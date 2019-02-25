@@ -1,0 +1,1 @@
+# akka-persistence-dynamodb

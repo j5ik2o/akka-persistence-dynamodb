@@ -6,7 +6,9 @@ crossScalaVersions := Seq("2.11.12", "2.12.8")
 val akkaVersion = "2.5.19"
 
 libraryDependencies ++= Seq(
-  "com.github.j5ik2o" %% "reactive-dynamodb-v2" % "1.0.6",
+  "com.github.pureconfig" %% "pureconfig" % "0.10.2",
+  "com.github.j5ik2o" %% "reactive-dynamodb-v2" % "1.0.7",
+  "com.github.j5ik2o" %% "reactive-dynamodb-test" % "1.0.6" % Test,
   "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-persistence-tck" % akkaVersion % Test,

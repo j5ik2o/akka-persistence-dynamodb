@@ -6,15 +6,21 @@ import akka.stream.scaladsl.Flow
 
 trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
 
-  def deserializeFlow: Flow[T, Either[Throwable, (PersistentRepr, Set[String], Long)], NotUsed] = {
-    Flow[T].map(deserialize)
+  def deserializeFlow: Flow[T, (PersistentRepr, Set[String], Long), NotUsed] = {
+    Flow[T].map(
+      v =>
+        deserialize(v) match {
+          case Right(r) => r
+          case Left(ex) => throw ex
+      }
+    )
   }
 
-  def deserializeFlowWithoutTags: Flow[T, Either[Throwable, PersistentRepr], NotUsed] = {
+  def deserializeFlowWithoutTags: Flow[T, PersistentRepr, NotUsed] = {
     def keepPersistentRepr(tup: (PersistentRepr, Set[String], Long)): PersistentRepr = tup match {
       case (repr, _, _) => repr
     }
-    deserializeFlow.map(_.map(keepPersistentRepr))
+    deserializeFlow.map(keepPersistentRepr)
   }
 
 }

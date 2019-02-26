@@ -1,14 +1,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 
 import akka.persistence.journal.Tagged
-import akka.persistence.{AtomicWrite, PersistentRepr}
+import akka.persistence.{ AtomicWrite, PersistentRepr }
 
-object TrySeq {
+object EitherSeq {
   def sequence[A](seq: Seq[Either[Throwable, A]]): Either[Throwable, Seq[A]] = {
     def recurse(remaining: Seq[Either[Throwable, A]], processed: Seq[A]): Either[Throwable, Seq[A]] = remaining match {
-      case Seq()                 => Right(processed)
+      case Seq()               => Right(processed)
       case Right(head) +: tail => recurse(remaining = tail, processed :+ head)
-      case Left(t) +: _       => Left(t)
+      case Left(t) +: _        => Left(t)
     }
     recurse(seq, Vector.empty)
   }
@@ -19,7 +19,7 @@ trait PersistentReprSerializer[A] {
   def serialize(messages: Seq[AtomicWrite]): Seq[Either[Throwable, Seq[A]]] = {
     messages.map { atomicWrite =>
       val serialized = atomicWrite.payload.map(serialize)
-      TrySeq.sequence(serialized)
+      EitherSeq.sequence(serialized)
     }
   }
 

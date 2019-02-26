@@ -1,9 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import java.net.URI
 import java.time.{ Duration => JavaDuration }
 
 import akka.Done
-import akka.actor.ActorSystem
+import akka.actor.{ ActorLogging, ActorSystem }
 import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
@@ -11,7 +12,10 @@ import akka.serialization.SerializationExtension
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
 import com.github.j5ik2o.reactive.dynamodb.DynamoDBAsyncClientV2
+import com.github.j5ik2o.reactive.dynamodb.monix.DynamoDBTaskClientV2
 import com.typesafe.config.Config
+import monix.execution.Scheduler
+import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
@@ -28,48 +32,66 @@ object DynamoDBJournal {
 
 }
 
-class DynamoDBJournal(config: Config) extends AsyncWriteJournal {
+class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem  = context.system
   implicit val mat: Materializer    = ActorMaterializer()
+  implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val dynamoDBConfig = pureconfig.loadConfigOrThrow[DynamoDBConfig](config)
+  protected val persistencePluginConfig: PersistencePluginConfig =
+    PersistencePluginConfig.fromConfig(config).getOrElse(PersistencePluginConfig())
+
+  protected val tableName: String = persistencePluginConfig.tableName
 
   private val httpClientBuilder = {
     val builder = NettyNioAsyncHttpClient.builder()
-    dynamoDBConfig.maxConcurrency.foreach(v => builder.maxConcurrency(v))
-    dynamoDBConfig.maxPendingConnectionAcquires.foreach(v => builder.maxPendingConnectionAcquires(v))
-    dynamoDBConfig.readTimeout.foreach(v => builder.readTimeout(JavaDuration.ofMillis(v.toMillis)))
-    dynamoDBConfig.writeTimeout.foreach(v => builder.writeTimeout(JavaDuration.ofMillis(v.toMillis)))
-    dynamoDBConfig.connectionTimeout.foreach(
-      v => builder.connectionTimeout(JavaDuration.ofMillis(v.toMillis))
-    )
-    dynamoDBConfig.connectionAcquisitionTimeout.foreach(
-      v => builder.connectionAcquisitionTimeout(JavaDuration.ofMillis(v.toMillis))
-    )
-    dynamoDBConfig.connectionTimeToLive.foreach(
-      v => builder.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis))
-    )
-    dynamoDBConfig.maxIdleConnectionTimeout.foreach(
-      v => builder.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis))
-    )
-    dynamoDBConfig.useConnectionReaper.foreach(v => builder.useIdleConnectionReaper(v))
-    dynamoDBConfig.userHttp2.foreach(
-      v => if (v) builder.protocol(Protocol.HTTP2) else builder.protocol(Protocol.HTTP1_1)
-    )
-    dynamoDBConfig.maxHttp2Streams.foreach(v => builder.maxHttp2Streams(v))
+    persistencePluginConfig.clientConfig.foreach { clientConfig =>
+      clientConfig.maxConcurrency.foreach(v => builder.maxConcurrency(v))
+      clientConfig.maxPendingConnectionAcquires.foreach(v => builder.maxPendingConnectionAcquires(v))
+      clientConfig.readTimeout.foreach(v => builder.readTimeout(JavaDuration.ofMillis(v.toMillis)))
+      clientConfig.writeTimeout.foreach(v => builder.writeTimeout(JavaDuration.ofMillis(v.toMillis)))
+      clientConfig.connectionTimeout.foreach(
+        v => builder.connectionTimeout(JavaDuration.ofMillis(v.toMillis))
+      )
+      clientConfig.connectionAcquisitionTimeout.foreach(
+        v => builder.connectionAcquisitionTimeout(JavaDuration.ofMillis(v.toMillis))
+      )
+      clientConfig.connectionTimeToLive.foreach(
+        v => builder.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis))
+      )
+      clientConfig.maxIdleConnectionTimeout.foreach(
+        v => builder.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis))
+      )
+      clientConfig.useConnectionReaper.foreach(v => builder.useIdleConnectionReaper(v))
+      clientConfig.userHttp2.foreach(
+        v => if (v) builder.protocol(Protocol.HTTP2) else builder.protocol(Protocol.HTTP1_1)
+      )
+      clientConfig.maxHttp2Streams.foreach(v => builder.maxHttp2Streams(v))
+    }
     builder
   }
-
-  private val underlying = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder.build).build()
-  private val client     = DynamoDBAsyncClientV2(underlying)
-  private val journalDao =
-    new JournalDaoImpl(client, dynamoDBConfig.tableName, SerializationExtension(system), dynamoDBConfig.tagSeparator)
+  private var builder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder.build)
+  persistencePluginConfig.clientConfig.foreach { clientConfig =>
+    (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
+      case (Some(a), Some(s)) =>
+        builder = builder.credentialsProvider(
+          StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
+        )
+      case _ =>
+    }
+    clientConfig.endpoint.foreach { ep =>
+      builder = builder.endpointOverride(URI.create(ep))
+    }
+  }
+  protected val underlying: DynamoDbAsyncClient = builder.build()
+  protected val client: DynamoDBTaskClientV2    = DynamoDBTaskClientV2(DynamoDBAsyncClientV2(underlying))
+  protected val journalDao: JournalDao with JournalDaoWithUpdates =
+    new JournalDaoImpl(client, SerializationExtension(system), persistencePluginConfig)
 
   private val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    val future        = journalDao.asyncWriteMessages(messages)
+    val future        = journalDao.asyncWriteMessages(messages).runToFuture
     val persistenceId = messages.head.persistenceId
     writeInProgress.put(persistenceId, future)
     future.onComplete(_ => self ! WriteFinished(persistenceId, future))
@@ -77,7 +99,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal {
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    journalDao.delete(persistenceId, toSequenceNr)
+    journalDao.delete(persistenceId, toSequenceNr).runToFuture
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
@@ -85,12 +107,12 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal {
   ): Future[Unit] =
     journalDao
       .messages(persistenceId, fromSequenceNr, toSequenceNr, max)
-      .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr.toTry))
       .runForeach(recoveryCallback)
       .map(_ => ())
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
-    def fetchHighestSeqNr() = journalDao.highestSequenceNr(persistenceId, fromSequenceNr)
+    def fetchHighestSeqNr(): Future[Long] =
+      journalDao.highestSequenceNr(persistenceId, fromSequenceNr).runToFuture
     writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()
       case Some(f) =>
@@ -101,7 +123,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal {
   }
 
   private def asyncUpdateEvent(persistenceId: String, sequenceNr: Long, message: AnyRef): Future[Done] = {
-    journalDao.update(persistenceId, sequenceNr, message)
+    journalDao.update(persistenceId, sequenceNr, message).runToFuture.map(_ => Done)
   }
 
   override def postStop(): Unit = {

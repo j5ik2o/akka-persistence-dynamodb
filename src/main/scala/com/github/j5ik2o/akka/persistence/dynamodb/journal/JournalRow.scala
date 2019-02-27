@@ -5,4 +5,6 @@ final case class JournalRow(ordering: Long,
                             persistenceId: String,
                             sequenceNumber: Long,
                             message: Array[Byte],
-                            tags: Option[String] = None)
+                            tags: Option[String] = None) {
+  def withDeleted: JournalRow = copy(deleted = true)
+}

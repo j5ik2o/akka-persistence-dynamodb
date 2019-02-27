@@ -44,46 +44,46 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val tableName: String = persistencePluginConfig.tableName
 
   private val httpClientBuilder = {
-    val builder = NettyNioAsyncHttpClient.builder()
+    val result = NettyNioAsyncHttpClient.builder()
     persistencePluginConfig.clientConfig.foreach { clientConfig =>
-      clientConfig.maxConcurrency.foreach(v => builder.maxConcurrency(v))
-      clientConfig.maxPendingConnectionAcquires.foreach(v => builder.maxPendingConnectionAcquires(v))
-      clientConfig.readTimeout.foreach(v => builder.readTimeout(JavaDuration.ofMillis(v.toMillis)))
-      clientConfig.writeTimeout.foreach(v => builder.writeTimeout(JavaDuration.ofMillis(v.toMillis)))
+      clientConfig.maxConcurrency.foreach(v => result.maxConcurrency(v))
+      clientConfig.maxPendingConnectionAcquires.foreach(v => result.maxPendingConnectionAcquires(v))
+      clientConfig.readTimeout.foreach(v => result.readTimeout(JavaDuration.ofMillis(v.toMillis)))
+      clientConfig.writeTimeout.foreach(v => result.writeTimeout(JavaDuration.ofMillis(v.toMillis)))
       clientConfig.connectionTimeout.foreach(
-        v => builder.connectionTimeout(JavaDuration.ofMillis(v.toMillis))
+        v => result.connectionTimeout(JavaDuration.ofMillis(v.toMillis))
       )
       clientConfig.connectionAcquisitionTimeout.foreach(
-        v => builder.connectionAcquisitionTimeout(JavaDuration.ofMillis(v.toMillis))
+        v => result.connectionAcquisitionTimeout(JavaDuration.ofMillis(v.toMillis))
       )
       clientConfig.connectionTimeToLive.foreach(
-        v => builder.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis))
+        v => result.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis))
       )
       clientConfig.maxIdleConnectionTimeout.foreach(
-        v => builder.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis))
+        v => result.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis))
       )
-      clientConfig.useConnectionReaper.foreach(v => builder.useIdleConnectionReaper(v))
+      clientConfig.useConnectionReaper.foreach(v => result.useIdleConnectionReaper(v))
       clientConfig.userHttp2.foreach(
-        v => if (v) builder.protocol(Protocol.HTTP2) else builder.protocol(Protocol.HTTP1_1)
+        v => if (v) result.protocol(Protocol.HTTP2) else result.protocol(Protocol.HTTP1_1)
       )
-      clientConfig.maxHttp2Streams.foreach(v => builder.maxHttp2Streams(v))
+      clientConfig.maxHttp2Streams.foreach(v => result.maxHttp2Streams(v))
     }
-    builder
+    result
   }
-  private var builder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder.build)
+  private var dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder.build)
   persistencePluginConfig.clientConfig.foreach { clientConfig =>
     (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
-        builder = builder.credentialsProvider(
+        dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
     clientConfig.endpoint.foreach { ep =>
-      builder = builder.endpointOverride(URI.create(ep))
+      dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.endpointOverride(URI.create(ep))
     }
   }
-  protected val underlying: DynamoDbAsyncClient = builder.build()
+  protected val underlying: DynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
   protected val client: DynamoDBTaskClientV2    = DynamoDBTaskClientV2(DynamoDBAsyncClientV2(underlying))
   protected val journalDao: JournalDao with JournalDaoWithUpdates =
     new JournalDaoImpl(client, SerializationExtension(system), persistencePluginConfig)

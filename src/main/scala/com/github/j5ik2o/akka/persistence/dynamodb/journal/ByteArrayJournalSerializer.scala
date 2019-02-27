@@ -11,12 +11,13 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
     serialization
       .serialize(persistentRepr)
       .map(
-        JournalRow(Long.MinValue,
-                   persistentRepr.deleted,
-                   persistentRepr.persistenceId,
+        JournalRow(persistentRepr.persistenceId,
                    persistentRepr.sequenceNr,
+                   persistentRepr.deleted,
                    _,
-                   encodeTags(tags, separator))
+                   Long.MaxValue,
+                   encodeTags(tags, separator),
+        )
       ).toEither
   }
 

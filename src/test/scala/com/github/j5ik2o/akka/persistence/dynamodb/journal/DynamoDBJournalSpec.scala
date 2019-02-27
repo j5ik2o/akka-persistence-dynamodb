@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import scala.concurrent.duration._
 
 class DynamoDBJournalSpec
-    extends JournalSpec(ConfigFactory.load("default.conf"))
+    extends JournalSpec(ConfigFactory.load("default"))
     with ScalaFutures
     with DynamoDBEmbeddedSpecSupport {
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = CapabilityFlag.on()

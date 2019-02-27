@@ -26,7 +26,7 @@ object PersistencePluginConfig {
 
 case class PersistencePluginConfig(tableName: String = "Journal",
                                    tagSeparator: String = ",",
-                                   bufferSize: Int = 1024,
+                                   bufferSize: Int = Int.MaxValue,
                                    batchSize: Int = 64,
                                    parallelism: Int = 64,
                                    clientConfig: Option[DynamoDBClientConfig] = Some(DynamoDBClientConfig()))

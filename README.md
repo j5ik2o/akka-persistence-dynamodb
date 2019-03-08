@@ -2,6 +2,8 @@
 
 ## akka-persistence journal plugin
 
+## akka-persistence snapshot plugin
+
 ## akka-persistence query plugin
 
 Tests were done using [akka-persistence-query-test](https://github.com/dnvriend/akka-persistence-query-test). 

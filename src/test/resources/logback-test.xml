@@ -6,7 +6,7 @@
             <level>debug</level>
         </filter>
         <encoder>
-            <pattern>%date{ISO8601} - %logger -> %-5level[%thread] %logger{0} - %msg%n</pattern>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -36,8 +36,9 @@
     <!--<logger name="slick.jdbc.StatementInvoker.result" level="DEBUG"/>-->
 
     <!--<logger name="slick.util.AsyncExecutor" level="DEBUG" />-->
-
-    <root level="INFO">
+    <logger name="software.amazon" level="ERROR" />
+    <logger name="io.netty" level="ERROR" />
+    <root level="DEBUG">
         <appender-ref ref="console"/>
     </root>
 

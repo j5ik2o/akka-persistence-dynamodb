@@ -1,11 +1,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import java.util.concurrent.atomic.AtomicLong
+
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
     extends FlowPersistentReprSerializer[JournalRow] {
+  private val counter = new AtomicLong()
 
   override def serialize(persistentRepr: PersistentRepr, tags: Set[String]): Either[Throwable, JournalRow] = {
     serialization
@@ -15,7 +18,7 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
                    persistentRepr.sequenceNr,
                    persistentRepr.deleted,
                    _,
-                   Long.MaxValue,
+                   counter.incrementAndGet(),
                    encodeTags(tags, separator),
         )
       ).toEither

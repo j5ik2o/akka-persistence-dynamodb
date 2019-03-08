@@ -1,10 +1,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
+
 import java.net.URI
 
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
-import com.github.j5ik2o.reactive.dynamodb.model._
-import com.github.j5ik2o.reactive.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
+import com.github.j5ik2o.reactive.aws.dynamodb.model._
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
@@ -35,6 +36,7 @@ class DynamoDBJournalSpec
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val client: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(underlying)
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     val tableName = "Journal"

@@ -8,7 +8,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentR
 
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
     extends FlowPersistentReprSerializer[JournalRow] {
-  val counter = new AtomicLong()
+  private val counter = new AtomicLong()
 
   override def serialize(persistentRepr: PersistentRepr, tags: Set[String]): Either[Throwable, JournalRow] = {
     serialization
@@ -18,7 +18,7 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
                    persistentRepr.sequenceNr,
                    persistentRepr.deleted,
                    _,
-                   counter.incrementAndGet(), //Long.MaxValue,
+                   counter.incrementAndGet(),
                    encodeTags(tags, separator),
         )
       ).toEither

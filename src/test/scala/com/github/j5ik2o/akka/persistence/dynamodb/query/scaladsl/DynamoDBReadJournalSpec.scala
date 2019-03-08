@@ -13,12 +13,9 @@ import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
+import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
-  ByteArrayJournalSerializer,
-  JournalRow,
-  WriteJournalDaoImpl
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ ByteArrayJournalSerializer, WriteJournalDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.TestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.query.query.DynamoDBSpecSupport

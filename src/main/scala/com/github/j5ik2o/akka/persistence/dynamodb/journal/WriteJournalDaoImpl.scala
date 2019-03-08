@@ -4,6 +4,7 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
+import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2

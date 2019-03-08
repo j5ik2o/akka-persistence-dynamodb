@@ -6,10 +6,10 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.Columns
+import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
 import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ ByteArrayJournalSerializer, JournalRow }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.ByteArrayJournalSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -27,18 +27,14 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   type State = Option[Map[String, AttributeValue]]
   type Elm   = Seq[Map[String, AttributeValue]]
-  private val logger               = LoggerFactory.getLogger(getClass)
-  private val tableName: String    = dynamoDBConfig.tableName
-  private val tagSeparator: String = dynamoDBConfig.tagSeparator
-  private val batchSize: Int       = dynamoDBConfig.batchSize
-  private val parallelism: Int     = dynamoDBConfig.parallelism
+  private val logger            = LoggerFactory.getLogger(getClass)
+  private val tableName: String = dynamoDBConfig.tableName
+  private val batchSize: Int    = dynamoDBConfig.batchSize
+  private val parallelism: Int  = dynamoDBConfig.parallelism
 
-  val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
-                                       onFailure = Attributes.LogLevels.Error,
-                                       onFinish = Attributes.LogLevels.Info)
-
-  private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, tagSeparator)
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+                                               onFailure = Attributes.LogLevels.Error,
+                                               onFinish = Attributes.LogLevels.Info)
 
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
@@ -124,12 +120,13 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .statefulMapConcat { () =>
         val index = new AtomicLong()
         journalRow =>
-          List(journalRow.copy(ordering = index.incrementAndGet()))
+          List(journalRow.withOrdering(index.incrementAndGet()))
       }
       .filter { row =>
         row.ordering > offset && row.ordering <= maxOffset
       }
       .take(max)
+      .withAttributes(logLevels)
   }
 
   override def getMessages(persistenceId: String,
@@ -179,7 +176,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .statefulMapConcat { () =>
         val index = new AtomicLong()
         journalRow =>
-          List(journalRow.copy(ordering = index.incrementAndGet()))
+          List(journalRow.withOrdering(index.incrementAndGet()))
       }
       .filter(_.deleted == false).log("journalRow")
       .take(max)
@@ -215,6 +212,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .drop(offset)
       .take(limit)
+      .withAttributes(logLevels)
   }
 
   override def maxJournalSequence(): Future[Long] = {

@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
+import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)

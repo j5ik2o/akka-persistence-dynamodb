@@ -7,8 +7,9 @@ import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
+import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, WriteJournalDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.WriteJournalDaoImpl
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2

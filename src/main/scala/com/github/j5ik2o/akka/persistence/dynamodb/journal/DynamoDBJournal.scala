@@ -37,10 +37,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   protected val persistencePluginConfig: PersistencePluginConfig = PersistencePluginConfig.fromConfig(config)
 
-  protected val tableName: String = persistencePluginConfig.tableName
-  private val httpClientBuilder   = HttpClientUtils.asyncBuilder(persistencePluginConfig)
+  protected val tableName: String = persistencePluginConfig.journalTableName
+
+  private val httpClientBuilder = HttpClientUtils.asyncBuilder(persistencePluginConfig)
+
   private val dynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.asyncBuilder(persistencePluginConfig, httpClientBuilder.build())
+
   private val serialization = SerializationExtension(system)
 
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()

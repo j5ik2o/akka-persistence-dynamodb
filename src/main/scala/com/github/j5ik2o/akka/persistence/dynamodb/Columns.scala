@@ -8,5 +8,7 @@ object Columns {
   val PersistenceIdColumnName = "persistence-id"
   val SequenceNrColumnName    = "sequence-nr"
   val TagsColumnName          = "tags"
+  val SnapshotColumnName      = "snapshot"
+  val CreatedColumnName       = "created"
 
 }

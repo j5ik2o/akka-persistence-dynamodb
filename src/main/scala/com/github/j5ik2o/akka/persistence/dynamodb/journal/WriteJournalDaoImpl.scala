@@ -6,7 +6,6 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -31,17 +30,13 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val tableName: String    = persistencePluginConfig.tableName
-  private val tagSeparator: String = persistencePluginConfig.tagSeparator
-  private val bufferSize: Int      = persistencePluginConfig.bufferSize
-  private val batchSize: Int       = persistencePluginConfig.batchSize
-  private val parallelism: Int     = persistencePluginConfig.parallelism
+  private val tableName: String = persistencePluginConfig.journalTableName
+  private val bufferSize: Int   = persistencePluginConfig.bufferSize
+  private val batchSize: Int    = persistencePluginConfig.batchSize
+  private val parallelism: Int  = persistencePluginConfig.parallelism
 
   private val taskClient: DynamoDBTaskClientV2   = DynamoDBTaskClientV2(asyncClient)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
-
-  private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, persistencePluginConfig.tagSeparator)
 
   private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
                                                onFailure = Attributes.LogLevels.Error,
@@ -374,9 +369,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { xs =>
-      logger.info(s"deleteJournalRows.size: ${xs.size}")
-      logger.info(s"deleteJournalRows: $xs")
-      xs.map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.info)
+      logger.debug(s"deleteJournalRows.size: ${xs.size}")
+      logger.debug(s"deleteJournalRows: $xs")
+      xs.map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
       def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
         Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
           if (requestItems.isEmpty)

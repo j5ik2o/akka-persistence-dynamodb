@@ -28,7 +28,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   type State = Option[Map[String, AttributeValue]]
   type Elm   = Seq[Map[String, AttributeValue]]
   private val logger            = LoggerFactory.getLogger(getClass)
-  private val tableName: String = dynamoDBConfig.tableName
+  private val tableName: String = dynamoDBConfig.journalTableName
   private val batchSize: Int    = dynamoDBConfig.batchSize
   private val parallelism: Int  = dynamoDBConfig.parallelism
 

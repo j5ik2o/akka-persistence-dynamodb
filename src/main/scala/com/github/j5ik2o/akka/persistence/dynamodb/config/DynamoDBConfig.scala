@@ -10,7 +10,7 @@ object PersistencePluginConfig {
   def fromConfig(rootConfig: Config): PersistencePluginConfig = {
     val config = rootConfig.asConfig("akka-persistence-dynamodb")
     PersistencePluginConfig(
-      tableName = config.asString("table-name", "Journal"),
+      journalTableName = config.asString("journal-table-name", "Journal"),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       batchSize = config.asInt("batch-size", 16),
@@ -22,7 +22,7 @@ object PersistencePluginConfig {
 
 }
 
-case class PersistencePluginConfig(tableName: String,
+case class PersistencePluginConfig(journalTableName: String,
                                    tagSeparator: String,
                                    bufferSize: Int,
                                    batchSize: Int,

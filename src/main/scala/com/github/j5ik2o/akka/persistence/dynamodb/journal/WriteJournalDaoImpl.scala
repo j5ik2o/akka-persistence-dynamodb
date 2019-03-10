@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.NotUsed
@@ -38,9 +54,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   private val taskClient: DynamoDBTaskClientV2   = DynamoDBTaskClientV2(asyncClient)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Info)
+                                               onFinish = Attributes.LogLevels.Debug)
   private val putQueue = Source
     .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
     .flatMapConcat {
@@ -411,9 +427,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
 
   private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat { xs =>
-    logger.info(s"putJournalRows.size: ${xs.size}")
-    logger.info(s"putJournalRows: $xs")
-    xs.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.info)
+    logger.debug(s"putJournalRows.size: ${xs.size}")
+    logger.debug(s"putJournalRows: $xs")
+    xs.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
     def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
       Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
         if (requestItems.isEmpty)

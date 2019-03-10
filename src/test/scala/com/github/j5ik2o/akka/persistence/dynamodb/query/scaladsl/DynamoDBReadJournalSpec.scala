@@ -1,3 +1,18 @@
+/*
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
 import java.net.URI
@@ -33,7 +48,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import scala.concurrent.duration._
 
 class DynamoDBReadJournalSpec
-    extends TestKit(ActorSystem("DynamoDBReadJournalSpec", ConfigFactory.load("snapshot.conf")))
+    extends TestKit(ActorSystem("DynamoDBReadJournalSpec", ConfigFactory.load("default.conf")))
     with FreeSpecLike
     with Matchers
     with Eventually
@@ -91,21 +106,20 @@ class DynamoDBReadJournalSpec
   }
 
   def countJournal: Long = {
-    logger.info("countJournal: start")
+    logger.debug("countJournal: start")
     val numEvents = readJournal
       .currentPersistenceIds().flatMapConcat { pid =>
-        logger.info(s">>>>> pid = $pid")
         readJournal.currentEventsByPersistenceId(pid, 0, Long.MaxValue).map(_ => 1).fold(0)(_ + _)
       }.runFold(0L)(_ + _).futureValue
-    logger.info("==> NumEvents: " + numEvents)
-    logger.info("countJournal: ==> NumEvents: " + numEvents)
+    logger.debug("==> NumEvents: " + numEvents)
+    logger.debug("countJournal: ==> NumEvents: " + numEvents)
     numEvents
   }
 
   def withPersistenceIds(within: FiniteDuration = 10.second)(f: TestSubscriber.Probe[String] => Unit): Unit = {
     val tp = readJournal
       .persistenceIds().filter { pid =>
-        logger.info(s"withPersistenceIds:filter = $pid")
+        logger.debug(s"withPersistenceIds:filter = $pid")
         (1 to 3).map(id => s"my-$id").contains(pid)
       }.runWith(TestSink.probe[String])
     tp.within(within)(f(tp))
@@ -134,7 +148,7 @@ class DynamoDBReadJournalSpec
       (pActor ? 2).futureValue
       (pActor ? 3).futureValue
       val results = readJournal.currentEventsByPersistenceId("my-1", 0, Long.MaxValue).runWith(Sink.seq).futureValue
-      println(results)
+//      println(results)
       results should have size (3)
       results.map(_.persistenceId).forall(_ == "my-1") shouldBe true
       results.map(_.sequenceNr) should contain(1)

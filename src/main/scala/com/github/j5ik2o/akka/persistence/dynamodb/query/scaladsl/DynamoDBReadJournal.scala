@@ -1,7 +1,23 @@
+/*
+ * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
 import akka.NotUsed
-import akka.actor.{ ActorLogging, ExtendedActorSystem }
+import akka.actor.ExtendedActorSystem
 import akka.pattern._
 import akka.persistence.query._
 import akka.persistence.query.scaladsl._
@@ -86,9 +102,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   private val delaySource =
     Source.tick(pluginConfig.refreshInterval, 0.seconds, 0).take(1)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Info)
+                                               onFinish = Attributes.LogLevels.Debug)
 
   private val refreshInterval = pluginConfig.refreshInterval
 

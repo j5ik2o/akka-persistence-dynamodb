@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,9 +94,9 @@ abstract class CurrentEventsByPersistenceId1Test(config: String) extends TestSpe
   }
 }
 
-class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
-
-class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
+//class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
+//
+//class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
 
 class DynamoDBCurrentEventsByPersistenceId1Test
     extends CurrentEventsByPersistenceId1Test("default.conf")

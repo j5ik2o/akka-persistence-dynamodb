@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,10 +77,6 @@ abstract class CurrentEventsByTagTestDeletedEventsTest(config: String) extends T
     }
   }
 }
-
-class LevelDbCurrentEventsByTagTestDeletedEventsTest extends CurrentEventsByTagTestDeletedEventsTest("leveldb.conf")
-
-class InMemoryCurrentEventsByTagTestDeletedEventsTest extends CurrentEventsByTagTestDeletedEventsTest("inmemory.conf")
 
 class DynamoDBCurrentEventsByTagTestDeletedEventsTest
     extends CurrentEventsByTagTestDeletedEventsTest("default.conf")

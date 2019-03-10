@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,9 +110,9 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
   }
 }
 
-class LevelDbEventsByTagTest extends EventsByTagTest("leveldb.conf")
-
-class InMemoryEventsByTagTest extends EventsByTagTest("inmemory.conf")
+//class LevelDbEventsByTagTest extends EventsByTagTest("leveldb.conf")
+//
+//class InMemoryEventsByTagTest extends EventsByTagTest("inmemory.conf")
 
 class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with DynamoDBSpecSupport {
 
@@ -140,7 +141,7 @@ class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with Dynam
   after { deleteTable }
 
 }
-//
+
 //class JdbcEventsByTagTest2 extends EventsByTagTest2("jdbc.conf")
 //
 //class CassandraEventsByTagTest2 extends EventsByTagTest2("cassandra.conf")

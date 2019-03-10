@@ -1,7 +1,6 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.query
-
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +14,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.github.j5ik2o.akka.persistence.dynamodb.query
 
 import java.util.UUID
 
@@ -24,14 +24,7 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
 
 import scala.language.implicitConversions
-//import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
-//import akka.persistence.cassandra.session.scaladsl.CassandraSession
-import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
-//import akka.persistence.jdbc.config.JournalConfig
-//import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
-//import akka.persistence.jdbc.util.SlickDatabase
 import akka.persistence.journal.Tagged
-import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, PersistenceQuery }
 import akka.stream.scaladsl.Sink
@@ -48,7 +41,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
-abstract class TestSpec(config: String = "leveldb.conf")
+abstract class TestSpec(config: String)
     extends FlatSpec
     with Matchers
     with ScalaFutures
@@ -62,27 +55,7 @@ abstract class TestSpec(config: String = "leveldb.conf")
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
   implicit val timeout: Timeout     = 30.seconds
 
-  val identifier: String = config match {
-    //    case "cassandra.conf" => CassandraReadJournal.Identifier
-    case "inmemory.conf" => InMemoryReadJournal.Identifier
-    //    case "jdbc.conf"      => JdbcReadJournal.Identifier
-    case "leveldb.conf" => LeveldbReadJournal.Identifier
-    case _              => DynamoDBReadJournal.Identifier
-  }
-
-  //  override def db: Option[JdbcBackend#DatabaseDef] = {
-  //    Option(config).filter(_ == "jdbc.conf").map { _ =>
-  //      val cfg = system.settings.config.getConfig("jdbc-journal")
-  //      val journalConfig = new JournalConfig(cfg)
-  //      SlickDatabase.forConfig(cfg, journalConfig.slickConfiguration)
-  //    }
-  //  }
-
-  //  def session: Option[CassandraSession] = {
-  //    Option(config).filter(_ == "cassandra.conf").map { _ =>
-  //      readJournal.asInstanceOf[CassandraReadJournal].session
-  //    }
-  //  }
+  val identifier: String = DynamoDBReadJournal.Identifier
 
   val readJournal: ReadJournal
     with CurrentPersistenceIdsQuery
@@ -94,11 +67,11 @@ abstract class TestSpec(config: String = "leveldb.conf")
     PersistenceQuery(system).readJournalFor(identifier)
   }
 
-  def randomId = UUID.randomUUID.toString.take(5)
+  def randomId: String = UUID.randomUUID.toString.take(5)
 
   def terminate(actors: ActorRef*): Unit = {
     val tp = TestProbe()
-    actors.foreach { (actor: ActorRef) =>
+    actors.foreach { actor: ActorRef =>
       tp watch actor
       actor ! PoisonPill
       tp expectTerminated actor
@@ -153,7 +126,7 @@ abstract class TestSpec(config: String = "leveldb.conf")
   def withCurrentPersistenceIds(within: FiniteDuration = WITH_IN)(f: TestSubscriber.Probe[String] => Unit): Unit = {
     val tp = readJournal
       .currentPersistenceIds().filter { pid =>
-        log.info(s"withCurrentPersistenceIds:filter = $pid")
+        log.debug(s"withCurrentPersistenceIds:filter = $pid")
         (1 to 3).map(id => s"my-$id").contains(pid)
       }.runWith(
         TestSink.probe[String]
@@ -164,7 +137,7 @@ abstract class TestSpec(config: String = "leveldb.conf")
   def withPersistenceIds(within: FiniteDuration = WITH_IN)(f: TestSubscriber.Probe[String] => Unit): Unit = {
     val tp = readJournal
       .persistenceIds().filter { pid =>
-        log.info(s"withPersistenceIds:filter = $pid")
+        log.debug(s"withPersistenceIds:filter = $pid")
         (1 to 3).map(id => s"my-$id").contains(pid)
       }.runWith(TestSink.probe[String])
     tp.within(within)(f(tp))
@@ -214,72 +187,46 @@ abstract class TestSpec(config: String = "leveldb.conf")
     readJournal.currentEventsByTag(tag, offset).runWith(Sink.seq).futureValue.toList
 
   override protected def afterAll(): Unit = {
-    config match {
-      //      case "cassandra.conf" =>
-      //        println("Cleaning Cassandra Journal")
-      //        session.foreach { s =>
-      //          Future.sequence(List(
-      //            s.executeWrite("TRUNCATE akka.messages")
-      //                      s.executeWrite("TRUNCATE akka.metadata"),
-      //                      s.executeWrite("TRUNCATE akka.config"),
-      //                      s.executeWrite("TRUNCATE akka.snapshots")
-      //          )).futureValue
-      //        }
-      //      case "jdbc.conf" =>
-      //        println("Closing database connections")
-      //        db.foreach(_.close())
-      case "inmemory.conf" =>
-        println("No cleanup for inmemory store")
-      case "leveldb.conf" =>
-        println("Deleting LevelDb dirs: " + deleteDirs)
-      case _ =>
-    }
     TestKit.shutdownActorSystem(system)
   }
 
   override protected def beforeEach(): Unit = {}
 
-  override protected def beforeAll(): Unit = {
-    //    config match {
-    //      case "jdbc.conf" =>
-    //        dropCreate(H2())
-    //      case _ =>
-    //    }
-  }
+  override protected def beforeAll(): Unit = {}
 
   def countJournal: Long = {
-    log.info("countJournal: start")
+    log.debug("countJournal: start")
     val numEvents = readJournal
       .currentPersistenceIds()
       .filter { pid =>
-        log.info(s"filter: pid = $pid")
+        log.debug(s"filter: pid = $pid")
         (1 to 3).map(id => s"my-$id").contains(pid)
       }
       .mapAsync(1) { pid =>
-        log.info(s"mapAsync:pid = $pid")
+        log.debug(s"mapAsync:pid = $pid")
         val result = readJournal.currentEventsByPersistenceId(pid, 0, Long.MaxValue).map(_ => 1).runFold(0)(_ + _)
-        log.info(s"result = $result")
+        log.debug(s"result = $result")
         result
       }.runFold(0)(_ + _)
       .futureValue
-    log.info("==> NumEvents: " + numEvents)
-    log.info("countJournal: ==> NumEvents: " + numEvents)
+    log.debug("==> NumEvents: " + numEvents)
+    log.debug("countJournal: ==> NumEvents: " + numEvents)
     numEvents
   }
 
-  def deleteDirs: (Boolean, Boolean) = {
-    def loop(dir: java.io.File): Unit = {
-      Option(dir.listFiles).foreach(_.filter(_.isFile).foreach { file =>
-        println(s"Deleting: ${file.getName}: ${file.delete}")
-      })
-    }
-
-    val journalDir   = new java.io.File("target/journal")
-    val snapshotsDir = new java.io.File("target/snapshots")
-    loop(journalDir)
-    loop(snapshotsDir)
-    (journalDir.delete(), snapshotsDir.delete())
-  }
+//  def deleteDirs: (Boolean, Boolean) = {
+//    def loop(dir: java.io.File): Unit = {
+//      Option(dir.listFiles).foreach(_.filter(_.isFile).foreach { file =>
+//        println(s"Deleting: ${file.getName}: ${file.delete}")
+//      })
+//    }
+//
+//    val journalDir   = new java.io.File("target/journal")
+//    val snapshotsDir = new java.io.File("target/snapshots")
+//    loop(journalDir)
+//    loop(snapshotsDir)
+//    (journalDir.delete(), snapshotsDir.delete())
+//  }
 
   implicit class FutureSequence[A](xs: Seq[Future[A]]) {
     def sequence(implicit ec: ExecutionContext): Future[Seq[A]] = Future.sequence(xs)

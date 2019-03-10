@@ -23,9 +23,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence-tck" % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
   "ch.qos.logback" % "logback-classic" % "1.2.3" % Test,
-  "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.1" % Test,
-  "org.iq80.leveldb" % "leveldb" % "0.9" % Test,
-  "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8" % Test
+  "org.slf4j" % "jul-to-slf4j" % "1.7.26" % Test
 )
 
 parallelExecution in Test := false

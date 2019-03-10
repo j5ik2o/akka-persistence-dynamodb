@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
 import java.net.URI
 
-import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
@@ -74,7 +74,7 @@ abstract class PersistenceIdsQueryTest(config: String) extends TestSpec(config) 
       eventually {
         countJournal shouldBe 1
       }
-      if (readJournal.isInstanceOf[InMemoryReadJournal] || readJournal.isInstanceOf[DynamoDBReadJournal]) {
+      if (readJournal.isInstanceOf[DynamoDBReadJournal]) {
         tp.expectNext("my-1")
       }
       tp.expectNoMessage(1 seconds)
@@ -84,7 +84,7 @@ abstract class PersistenceIdsQueryTest(config: String) extends TestSpec(config) 
         countJournal shouldBe 2
       }
 
-      if (readJournal.isInstanceOf[InMemoryReadJournal] || readJournal.isInstanceOf[DynamoDBReadJournal]) {
+      if (readJournal.isInstanceOf[DynamoDBReadJournal]) {
         tp.expectNext("my-2")
       }
       tp.expectNoMessage(100.millis)
@@ -93,7 +93,7 @@ abstract class PersistenceIdsQueryTest(config: String) extends TestSpec(config) 
       eventually {
         countJournal shouldBe 3
       }
-      if (readJournal.isInstanceOf[InMemoryReadJournal] || readJournal.isInstanceOf[DynamoDBReadJournal]) {
+      if (readJournal.isInstanceOf[DynamoDBReadJournal]) {
         tp.expectNext("my-3")
       }
       tp.expectNoMessage(100.millis)

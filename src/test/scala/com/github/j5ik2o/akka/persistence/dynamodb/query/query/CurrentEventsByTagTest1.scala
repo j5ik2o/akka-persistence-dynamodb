@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,9 +45,9 @@ abstract class CurrentEventsByTagTest1(config: String) extends TestSpec(config) 
   }
 }
 
-class LevelDbCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("leveldb.conf")
-
-class InMemoryCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("inmemory.conf")
+//class LevelDbCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("leveldb.conf")
+//
+//class InMemoryCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("inmemory.conf")
 
 class DynamoDBCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("default.conf") with DynamoDBSpecSupport {
 

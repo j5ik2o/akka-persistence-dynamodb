@@ -228,28 +228,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withAttributes(logLevels)
   }
 
-  override def maxJournalSequence(): Source[Long, NotUsed] = {
+  override def maxJournalSequence(): Source[Long, NotUsed] =
     Source.single(Long.MaxValue)
-//    val queryRequest =
-//      QueryRequest()
-//        .withTableName(Some(tableName)).withKeyConditions(Some(Map("" -> Condition().withComparisonOperator(Some(ConditionalOperator.))))).withExpressionAttributeNames(
-//          Some(Map("#pid" -> Columns.PersistenceIdColumnName))
-//        )
-//        .withScanIndexForward(
-//          Some(false)
-//        ).withLimit(
-//          Some(1)
-//        )
-//    streamClient.underlying
-//      .query(queryRequest).flatMap { result =>
-//        if (result.isSuccessful)
-//          Future.successful(
-//            result.items
-//              .getOrElse(Seq.empty).map(_(Columns.OrderingColumnName).number.get.toLong).headOption.getOrElse(0L)
-//          )
-//        else
-//          Future.failed(new Exception())
-//      }
-  }
 
 }

@@ -5,7 +5,7 @@ val reactiveAwsDynamoDB = "1.0.2"
 
 name := "akka-persistence-dynamodb"
 
-scalaVersion := scala211Version
+scalaVersion := scala212Version
 
 crossScalaVersions := Seq(scala211Version, scala212Version)
 

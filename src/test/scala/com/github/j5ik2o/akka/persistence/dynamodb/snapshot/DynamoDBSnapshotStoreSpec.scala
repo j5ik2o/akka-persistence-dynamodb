@@ -1,4 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
+
 import java.net.URI
 
 import akka.persistence.snapshot.SnapshotStoreSpec
@@ -10,10 +11,13 @@ import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCred
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
+import scala.concurrent.duration._
+
 class DynamoDBSnapshotStoreSpec
-    extends SnapshotStoreSpec(ConfigFactory.load("default"))
+    extends SnapshotStoreSpec(ConfigFactory.load("snapshot.conf"))
     with ScalaFutures
     with DynamoDBEmbeddedSpecSupport {
+
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = 8000
@@ -33,7 +37,7 @@ class DynamoDBSnapshotStoreSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    val tableName = ""
+    val tableName = "Snapshot"
     val createRequest = CreateTableRequest()
       .withAttributeDefinitions(
         Some(

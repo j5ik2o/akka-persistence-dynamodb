@@ -5,7 +5,7 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -19,7 +19,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                           serialization: Serialization,
-                          persistencePluginConfig: PersistencePluginConfig)(
+                          persistencePluginConfig: JournalPluginConfig)(
     implicit ec: ExecutionContext,
     mat: Materializer
 ) extends WriteJournalDaoWithUpdates {
@@ -30,7 +30,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val tableName: String = persistencePluginConfig.journalTableName
+  private val tableName: String = persistencePluginConfig.tableName
   private val bufferSize: Int   = persistencePluginConfig.bufferSize
   private val batchSize: Int    = persistencePluginConfig.batchSize
   private val parallelism: Int  = persistencePluginConfig.parallelism

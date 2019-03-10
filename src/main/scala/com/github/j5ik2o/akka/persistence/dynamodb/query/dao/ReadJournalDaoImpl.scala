@@ -6,29 +6,26 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
 import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.ByteArrayJournalSerializer
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBSyncClientV2 }
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 
 class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
-                         syncClient: DynamoDBSyncClientV2,
                          serialization: Serialization,
-                         dynamoDBConfig: PersistencePluginConfig)(implicit ec: ExecutionContext)
+                         dynamoDBConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
     extends ReadJournalDao {
 
   type State = Option[Map[String, AttributeValue]]
   type Elm   = Seq[Map[String, AttributeValue]]
   private val logger            = LoggerFactory.getLogger(getClass)
-  private val tableName: String = dynamoDBConfig.journalTableName
+  private val tableName: String = dynamoDBConfig.tableName
   private val batchSize: Int    = dynamoDBConfig.batchSize
   private val parallelism: Int  = dynamoDBConfig.parallelism
 
@@ -184,7 +181,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   }
 
-  private def convertToJournalRow(map: Map[String, AttributeValue]) = {
+  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
     JournalRow(
       persistenceId = map(PersistenceIdColumnName).string.get,
       sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
@@ -215,8 +212,8 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withAttributes(logLevels)
   }
 
-  override def maxJournalSequence(): Future[Long] = {
-    Future.successful(Long.MaxValue)
+  override def maxJournalSequence(): Source[Long, NotUsed] = {
+    Source.single(Long.MaxValue)
 //    val queryRequest =
 //      QueryRequest()
 //        .withTableName(Some(tableName)).withKeyConditions(Some(Map("" -> Condition().withComparisonOperator(Some(ConditionalOperator.))))).withExpressionAttributeNames(

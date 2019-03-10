@@ -7,23 +7,19 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{JournalPluginConfig, QueryPluginConfig}
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{
-  DynamoDBAsyncClientV2,
-  DynamoDBEmbeddedSpecSupport,
-  DynamoDBSyncClientV2
-}
+import com.github.j5ik2o.reactive.aws.dynamodb.{DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport, DynamoDBSyncClientV2}
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FreeSpecLike, Matchers }
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
+import org.scalatest.{FreeSpecLike, Matchers}
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+import software.amazon.awssdk.services.dynamodb.{DynamoDbAsyncClient, DynamoDbClient}
 
 import scala.concurrent.duration._
 
@@ -64,13 +60,16 @@ class WriteJournalDaoImplSpec
 
   private val serialization = SerializationExtension(system)
 
-  protected val persistencePluginConfig: PersistencePluginConfig =
-    PersistencePluginConfig.fromConfig(system.settings.config)
+  protected val journalPluginConfig: JournalPluginConfig =
+    JournalPluginConfig.fromConfig(system.settings.config)
+  protected val queryPluginConfig: QueryPluginConfig =
+    QueryPluginConfig.fromConfig(system.settings.config)
+
   implicit val mat = ActorMaterializer()
   implicit val ec  = system.dispatcher
 
-  val readJournalDao  = new ReadJournalDaoImpl(asyncClient, syncClient, serialization, persistencePluginConfig)(ec)
-  val writeJournalDao = new WriteJournalDaoImpl(asyncClient, serialization, persistencePluginConfig)(ec, mat)
+  val readJournalDao  = new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig)(ec)
+  val writeJournalDao = new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig)(ec, mat)
 
   val sch = Scheduler(ec)
 

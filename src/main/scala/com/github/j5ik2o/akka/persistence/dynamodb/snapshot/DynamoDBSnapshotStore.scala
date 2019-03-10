@@ -6,7 +6,7 @@ import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, SnapshotPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.Config
@@ -27,20 +27,21 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   implicit val system: ActorSystem  = context.system
   implicit val mat: Materializer    = ActorMaterializer()
 
-  private val serialization                                      = SerializationExtension(system)
-  protected val persistencePluginConfig: PersistencePluginConfig = PersistencePluginConfig.fromConfig(config)
+  private val serialization                        = SerializationExtension(system)
+  protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  private val httpClientBuilder = HttpClientUtils.asyncBuilder(persistencePluginConfig)
+  private val httpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(persistencePluginConfig, httpClientBuilder.build())
+    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, httpClientBuilder.build())
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
+
   protected val snapshotDao: SnapshotDao =
     new SnapshotDaoImpl(asyncClient,
                         serialization,
-                        persistencePluginConfig.journalTableName,
-                        persistencePluginConfig.parallelism,
-                        persistencePluginConfig.batchSize)
+                        pluginConfig.tableName,
+                        pluginConfig.parallelism,
+                        pluginConfig.batchSize)
 
   override def loadAsync(persistenceId: String,
                          criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {

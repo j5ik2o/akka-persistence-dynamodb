@@ -39,5 +39,5 @@ trait ReadJournalDao {
   /**
     * @return The value of the maximum (ordering) id in the journal
     */
-  def maxJournalSequence(): Future[Long]
+  def maxJournalSequence(): Source[Long, NotUsed]
 }

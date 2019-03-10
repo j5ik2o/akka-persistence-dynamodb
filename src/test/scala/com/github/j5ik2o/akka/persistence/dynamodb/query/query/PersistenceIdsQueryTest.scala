@@ -125,9 +125,9 @@ abstract class PersistenceIdsQueryTest(config: String) extends TestSpec(config) 
   }
 }
 
-class LevelDbPersistenceIdsQueryTest extends PersistenceIdsQueryTest("leveldb.conf")
+// class LevelDbPersistenceIdsQueryTest extends PersistenceIdsQueryTest("leveldb.conf")
 
-class InMemoryPersistenceIdsQueryTest extends PersistenceIdsQueryTest("inmemory.conf")
+// class InMemoryPersistenceIdsQueryTest extends PersistenceIdsQueryTest("inmemory.conf")
 
 class DynamoDBPersistenceIdsQueryTest extends PersistenceIdsQueryTest("default.conf") with DynamoDBSpecSupport {
 

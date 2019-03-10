@@ -8,7 +8,7 @@ import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.Sink
 import akka.stream.{ ActorMaterializer, Materializer }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils, JournalRow }
@@ -23,26 +23,28 @@ import scala.util.Try
 
 object DynamoDBJournal {
 
-  final case class InPlaceUpdateEvent(persistenceId: String, seqNr: Long, write: AnyRef)
+  final case class InPlaceUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef)
 
   private case class WriteFinished(pid: String, f: Future[_])
 
 }
 
 class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
+
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem  = context.system
   implicit val mat: Materializer    = ActorMaterializer()
   implicit val scheduler: Scheduler = Scheduler(ec)
 
-  protected val persistencePluginConfig: PersistencePluginConfig = PersistencePluginConfig.fromConfig(config)
+  protected val pluginConfig: JournalPluginConfig =
+    JournalPluginConfig.fromConfig(config)
 
-  protected val tableName: String = persistencePluginConfig.journalTableName
+  protected val tableName: String = pluginConfig.tableName
 
-  private val httpClientBuilder = HttpClientUtils.asyncBuilder(persistencePluginConfig)
+  private val httpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
 
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(persistencePluginConfig, httpClientBuilder.build())
+    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, httpClientBuilder.build())
 
   private val serialization = SerializationExtension(system)
 
@@ -50,10 +52,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
 
   protected val journalDao: WriteJournalDao with WriteJournalDaoWithUpdates =
-    new WriteJournalDaoImpl(asyncClient, serialization, persistencePluginConfig)
+    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, persistencePluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
   private val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
@@ -118,17 +120,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def receivePluginInternal: Receive = {
     case WriteFinished(persistenceId, _) =>
       writeInProgress.remove(persistenceId)
-    case InPlaceUpdateEvent(pid, seq, write) =>
-      asyncUpdateEvent(pid, seq, write).pipeTo(sender())
+    case InPlaceUpdateEvent(pid, seq, message) =>
+      asyncUpdateEvent(pid, seq, message).pipeTo(sender())
   }
 
-  private def asyncUpdateEvent(persistenceId: String, sequenceNr: Long, message: AnyRef): Future[Done] = {
-    val write = PersistentRepr(message, sequenceNr, persistenceId)
+  private def asyncUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef): Future[Done] = {
+    val write = PersistentRepr(message, sequenceNumber, persistenceId)
     val serializedRow: JournalRow = serializer.serialize(write) match {
-      case Right(t) => t
-      case Left(ex) =>
+      case Right(row) => row
+      case Left(_) =>
         throw new IllegalArgumentException(
-          s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNr]"
+          s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNumber]"
         )
     }
     journalDao.updateMessage(serializedRow).runWith(Sink.ignore)

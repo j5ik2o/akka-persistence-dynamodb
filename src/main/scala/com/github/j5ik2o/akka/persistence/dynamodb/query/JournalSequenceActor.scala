@@ -64,7 +64,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
 
   override def preStart(): Unit = {
     self ! QueryOrderingIds
-    readJournalDao.maxJournalSequence().mapTo[Long].onComplete {
+    readJournalDao.maxJournalSequence().runWith(Sink.head).onComplete {
       case scala.util.Success(maxInDatabase) =>
         self ! ScheduleAssumeMaxOrderingId(maxInDatabase)
       case scala.util.Failure(t) =>

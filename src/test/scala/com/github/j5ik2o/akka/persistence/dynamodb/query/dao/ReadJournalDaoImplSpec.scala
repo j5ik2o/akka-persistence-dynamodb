@@ -8,29 +8,25 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.WriteJournalDaoImpl
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{
-  DynamoDBAsyncClientV2,
-  DynamoDBEmbeddedSpecSupport,
-  DynamoDBSyncClientV2
-}
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
+import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 class ReadJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec"))
+    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load("default.conf")))
     with FreeSpecLike
     with Matchers
     with ScalaFutures
@@ -47,30 +43,24 @@ class ReadJournalDaoImplSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  val underlyingSync: DynamoDbClient = DynamoDbClient
-    .builder()
-    .httpClient(ApacheHttpClient.builder().maxConnections(1).build())
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val asyncClient  = DynamoDBAsyncClientV2(underlyingAsync)
-  val syncClient   = DynamoDBSyncClientV2(underlyingSync)
   val taskClient   = DynamoDBTaskClientV2(asyncClient)
   val streamClient = DynamoDBStreamClientV2(asyncClient)
 
   private val serialization = SerializationExtension(system)
-  protected val persistencePluginConfig: PersistencePluginConfig =
-    PersistencePluginConfig.fromConfig(system.settings.config)
+
+  protected val journalPluginConfig: JournalPluginConfig =
+    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamodb-journal"))
+
+  protected val queryPluginConfig: QueryPluginConfig =
+    QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
 
   implicit val mat    = ActorMaterializer()
   implicit val ec     = system.dispatcher
-  val readJournalDao  = new ReadJournalDaoImpl(asyncClient, syncClient, serialization, persistencePluginConfig)(ec)
-  val writeJournalDao = new WriteJournalDaoImpl(asyncClient, serialization, persistencePluginConfig)(ec, mat)
+  val readJournalDao  = new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig)(ec)
+  val writeJournalDao = new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig)(ec, mat)
 
   val sch = Scheduler(ec)
 

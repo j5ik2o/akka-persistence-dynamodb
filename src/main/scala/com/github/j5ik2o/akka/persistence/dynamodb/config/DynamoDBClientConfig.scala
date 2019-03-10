@@ -5,31 +5,6 @@ import com.typesafe.config.Config
 
 import scala.concurrent.duration._
 
-object PersistencePluginConfig {
-
-  def fromConfig(rootConfig: Config): PersistencePluginConfig = {
-    val config = rootConfig.asConfig("akka-persistence-dynamodb")
-    PersistencePluginConfig(
-      journalTableName = config.asString("journal-table-name", "Journal"),
-      tagSeparator = config.asString("tag-separator", ","),
-      bufferSize = config.asInt("buffer-size", Int.MaxValue),
-      batchSize = config.asInt("batch-size", 16),
-      parallelism = config.asInt("parallelism", 32),
-      refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
-    )
-  }
-
-}
-
-case class PersistencePluginConfig(journalTableName: String,
-                                   tagSeparator: String,
-                                   bufferSize: Int,
-                                   batchSize: Int,
-                                   parallelism: Int,
-                                   refreshInterval: FiniteDuration,
-                                   clientConfig: DynamoDBClientConfig)
-
 object DynamoDBClientConfig {
 
   def fromConfig(rootConfig: Config): DynamoDBClientConfig = {
@@ -46,6 +21,7 @@ object DynamoDBClientConfig {
       connectionTimeToLive = rootConfig.asFiniteDuration("connection-time-to-live"),
       maxIdleConnectionTimeout = rootConfig.asFiniteDuration("max-idle-connection-timeout"),
       useConnectionReaper = rootConfig.asBoolean("use-connection-reaper"),
+      threadsOfEventLoopGroup = rootConfig.asInt("threads-of-event-loop-group"),
       userHttp2 = rootConfig.asBoolean("user-http2"),
       maxHttp2Streams = rootConfig.asInt("max-http2-streams")
     )
@@ -66,5 +42,6 @@ case class DynamoDBClientConfig(accessKeyId: Option[String],
                                 connectionTimeToLive: Option[FiniteDuration] = None,
                                 maxIdleConnectionTimeout: Option[FiniteDuration] = None,
                                 useConnectionReaper: Option[Boolean] = None,
+                                threadsOfEventLoopGroup: Option[Int] = None,
                                 userHttp2: Option[Boolean] = None,
                                 maxHttp2Streams: Option[Int] = None)

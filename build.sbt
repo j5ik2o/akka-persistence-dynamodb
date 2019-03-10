@@ -9,7 +9,7 @@ val reactiveAwsDynamoDB = "1.0.2"
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
   Resolver.sonatypeRepo("releases"),
-  "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
+  "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
 )
 
 libraryDependencies ++= Seq(

@@ -1,6 +1,6 @@
 # akka-persistence-dynamodb
 
-This plugin is not derived from [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb].
+This plugin is not derived from [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
 
 There are the following reasons.
 

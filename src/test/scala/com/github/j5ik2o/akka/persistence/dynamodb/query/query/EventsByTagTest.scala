@@ -67,7 +67,7 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
         tp.expectNextPF { case EventEnvelope(Sequence(1), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(2), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
@@ -75,32 +75,32 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
         tp.request(Int.MaxValue)
         tp.expectNextPF { case EventEnvelope(Sequence(2), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(2)) { tp =>
         tp.request(Int.MaxValue)
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(3)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(4)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(4)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
 
         // new event
         actor1 ! withTags(4, "number3")
@@ -109,10 +109,6 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
     }
   }
 }
-
-//class LevelDbEventsByTagTest extends EventsByTagTest("leveldb.conf")
-//
-//class InMemoryEventsByTagTest extends EventsByTagTest("inmemory.conf")
 
 class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with DynamoDBSpecSupport {
 
@@ -141,7 +137,3 @@ class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with Dynam
   after { deleteTable }
 
 }
-
-//class JdbcEventsByTagTest2 extends EventsByTagTest2("jdbc.conf")
-//
-//class CassandraEventsByTagTest2 extends EventsByTagTest2("cassandra.conf")

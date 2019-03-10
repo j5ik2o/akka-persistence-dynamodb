@@ -35,7 +35,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object DynamoDBJournal {
 
@@ -78,17 +78,21 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(messages)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
-      row          <- serializeTry.getOrElse(Seq.empty)
+      row          <- serializeTry.right.getOrElse(Seq.empty)
     } yield row
     def resultWhenWriteComplete: Seq[Either[Throwable, Unit]] =
       if (serializedTries.forall(_.isRight)) Nil
       else
         serializedTries
-          .map(_.map(_ => ()))
+          .map(_.right.map(_ => ()))
     val future =
       journalDao
         .putMessages(rowsToWrite).runWith(Sink.head).map(
-          _ => resultWhenWriteComplete.map(_.toTry).to
+          _ =>
+            resultWhenWriteComplete.map {
+              case Right(value) => Success(value)
+              case Left(ex)     => Failure(ex)
+            }.to
         )
     val persistenceId = messages.head.persistenceId
     writeInProgress.put(persistenceId, future)

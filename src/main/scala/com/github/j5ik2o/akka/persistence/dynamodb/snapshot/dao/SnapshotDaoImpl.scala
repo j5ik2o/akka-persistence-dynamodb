@@ -104,7 +104,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           Map(
             ":pid" -> AttributeValue().withString(Some(persistenceId)),
             ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString)),
+            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString))
           )
         )
       )
@@ -123,7 +123,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           Map(
             ":pid" -> AttributeValue().withString(Some(persistenceId)),
             ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(maxSequenceNr.toString)),
+            ":max" -> AttributeValue().withNumber(Some(maxSequenceNr.toString))
           )
         )
       )
@@ -190,7 +190,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           Map(
             ":pid" -> AttributeValue().withString(Some(persistenceId)),
             ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString)),
+            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString))
           )
         )
       )
@@ -342,7 +342,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                 Columns.PersistenceIdColumnName -> AttributeValue().withString(Some(snapshotRow.persistenceId)),
                 Columns.SequenceNrColumnName    -> AttributeValue().withNumber(Some(snapshotRow.sequenceNumber.toString)),
                 Columns.SnapshotColumnName      -> AttributeValue().withBinary(Some(snapshotRow.snapshot)),
-                Columns.CreatedColumnName       -> AttributeValue().withNumber(Some(snapshotRow.created.toString)),
+                Columns.CreatedColumnName       -> AttributeValue().withNumber(Some(snapshotRow.created.toString))
               )
             )
           )

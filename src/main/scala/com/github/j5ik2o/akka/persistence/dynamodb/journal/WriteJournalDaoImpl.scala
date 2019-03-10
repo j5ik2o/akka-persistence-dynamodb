@@ -157,7 +157,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               ),
             DeletedColumnName -> AttributeValueUpdate()
               .withAction(Some(AttributeAction.PUT)).withValue(
-                Some(AttributeValue().withBool(Some(journalRow.deleted))),
+                Some(AttributeValue().withBool(Some(journalRow.deleted)))
               )
           ) ++ journalRow.tags
             .map { t =>
@@ -274,7 +274,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeNames(
         Some(
           Map(
-            "#pid" -> PersistenceIdColumnName,
+            "#pid" -> PersistenceIdColumnName
           ) ++ deleted
             .map { _ =>
               Map("#d" -> DeletedColumnName)
@@ -289,7 +289,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeValues(
         Some(
           Map(
-            ":id" -> AttributeValue().withString(Some(persistenceId)),
+            ":id" -> AttributeValue().withString(Some(persistenceId))
           ) ++ deleted
             .map { d =>
               Map(

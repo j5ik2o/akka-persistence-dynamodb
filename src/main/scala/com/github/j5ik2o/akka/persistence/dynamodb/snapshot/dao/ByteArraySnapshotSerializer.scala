@@ -20,6 +20,8 @@ import akka.persistence.SnapshotMetadata
 import akka.persistence.serialization.Snapshot
 import akka.serialization.Serialization
 
+import scala.util.{ Failure, Success }
+
 trait SnapshotSerializer[T] {
   def serialize(metadata: SnapshotMetadata, snapshot: Any): Either[Throwable, T]
 
@@ -33,7 +35,10 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
   ): Either[Throwable, SnapshotRow] = {
     serialization
       .serialize(Snapshot(snapshot))
-      .map(SnapshotRow(metadata.persistenceId, metadata.sequenceNr, metadata.timestamp, _)).toEither
+      .map(SnapshotRow(metadata.persistenceId, metadata.sequenceNr, metadata.timestamp, _)) match {
+      case Success(value) => Right(value)
+      case Failure(ex)    => Left(ex)
+    }
   }
 
   override def deserialize(snapshotRow: SnapshotRow): Either[Throwable, (SnapshotMetadata, Any)] = {
@@ -43,6 +48,9 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
         val snapshotMetadata =
           SnapshotMetadata(snapshotRow.persistenceId, snapshotRow.sequenceNumber, snapshotRow.created)
         (snapshotMetadata, snapshot.data)
-      }).toEither
+      }) match {
+      case Success(value) => Right(value)
+      case Failure(ex)    => Left(ex)
+    }
   }
 }

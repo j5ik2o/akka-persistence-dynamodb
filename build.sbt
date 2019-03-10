@@ -1,10 +1,34 @@
-name := "akka-persistence-dynamodb"
-
-scalaVersion := "2.12.8"
-crossScalaVersions := Seq("2.11.12", "2.12.8")
-
+val scala211Version = "2.11.12"
+val scala212Version = "2.12.8"
 val akkaVersion = "2.5.19"
 val reactiveAwsDynamoDB = "1.0.2"
+
+name := "akka-persistence-dynamodb"
+
+scalaVersion := scala211Version
+
+crossScalaVersions := Seq(scala211Version, scala212Version)
+
+def crossScalacOptions(scalaVersion: String) = CrossVersion.partialVersion(scalaVersion) match {
+  case Some((2L, scalaMajor)) if scalaMajor == 12 =>
+    Seq.empty
+  case Some((2L, scalaMajor)) if scalaMajor <= 11 =>
+    Seq(
+      "-Yinline-warnings"
+    )
+}
+
+scalacOptions ++= (Seq(
+    "-feature",
+    "-deprecation",
+    "-unchecked",
+    "-encoding",
+    "UTF-8",
+    "-language:_",
+    "-Ydelambdafy:method",
+    "-target:jvm-1.8"
+  ) ++ crossScalacOptions(scalaVersion.value))
+
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),

@@ -23,6 +23,8 @@ import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 
+import scala.util.{ Failure, Success }
+
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
     extends FlowPersistentReprSerializer[JournalRow] {
   private val counter = new AtomicLong()
@@ -36,14 +38,19 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
                    persistentRepr.deleted,
                    _,
                    counter.incrementAndGet(),
-                   encodeTags(tags, separator),
-        )
-      ).toEither
+                   encodeTags(tags, separator))
+      ) match {
+      case Success(value) => Right(value)
+      case Failure(ex)    => Left(ex)
+    }
   }
 
   override def deserialize(journalRow: JournalRow): Either[Throwable, (PersistentRepr, Set[String], Long)] = {
     serialization
       .deserialize(journalRow.message, classOf[PersistentRepr])
-      .map((_, decodeTags(journalRow.tags, separator), journalRow.ordering)).toEither
+      .map((_, decodeTags(journalRow.tags, separator), journalRow.ordering)) match {
+      case Success(value) => Right(value)
+      case Failure(ex)    => Left(ex)
+    }
   }
 }

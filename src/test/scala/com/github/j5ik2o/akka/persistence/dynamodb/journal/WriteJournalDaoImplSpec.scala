@@ -7,19 +7,23 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{JournalPluginConfig, QueryPluginConfig}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport, DynamoDBSyncClientV2}
+import com.github.j5ik2o.reactive.aws.dynamodb.{
+  DynamoDBAsyncClientV2,
+  DynamoDBEmbeddedSpecSupport,
+  DynamoDBSyncClientV2
+}
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FreeSpecLike, Matchers}
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import org.scalatest.{ FreeSpecLike, Matchers }
+import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{DynamoDbAsyncClient, DynamoDbClient}
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
 
 import scala.concurrent.duration._
 
@@ -48,8 +52,6 @@ class WriteJournalDaoImplSpec
     )
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
-
-  ApacheHttpClient.builder().maxConnections(1).build()
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

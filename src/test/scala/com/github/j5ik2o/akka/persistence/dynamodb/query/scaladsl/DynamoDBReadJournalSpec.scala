@@ -31,7 +31,7 @@ import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ ByteArrayJournalSerializer, WriteJournalDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestActor
+import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.query.query.DynamoDBSpecSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
@@ -143,7 +143,7 @@ class DynamoDBReadJournalSpec
 //    }
     "currentEventsByPersistenceId" in {
       implicit val to = Timeout(10 seconds)
-      val pActor      = system.actorOf(Props(new TestActor(1)))
+      val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
       (pActor ? 1).futureValue
       (pActor ? 2).futureValue
       (pActor ? 3).futureValue
@@ -158,7 +158,7 @@ class DynamoDBReadJournalSpec
     "withPersistenceIds" in withPersistenceIds() { tp =>
       tp.request(Int.MaxValue)
       implicit val to = Timeout(10 seconds)
-      val pActor      = system.actorOf(Props(new TestActor(1)))
+      val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
       (pActor ? 1).futureValue
       (pActor ? 2).futureValue
       (pActor ? 3).futureValue

@@ -22,12 +22,12 @@ import akka.event.LoggingReceive
 import akka.persistence._
 import akka.persistence.journal.Tagged
 
-object TestActor {
+object PersistenceTestActor {
   final case class DeleteCmd(toSequenceNr: Long = Long.MaxValue) extends Serializable
 }
 
-class TestActor(id: Int) extends PersistentActor with ActorLogging {
-  import TestActor._
+class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
+  import PersistenceTestActor._
   val pluginName                     = context.system.settings.config.getString("akka.persistence.journal.plugin")
   override def persistenceId: String = "my-" + id
   val label                          = s"$persistenceId - $pluginName"

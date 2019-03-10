@@ -41,7 +41,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
-abstract class TestSpec(config: String)
+abstract class QueryJournalSpec(config: String)
     extends FlatSpec
     with Matchers
     with ScalaFutures
@@ -85,17 +85,17 @@ abstract class TestSpec(config: String)
   }
 
   def setupEmpty(persistenceId: Int): ActorRef = {
-    system.actorOf(Props(new TestActor(persistenceId)))
+    system.actorOf(Props(new PersistenceTestActor(persistenceId)))
   }
 
   def deleteEvents(actor: ActorRef, toSequenceNr: Long): Future[Unit] = {
     import akka.pattern.ask
-    actor.ask(TestActor.DeleteCmd(toSequenceNr)).map(_ => ())
+    actor.ask(PersistenceTestActor.DeleteCmd(toSequenceNr)).map(_ => ())
   }
 
   def clearEventStore(actors: ActorRef*): Future[Unit] = {
     import akka.pattern.ask
-    Future.sequence(actors.map(_.ask(TestActor.DeleteCmd()))).map(_ => ())
+    Future.sequence(actors.map(_.ask(PersistenceTestActor.DeleteCmd()))).map(_ => ())
   }
 
   def withTestActors()(f: (ActorRef, ActorRef, ActorRef) => Unit): Unit = {
@@ -220,4 +220,3 @@ abstract class TestSpec(config: String)
   }
 
 }
-

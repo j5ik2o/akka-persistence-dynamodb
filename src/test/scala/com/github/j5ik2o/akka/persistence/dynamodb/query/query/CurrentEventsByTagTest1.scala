@@ -19,7 +19,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
 import java.net.URI
 
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -27,7 +27,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTest1(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByTagTest1(config: String) extends QueryJournalSpec(config) {
 
   it should "not find an event by tag for unknown tag" in {
     withTestActors() { (actor1, actor2, actor3) =>

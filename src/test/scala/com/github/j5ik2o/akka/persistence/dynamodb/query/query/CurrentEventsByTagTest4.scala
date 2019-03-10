@@ -21,7 +21,7 @@ import java.net.URI
 
 import akka.pattern.ask
 import akka.persistence.query.{ EventEnvelope, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTest4(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByTagTest4(config: String) extends QueryJournalSpec(config) {
 
   it should "persist and find a tagged event with one tag" in
   withTestActors() { (actor1, actor2, actor3) =>

@@ -21,7 +21,7 @@ import java.net.URI
 
 import akka.pattern.ask
 import akka.persistence.query.{ EventEnvelope, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -30,7 +30,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-abstract class CurrentPersistenceIds1Test(config: String) extends TestSpec(config) {
+abstract class CurrentPersistenceIds1Test(config: String) extends QueryJournalSpec(config) {
 
   it should "not find any events for unknown pid" in
   withCurrentEventsByPersistenceId()("unkown-pid", 0L, Long.MaxValue) { tp =>

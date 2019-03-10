@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
 import java.net.URI
 
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -26,7 +27,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTest1(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByTagTest1(config: String) extends QueryJournalSpec(config) {
 
   it should "not find an event by tag for unknown tag" in {
     withTestActors() { (actor1, actor2, actor3) =>
@@ -44,9 +45,9 @@ abstract class CurrentEventsByTagTest1(config: String) extends TestSpec(config) 
   }
 }
 
-class LevelDbCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("leveldb.conf")
-
-class InMemoryCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("inmemory.conf")
+//class LevelDbCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("leveldb.conf")
+//
+//class InMemoryCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("inmemory.conf")
 
 class DynamoDBCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("default.conf") with DynamoDBSpecSupport {
 

@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +20,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
-abstract class CurrentEventsByPersistenceId1Test(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJournalSpec(config) {
 
   it should "not find any events for unknown pid" in
   withCurrentEventsByPersistenceId()("unkown-pid", 0L, Long.MaxValue) { tp =>
@@ -93,9 +94,9 @@ abstract class CurrentEventsByPersistenceId1Test(config: String) extends TestSpe
   }
 }
 
-class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
-
-class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
+//class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
+//
+//class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
 
 class DynamoDBCurrentEventsByPersistenceId1Test
     extends CurrentEventsByPersistenceId1Test("default.conf")

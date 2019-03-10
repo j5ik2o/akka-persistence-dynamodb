@@ -14,14 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.j5ik2o.akka.persistence.dynamodb.journal
+package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-
-trait WriteJournalDaoWithUpdates extends WriteJournalDao {
-
-  def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed]
-
-}
+case class SnapshotRow(persistenceId: String, sequenceNumber: Long, created: Long, snapshot: Array[Byte])

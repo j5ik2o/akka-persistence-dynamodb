@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +21,7 @@ import java.net.URI
 
 import akka.pattern.ask
 import akka.persistence.query.{ EventEnvelope, NoOffset, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -28,7 +29,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTest5(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByTagTest5(config: String) extends QueryJournalSpec(config) {
 
   it should "persist and find a tagged event with multiple tags" in
   withTestActors() { (actor1, actor2, actor3) =>
@@ -164,9 +165,9 @@ abstract class CurrentEventsByTagTest5(config: String) extends TestSpec(config) 
   }
 }
 
-class LevelDbCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("leveldb.conf")
-
-class InMemoryCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("inmemory.conf")
+//class LevelDbCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("leveldb.conf")
+//
+//class InMemoryCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("inmemory.conf")
 
 class DynamoDBCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("default.conf") with DynamoDBSpecSupport {
 

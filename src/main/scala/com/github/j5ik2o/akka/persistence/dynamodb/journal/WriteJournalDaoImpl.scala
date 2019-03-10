@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.NotUsed
@@ -5,8 +21,7 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -20,7 +35,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                           serialization: Serialization,
-                          persistencePluginConfig: PersistencePluginConfig)(
+                          persistencePluginConfig: JournalPluginConfig)(
     implicit ec: ExecutionContext,
     mat: Materializer
 ) extends WriteJournalDaoWithUpdates {
@@ -31,21 +46,17 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val tableName: String    = persistencePluginConfig.tableName
-  private val tagSeparator: String = persistencePluginConfig.tagSeparator
-  private val bufferSize: Int      = persistencePluginConfig.bufferSize
-  private val batchSize: Int       = persistencePluginConfig.batchSize
-  private val parallelism: Int     = persistencePluginConfig.parallelism
+  private val tableName: String = persistencePluginConfig.tableName
+  private val bufferSize: Int   = persistencePluginConfig.bufferSize
+  private val batchSize: Int    = persistencePluginConfig.batchSize
+  private val parallelism: Int  = persistencePluginConfig.parallelism
 
   private val taskClient: DynamoDBTaskClientV2   = DynamoDBTaskClientV2(asyncClient)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
-  private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, persistencePluginConfig.tagSeparator)
-
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Info)
+                                               onFinish = Attributes.LogLevels.Debug)
   private val putQueue = Source
     .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
     .flatMapConcat {
@@ -146,7 +157,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               ),
             DeletedColumnName -> AttributeValueUpdate()
               .withAction(Some(AttributeAction.PUT)).withValue(
-                Some(AttributeValue().withBool(Some(journalRow.deleted))),
+                Some(AttributeValue().withBool(Some(journalRow.deleted)))
               )
           ) ++ journalRow.tags
             .map { t =>
@@ -263,7 +274,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeNames(
         Some(
           Map(
-            "#pid" -> PersistenceIdColumnName,
+            "#pid" -> PersistenceIdColumnName
           ) ++ deleted
             .map { _ =>
               Map("#d" -> DeletedColumnName)
@@ -278,7 +289,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeValues(
         Some(
           Map(
-            ":id" -> AttributeValue().withString(Some(persistenceId)),
+            ":id" -> AttributeValue().withString(Some(persistenceId))
           ) ++ deleted
             .map { d =>
               Map(
@@ -374,9 +385,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { xs =>
-      logger.info(s"deleteJournalRows.size: ${xs.size}")
-      logger.info(s"deleteJournalRows: $xs")
-      xs.map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.info)
+      logger.debug(s"deleteJournalRows.size: ${xs.size}")
+      logger.debug(s"deleteJournalRows: $xs")
+      xs.map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
       def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
         Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
           if (requestItems.isEmpty)
@@ -416,9 +427,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
 
   private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat { xs =>
-    logger.info(s"putJournalRows.size: ${xs.size}")
-    logger.info(s"putJournalRows: $xs")
-    xs.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.info)
+    logger.debug(s"putJournalRows.size: ${xs.size}")
+    logger.debug(s"putJournalRows: $xs")
+    xs.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
     def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
       Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
         if (requestItems.isEmpty)

@@ -1,5 +1,4 @@
 /*
- * Copyright 2017 Dennis Vriend
  * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.j5ik2o.akka.persistence.dynamodb.journal
+package com.github.j5ik2o.akka.persistence.dynamodb.config
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
+import scala.concurrent.duration.FiniteDuration
 
-trait WriteJournalDaoWithUpdates extends WriteJournalDao {
-
-  def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed]
-
+trait PluginConfig {
+  val tableName: String
+  val tagSeparator: String
+  val bufferSize: Int
+  val batchSize: Int
+  val parallelism: Int
+  val refreshInterval: FiniteDuration
+  val clientConfig: DynamoDBClientConfig
 }

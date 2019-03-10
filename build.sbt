@@ -1,15 +1,39 @@
+val scala211Version = "2.11.12"
+val scala212Version = "2.12.8"
+val akkaVersion = "2.5.19"
+val reactiveAwsDynamoDB = "1.0.5-SNAPSHOT"
+
 name := "akka-persistence-dynamodb"
 
-scalaVersion := "2.12.8"
-crossScalaVersions := Seq("2.11.12", "2.12.8")
+scalaVersion := scala212Version
 
-val akkaVersion = "2.5.19"
-val reactiveAwsDynamoDB = "1.0.2"
+crossScalaVersions := Seq(scala211Version, scala212Version)
+
+def crossScalacOptions(scalaVersion: String) = CrossVersion.partialVersion(scalaVersion) match {
+  case Some((2L, scalaMajor)) if scalaMajor == 12 =>
+    Seq.empty
+  case Some((2L, scalaMajor)) if scalaMajor <= 11 =>
+    Seq(
+      "-Yinline-warnings"
+    )
+}
+
+scalacOptions ++= (Seq(
+    "-feature",
+    "-deprecation",
+    "-unchecked",
+    "-encoding",
+    "UTF-8",
+    "-language:_",
+    "-Ydelambdafy:method",
+    "-target:jvm-1.8"
+  ) ++ crossScalacOptions(scalaVersion.value))
+
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
   Resolver.sonatypeRepo("releases"),
-  "dnvriend" at "http://dl.bintray.com/dnvriend/maven"
+  "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
 )
 
 libraryDependencies ++= Seq(
@@ -23,9 +47,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence-tck" % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
   "ch.qos.logback" % "logback-classic" % "1.2.3" % Test,
-  "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.1" % Test,
-  "org.iq80.leveldb" % "leveldb" % "0.9" % Test,
-  "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8" % Test
+  "org.slf4j" % "jul-to-slf4j" % "1.7.26" % Test
 )
 
 parallelExecution in Test := false

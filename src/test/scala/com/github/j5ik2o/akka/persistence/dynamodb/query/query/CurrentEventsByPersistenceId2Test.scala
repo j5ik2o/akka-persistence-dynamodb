@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +20,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
-abstract class CurrentEventsByPersistenceId2Test(config: String) extends TestSpec(config) {
+abstract class CurrentEventsByPersistenceId2Test(config: String) extends QueryJournalSpec(config) {
 
   it should "find events from an offset" in {
     withTestActors() { (actor1, actor2, actor3) =>
@@ -100,9 +101,9 @@ abstract class CurrentEventsByPersistenceId2Test(config: String) extends TestSpe
   }
 }
 
-class LevelDbCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("leveldb.conf")
-
-class InMemoryCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("inmemory.conf")
+//class LevelDbCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("leveldb.conf")
+//
+//class InMemoryCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("inmemory.conf")
 
 class DynamoDBCurrentEventsByPersistenceId2Test
     extends CurrentEventsByPersistenceId2Test("default.conf")

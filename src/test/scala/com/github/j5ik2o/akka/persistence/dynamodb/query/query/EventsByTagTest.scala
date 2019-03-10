@@ -1,5 +1,6 @@
 /*
  * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +20,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
-import com.github.j5ik2o.akka.persistence.dynamodb.query.TestSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -27,7 +28,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-abstract class EventsByTagTest(config: String) extends TestSpec(config) {
+abstract class EventsByTagTest(config: String) extends QueryJournalSpec(config) {
 
   it should "find events by tag from an offset using Offset interface " in {
     withTestActors() { (actor1, actor2, actor3) =>
@@ -66,7 +67,7 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
         tp.expectNextPF { case EventEnvelope(Sequence(1), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(2), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
@@ -74,32 +75,32 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
         tp.request(Int.MaxValue)
         tp.expectNextPF { case EventEnvelope(Sequence(2), _, _, _) => }
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(2)) { tp =>
         tp.request(Int.MaxValue)
         tp.expectNextPF { case EventEnvelope(Sequence(3), _, _, _) => }
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(3)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(4)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
         tp.cancel()
       }
 
       withEventsByTag()("number3", Sequence(4)) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNoMsg(100.millis)
+        tp.expectNoMessage(100.millis)
 
         // new event
         actor1 ! withTags(4, "number3")
@@ -108,10 +109,6 @@ abstract class EventsByTagTest(config: String) extends TestSpec(config) {
     }
   }
 }
-
-class LevelDbEventsByTagTest extends EventsByTagTest("leveldb.conf")
-
-class InMemoryEventsByTagTest extends EventsByTagTest("inmemory.conf")
 
 class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with DynamoDBSpecSupport {
 
@@ -140,7 +137,3 @@ class DynamoDBEventsByTagTest extends EventsByTagTest("default.conf") with Dynam
   after { deleteTable }
 
 }
-//
-//class JdbcEventsByTagTest2 extends EventsByTagTest2("jdbc.conf")
-//
-//class CassandraEventsByTagTest2 extends EventsByTagTest2("cassandra.conf")

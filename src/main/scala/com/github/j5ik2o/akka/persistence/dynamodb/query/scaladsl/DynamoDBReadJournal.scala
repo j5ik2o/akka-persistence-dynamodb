@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
 import akka.NotUsed
@@ -10,18 +26,18 @@ import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, PersistencePluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.ByteArrayJournalSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils, JournalRow }
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBSyncClientV2 }
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.collection.immutable.Iterable
 import scala.concurrent.duration._
@@ -57,47 +73,43 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val mat: Materializer    = ActorMaterializer()(system)
 
-  protected val persistencePluginConfig: PersistencePluginConfig =
-    PersistencePluginConfig.fromConfig(config)
+  protected val pluginConfig: QueryPluginConfig =
+    QueryPluginConfig.fromConfig(config)
 
-  val journalSequenceRetrievalConfiguration = JournalSequenceRetrievalConfig(config)
+  protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
+    pluginConfig.journalSequenceRetrievalConfig
 
-  private val bufferSize = persistencePluginConfig.bufferSize
+  private val bufferSize = pluginConfig.bufferSize
 
-  private val asyncHttpClientBuilder = HttpClientUtils.asyncBuilder(persistencePluginConfig)
-  private val syncHttpClientBuilder  = HttpClientUtils.syncBuilder(persistencePluginConfig)
+  private val asyncHttpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(persistencePluginConfig, asyncHttpClientBuilder.build())
-  private val dynamoDbSyncClientBuilder =
-    DynamoDbClientBuilderUtils.syncBuilder(persistencePluginConfig, syncHttpClientBuilder.build())
+    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, asyncHttpClientBuilder.build())
 
   protected val javaAsyncClient: DynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
-  protected val javaSyncClient: DynamoDbClient       = dynamoDbSyncClientBuilder.build()
 
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaAsyncClient)
-  protected val syncClient: DynamoDBSyncClientV2   = DynamoDBSyncClientV2(javaSyncClient)
   protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
   private val serialization: Serialization         = SerializationExtension(system)
 
-  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, syncClient, serialization, persistencePluginConfig)
+  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig)
 
   private val writePluginId = config.getString("write-plugin")
   private val eventAdapters = Persistence(system).adaptersFor(writePluginId)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, persistencePluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
   private val delaySource =
-    Source.tick(persistencePluginConfig.refreshInterval, 0.seconds, 0).take(1)
+    Source.tick(pluginConfig.refreshInterval, 0.seconds, 0).take(1)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Info)
+                                               onFinish = Attributes.LogLevels.Debug)
 
-  val refreshInterval = 100 milliseconds
+  private val refreshInterval = pluginConfig.refreshInterval
 
   private lazy val journalSequenceActor = system.systemActorOf(
-    JournalSequenceActor.props(readJournalDao, journalSequenceRetrievalConfiguration),
+    JournalSequenceActor.props(readJournalDao, journalSequenceRetrievalConfig),
     s"$configPath.akka-persistence-dynamodb-journal-sequence-actor"
   )
 
@@ -116,28 +128,32 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
           xs
         }
         id =>
+          logger.debug("knownIds.size = {}", knownIds.size)
           next(id)
-      }.log("persistenceIds::persistenceId").withAttributes(logLevels)
+      }.log("persistenceIds")
+      .withAttributes(logLevels)
 
-  private def adaptEvents(repr: PersistentRepr): Vector[PersistentRepr] = {
-    val adapter = eventAdapters.get(repr.payload.getClass)
-    adapter.fromJournal(repr.payload, repr.manifest).events.map(repr.withPayload).toVector
+  private def adaptEvents(persistentRepr: PersistentRepr): Vector[PersistentRepr] = {
+    val adapter = eventAdapters.get(persistentRepr.payload.getClass)
+    adapter.fromJournal(persistentRepr.payload, persistentRepr.manifest).events.map(persistentRepr.withPayload).toVector
   }
 
   private def currentJournalEventsByPersistenceId(persistenceId: String,
                                                   fromSequenceNr: Long,
                                                   toSequenceNr: Long): Source[PersistentRepr, NotUsed] =
     readJournalDao
-      .getMessages(persistenceId, fromSequenceNr, toSequenceNr, Long.MaxValue).log("messages")
-      .via(serializer.deserializeFlowWithoutTags).withAttributes(logLevels)
+      .getMessages(persistenceId, fromSequenceNr, toSequenceNr, Long.MaxValue)
+      .via(serializer.deserializeFlowWithoutTags)
+      .log("currentJournalEventsByPersistenceId")
+      .withAttributes(logLevels)
 
   override def currentEventsByPersistenceId(persistenceId: String,
                                             fromSequenceNr: Long,
                                             toSequenceNr: Long): Source[EventEnvelope, NotUsed] =
     currentJournalEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr)
-      .log("PersistentRepr")
-      .mapConcat(adaptEvents).log("adaptEvents")
+      .mapConcat(adaptEvents)
       .map(repr => EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload))
+      .log("currentEventsByPersistenceId")
       .withAttributes(logLevels)
 
   override def eventsByPersistenceId(persistenceId: String,
@@ -184,11 +200,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   private def eventsByTag(tag: String,
                           offset: Long,
                           terminateAfterOffset: Option[Long]): Source[EventEnvelope, NotUsed] = {
-
     import DynamoDBReadJournal._
-    implicit val askTimeout: Timeout = Timeout(journalSequenceRetrievalConfiguration.askTimeout)
-    val batchSize                    = persistencePluginConfig.bufferSize
-
+    implicit val askTimeout: Timeout = Timeout(journalSequenceRetrievalConfig.askTimeout)
+    val batchSize                    = pluginConfig.bufferSize
     Source
       .unfoldAsync[(Long, FlowControl), Seq[EventEnvelope]]((offset, Continue)) {
         case (from, control) =>
@@ -245,8 +259,8 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   }
 
   def currentEventsByTag(tag: String, offset: Long): Source[EventEnvelope, NotUsed] =
-    Source
-      .fromFuture(readJournalDao.maxJournalSequence())
+    readJournalDao
+      .maxJournalSequence()
       .flatMapConcat { maxOrderingInDb =>
         eventsByTag(tag, offset, terminateAfterOffset = Some(maxOrderingInDb))
       }

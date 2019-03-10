@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Dennis Vriend
+ * Copyright 2019 Junichi Kato
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import java.util.concurrent.atomic.AtomicLong
@@ -6,23 +22,20 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
 import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PersistencePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.ByteArrayJournalSerializer
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBSyncClientV2 }
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 
 class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
-                         syncClient: DynamoDBSyncClientV2,
                          serialization: Serialization,
-                         dynamoDBConfig: PersistencePluginConfig)(implicit ec: ExecutionContext)
+                         dynamoDBConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
     extends ReadJournalDao {
 
   type State = Option[Map[String, AttributeValue]]
@@ -32,9 +45,9 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   private val batchSize: Int    = dynamoDBConfig.batchSize
   private val parallelism: Int  = dynamoDBConfig.parallelism
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Info)
+                                               onFinish = Attributes.LogLevels.Debug)
 
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
@@ -49,7 +62,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   }
 
   override def allPersistenceIdsSource(max: Long): Source[String, NotUsed] = {
-    logger.info("allPersistenceIdsSource: max = {}", max)
+    logger.debug("allPersistenceIdsSource: max = {}", max)
     Source
       .unfoldAsync[Option[State], Elm](None) {
         case None =>
@@ -184,7 +197,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   }
 
-  private def convertToJournalRow(map: Map[String, AttributeValue]) = {
+  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
     JournalRow(
       persistenceId = map(PersistenceIdColumnName).string.get,
       sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
@@ -215,28 +228,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withAttributes(logLevels)
   }
 
-  override def maxJournalSequence(): Future[Long] = {
-    Future.successful(Long.MaxValue)
-//    val queryRequest =
-//      QueryRequest()
-//        .withTableName(Some(tableName)).withKeyConditions(Some(Map("" -> Condition().withComparisonOperator(Some(ConditionalOperator.))))).withExpressionAttributeNames(
-//          Some(Map("#pid" -> Columns.PersistenceIdColumnName))
-//        )
-//        .withScanIndexForward(
-//          Some(false)
-//        ).withLimit(
-//          Some(1)
-//        )
-//    streamClient.underlying
-//      .query(queryRequest).flatMap { result =>
-//        if (result.isSuccessful)
-//          Future.successful(
-//            result.items
-//              .getOrElse(Seq.empty).map(_(Columns.OrderingColumnName).number.get.toLong).headOption.getOrElse(0L)
-//          )
-//        else
-//          Future.failed(new Exception())
-//      }
-  }
+  override def maxJournalSequence(): Source[Long, NotUsed] =
+    Source.single(Long.MaxValue)
 
 }

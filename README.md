@@ -11,7 +11,7 @@ There are the following reasons.
 
 Apache License
 
-Dennis Vriend's license is included in the product code and test code.
+This product was made by duplicating or referring to the code of the following products, so Dennis Vriend's license is included in the product code and test code.
 
 - [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
 - [dnvriend/akka-persistence-query-test](https://github.com/dnvriend/akka-persistence-query-test)

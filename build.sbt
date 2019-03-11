@@ -51,3 +51,44 @@ libraryDependencies ++= Seq(
 )
 
 parallelExecution in Test := false
+
+publishMavenStyle := true
+
+publishArtifact in Test := false
+
+pomIncludeRepository := { _ =>
+  false
+}
+
+pomExtra := {
+  <url>https://github.com/j5ik2o/akka-persistence-dynamodb</url>
+    <licenses>
+      <license>
+        <name>Apache 2</name>
+        <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+    <scm>
+      <url>git@github.com:j5ik2o/akka-persistence-dynamod.git</url>
+      <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamod</connection>
+      <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamod.git</developerConnection>
+    </scm>
+    <developers>
+      <developer>
+        <id>j5ik2o</id>
+        <name>Junichi Kato</name>
+      </developer>
+    </developers>
+}
+
+publishTo in ThisBuild := sonatypePublishTo.value
+
+credentials := {
+  val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
+  Credentials(ivyCredentials) :: Nil
+}
+
+scalafmtOnCompile in ThisBuild := true
+
+scalafmtTestOnCompile in ThisBuild := true

@@ -18,7 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 
 trait ReadJournalDao {
 

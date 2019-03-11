@@ -6,7 +6,6 @@ import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
-import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
@@ -52,6 +51,8 @@ class WriteJournalDaoImplSpec
     )
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
+
+  import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

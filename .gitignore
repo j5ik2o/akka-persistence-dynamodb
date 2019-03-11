@@ -25,8 +25,4 @@ node_modules/
 dump.rdb
 
 .DS_Store
-
-credential.yml
-fly
-.vagrant/
-deployment/*/Chart.yaml
+.credentials

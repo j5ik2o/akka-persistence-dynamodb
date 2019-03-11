@@ -25,6 +25,7 @@ object JournalPluginConfig {
   def fromConfig(config: Config): JournalPluginConfig = {
     JournalPluginConfig(
       tableName = config.asString("table-name", "Journal"),
+      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       batchSize = config.asInt("batch-size", 16),
@@ -37,6 +38,7 @@ object JournalPluginConfig {
 }
 
 case class JournalPluginConfig(tableName: String,
+                               columnsDefConfig: JournalColumnsDefConfig,
                                tagSeparator: String,
                                bufferSize: Int,
                                batchSize: Int,

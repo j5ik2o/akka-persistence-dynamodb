@@ -22,9 +22,8 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
+import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.{ Columns, JournalRow }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -35,15 +34,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                          serialization: Serialization,
-                         dynamoDBConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
+                         pluginConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
     extends ReadJournalDao {
-
-  type State = Option[Map[String, AttributeValue]]
-  type Elm   = Seq[Map[String, AttributeValue]]
-  private val logger            = LoggerFactory.getLogger(getClass)
-  private val tableName: String = dynamoDBConfig.tableName
-  private val batchSize: Int    = dynamoDBConfig.batchSize
-  private val parallelism: Int  = dynamoDBConfig.parallelism
+  import pluginConfig._
+  private val logger = LoggerFactory.getLogger(getClass)
 
   private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                                                onFailure = Attributes.LogLevels.Error,
@@ -63,6 +57,8 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   override def allPersistenceIdsSource(max: Long): Source[String, NotUsed] = {
     logger.debug("allPersistenceIdsSource: max = {}", max)
+    type State = Option[Map[String, AttributeValue]]
+    type Elm   = Seq[Map[String, AttributeValue]]
     Source
       .unfoldAsync[Option[State], Elm](None) {
         case None =>
@@ -83,10 +79,10 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)
       .filterNot { v =>
-        v(Columns.DeletedColumnName).bool.get
+        v(columnsDefConfig.deletedColumnName).bool.get
       }
       .map { map =>
-        map(Columns.PersistenceIdColumnName).string.get
+        map(columnsDefConfig.persistenceIdColumnName).string.get
       }
       .fold(Set.empty[String]) { case (r, e) => r + e }
       .mapConcat(_.toVector)
@@ -101,7 +97,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("contains(#tags, :tag)"))
       .withExpressionAttributeNames(
         Some(
-          Map("#tags" -> Columns.TagsColumnName)
+          Map("#tags" -> columnsDefConfig.tagsColumnName)
         )
       )
       .withExpressionAttributeValues(
@@ -155,8 +151,10 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                   .withKeys(
                     Some(
                       seqNos.map { seqNr =>
-                        Map(PersistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
-                            SequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString)))
+                        Map(
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
+                          columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString))
+                        )
                       }
                     )
                   )
@@ -187,12 +185,12 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
     JournalRow(
-      persistenceId = map(PersistenceIdColumnName).string.get,
-      sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
-      deleted = map(DeletedColumnName).bool.get,
-      message = map.get(MessageColumnName).flatMap(_.binary).get,
-      ordering = map(OrderingColumnName).number.get.toLong,
-      tags = map.get(TagsColumnName).flatMap(_.string)
+      persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
+      sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
+      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
+      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
     )
   }
 
@@ -201,7 +199,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .single(QueryRequest().withTableName(Some(tableName)))
       .via(streamClient.queryFlow(parallelism))
       .map { result =>
-        result.items.get.map(_(Columns.OrderingColumnName).number.get.toLong)
+        result.items.get.map(_(columnsDefConfig.orderingColumnName).number.get.toLong)
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)

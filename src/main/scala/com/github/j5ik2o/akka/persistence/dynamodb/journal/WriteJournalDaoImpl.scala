@@ -35,21 +35,18 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                           serialization: Serialization,
-                          persistencePluginConfig: JournalPluginConfig)(
+                          pluginConfig: JournalPluginConfig)(
     implicit ec: ExecutionContext,
     mat: Materializer
 ) extends WriteJournalDaoWithUpdates {
+
+  import pluginConfig._
 
   import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
 
   private val logger = LoggerFactory.getLogger(getClass)
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
-
-  private val tableName: String = persistencePluginConfig.tableName
-  private val bufferSize: Int   = persistencePluginConfig.bufferSize
-  private val batchSize: Int    = persistencePluginConfig.batchSize
-  private val parallelism: Int  = persistencePluginConfig.parallelism
 
   private val taskClient: DynamoDBTaskClientV2   = DynamoDBTaskClientV2(asyncClient)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
@@ -137,8 +134,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKey(
         Some(
           Map(
-            PersistenceIdColumnName -> AttributeValue().withString(Some(journalRow.persistenceId.toString)),
-            SequenceNrColumnName    -> AttributeValue().withNumber(Some(journalRow.sequenceNumber.toString))
+            columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+              .withString(Some(journalRow.persistenceId.toString)),
+            columnsDefConfig.sequenceNrColumnName -> AttributeValue()
+              .withNumber(Some(journalRow.sequenceNumber.toString))
           )
         )
       ).withAttributeUpdates(
@@ -183,7 +182,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           .withKeyConditionExpression(Some("#pid = :pid and #snr <= :snr"))
           .withFilterExpression(Some("#d = :flg"))
           .withExpressionAttributeNames(
-            Some(Map("#pid" -> PersistenceIdColumnName, "#snr" -> SequenceNrColumnName, "#d" -> DeletedColumnName))
+            Some(
+              Map("#pid" -> columnsDefConfig.persistenceIdColumnName,
+                  "#snr" -> columnsDefConfig.sequenceNrColumnName,
+                  "#d"   -> columnsDefConfig.deletedColumnName)
+            )
           )
           .withExpressionAttributeValues(
             Some(
@@ -271,14 +274,14 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeNames(
         Some(
           Map(
-            "#pid" -> PersistenceIdColumnName
+            "#pid" -> columnsDefConfig.persistenceIdColumnName
           ) ++ deleted
             .map { _ =>
-              Map("#d" -> DeletedColumnName)
+              Map("#d" -> columnsDefConfig.deletedColumnName)
             }.getOrElse(Map.empty) ++ fromSequenceNr
             .map { _ =>
               Map(
-                "#snr" -> SequenceNrColumnName
+                "#snr" -> columnsDefConfig.sequenceNrColumnName
               )
             }.getOrElse(Map.empty)
         )
@@ -303,7 +306,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withLimit(Some(1))
     Source
       .single(queryRequest).via(streamClient.queryFlow()).map {
-        _.items.get.map(_(SequenceNrColumnName).number.get.toLong).headOption.getOrElse(0)
+        _.items.get.map(_(columnsDefConfig.sequenceNrColumnName).number.get.toLong).headOption.getOrElse(0)
       }
 
   }
@@ -334,8 +337,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                   .withKeys(
                     Some(
                       seqNos.map { seqNr =>
-                        Map(PersistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
-                            SequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString)))
+                        Map(
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
+                          columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString))
+                        )
                       }
                     )
                   )
@@ -362,12 +367,12 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   private def convertToJournalRows(values: Seq[Map[String, AttributeValue]]): Seq[JournalRow] = {
     values.map { map =>
       JournalRow(
-        persistenceId = map(PersistenceIdColumnName).string.get,
-        sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
-        deleted = map(DeletedColumnName).bool.get,
-        message = map.get(MessageColumnName).flatMap(_.binary).get,
-        ordering = map(OrderingColumnName).number.get.toLong,
-        tags = map.get(TagsColumnName).flatMap(_.string)
+        persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
+        sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+        deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+        message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
+        ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
+        tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
       )
     }
   }
@@ -402,8 +407,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             DeleteRequest().withKey(
               Some(
                 Map(
-                  PersistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
-                  SequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString))
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
+                  columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString))
                 )
               )
             )
@@ -441,14 +446,14 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             .withItem(
               Some(
                 Map(
-                  PersistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
-                  SequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString)),
-                  OrderingColumnName      -> AttributeValue().withNumber(Some(x.ordering.toString)),
-                  DeletedColumnName       -> AttributeValue().withBool(Some(x.deleted)),
-                  MessageColumnName       -> AttributeValue().withBinary(Some(x.message))
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
+                  columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString)),
+                  columnsDefConfig.orderingColumnName      -> AttributeValue().withNumber(Some(x.ordering.toString)),
+                  columnsDefConfig.deletedColumnName       -> AttributeValue().withBool(Some(x.deleted)),
+                  columnsDefConfig.messageColumnName       -> AttributeValue().withBinary(Some(x.message))
                 ) ++ x.tags
                   .map { t =>
-                    Map(TagsColumnName -> AttributeValue().withString(Some(t)))
+                    Map(columnsDefConfig.tagsColumnName -> AttributeValue().withString(Some(t)))
                   }.getOrElse(Map.empty)
               )
             )

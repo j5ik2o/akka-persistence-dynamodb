@@ -26,6 +26,7 @@ object SnapshotPluginConfig {
   def fromConfig(config: Config): SnapshotPluginConfig = {
     SnapshotPluginConfig(
       tableName = config.asString("table-name", "Snapshot"),
+      columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       batchSize = config.asInt("batch-size", 16),
@@ -38,6 +39,7 @@ object SnapshotPluginConfig {
 }
 
 final case class SnapshotPluginConfig(tableName: String,
+                                      columnsDefConfig: SnapshotColumnsDefConfig,
                                       tagSeparator: String,
                                       bufferSize: Int,
                                       batchSize: Int,

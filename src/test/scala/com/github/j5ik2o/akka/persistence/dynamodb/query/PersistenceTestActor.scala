@@ -16,8 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query
 
-import akka.actor.{ ActorLogging, ActorRef }
 import akka.actor.Status.Success
+import akka.actor.{ ActorLogging, ActorRef }
 import akka.event.LoggingReceive
 import akka.persistence._
 import akka.persistence.journal.Tagged

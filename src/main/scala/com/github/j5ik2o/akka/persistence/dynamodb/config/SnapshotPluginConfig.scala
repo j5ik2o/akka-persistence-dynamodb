@@ -15,11 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
-import com.typesafe.config.Config
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import scala.concurrent.duration._
+import com.typesafe.config.Config
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{ FiniteDuration, _ }
 
 object SnapshotPluginConfig {
 

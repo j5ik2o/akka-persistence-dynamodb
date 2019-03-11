@@ -109,6 +109,7 @@ object ConfigOps {
   }
 
   final implicit class Requiring[A](val value: A) extends AnyVal {
+
     @inline def requiring(cond: Boolean, msg: => Any): A = {
       require(cond, msg)
       value

@@ -16,8 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query
 
-import akka.pattern._
 import akka.actor.{ Actor, ActorLogging, Props, Status, Timers }
+import akka.pattern._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalSequenceRetrievalConfig
@@ -27,6 +27,7 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.FiniteDuration
 
 object JournalSequenceActor {
+
   def props(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
       implicit materializer: Materializer
   ): Props = Props(new JournalSequenceActor(readJournalDao, config))
@@ -50,6 +51,7 @@ object JournalSequenceActor {
     * It can be seen as a collection of OrderingIds
     */
   private case class MissingElements(elements: Seq[NumericRange[OrderingId]]) {
+
     def addRange(from: OrderingId, until: OrderingId): MissingElements = {
       val newRange = from.until(until)
       MissingElements(elements :+ newRange)
@@ -73,8 +75,8 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     with ActorLogging
     with Timers {
   import JournalSequenceActor._
-  import context.dispatcher
   import config.{ batchSize, maxBackoffQueryDelay, maxTries, queryDelay }
+  import context.dispatcher
 
   override def receive: Receive = receive(0L, Map.empty, 0)
 

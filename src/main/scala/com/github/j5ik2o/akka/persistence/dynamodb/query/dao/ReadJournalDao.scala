@@ -20,8 +20,6 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 
-import scala.concurrent.Future
-
 trait ReadJournalDao {
 
   /**

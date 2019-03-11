@@ -17,8 +17,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.javadsl
 
 import akka.NotUsed
-import akka.persistence.query.{ EventEnvelope, Offset }
 import akka.persistence.query.javadsl._
+import akka.persistence.query.{ EventEnvelope, Offset }
 import akka.stream.javadsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.{ DynamoDBReadJournal => ScalaDynamoDBReadJournal }
 

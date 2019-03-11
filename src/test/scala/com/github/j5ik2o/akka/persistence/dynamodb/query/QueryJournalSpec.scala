@@ -20,10 +20,6 @@ import java.util.UUID
 
 import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Props }
 import akka.event.{ Logging, LoggingAdapter }
-import akka.testkit.TestKit
-import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
-
-import scala.language.implicitConversions
 import akka.persistence.journal.Tagged
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, PersistenceQuery }
@@ -31,14 +27,16 @@ import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.{ ActorMaterializer, Materializer }
-import akka.testkit.TestProbe
+import akka.testkit.{ TestKit, TestProbe }
 import akka.util.Timeout
+import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.language.implicitConversions
 import scala.util.Try
 
 abstract class QueryJournalSpec(config: String)
@@ -57,8 +55,13 @@ abstract class QueryJournalSpec(config: String)
 
   val identifier: String = DynamoDBReadJournal.Identifier
 
-  val readJournal
-    : ReadJournal with CurrentPersistenceIdsQuery with PersistenceIdsQuery with CurrentEventsByPersistenceIdQuery with EventsByPersistenceIdQuery with CurrentEventsByTagQuery with EventsByTagQuery = {
+  val readJournal: ReadJournal
+    with CurrentPersistenceIdsQuery
+    with PersistenceIdsQuery
+    with CurrentEventsByPersistenceIdQuery
+    with EventsByPersistenceIdQuery
+    with CurrentEventsByTagQuery
+    with EventsByTagQuery = {
     PersistenceQuery(system).readJournalFor(identifier)
   }
 

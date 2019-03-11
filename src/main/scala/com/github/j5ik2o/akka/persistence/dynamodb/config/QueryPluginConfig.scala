@@ -15,9 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import scala.concurrent.duration._
 
 object QueryPluginConfig {

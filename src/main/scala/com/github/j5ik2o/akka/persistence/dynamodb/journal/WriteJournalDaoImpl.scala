@@ -169,10 +169,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         )
       )
     Source.single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { result =>
-      if (result.isSuccessful)
-        ()
-      else
-        throw new Exception()
+      ()
     }
   }
 
@@ -348,10 +345,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
       .via(streamClient.batchGetItemFlow())
       .map { batchGetItemResponse =>
-        if (batchGetItemResponse.isSuccessful)
-          batchGetItemResponse.responses.getOrElse(Map.empty)
-        else
-          throw new Exception
+        batchGetItemResponse.responses.getOrElse(Map.empty)
       }
       .mapConcat { result =>
         (deleted match {
@@ -371,10 +365,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         persistenceId = map(PersistenceIdColumnName).string.get,
         sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
         deleted = map(DeletedColumnName).bool.get,
-        message = {
-          map.get(MessageColumnName).flatMap(_.binary).get
-
-        },
+        message = map.get(MessageColumnName).flatMap(_.binary).get,
         ordering = map(OrderingColumnName).number.get.toLong,
         tags = map.get(TagsColumnName).flatMap(_.string)
       )
@@ -397,15 +388,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               .single(requestItems).map { requests =>
                 BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
               }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
-                if (response.isSuccessful) {
-                  if (response.unprocessedItems.get.nonEmpty) {
-                    val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                    Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
-                  } else
-                    Source.single(requestItems.size)
-                } else {
-                  throw new Exception
-                }
+                if (response.unprocessedItems.get.nonEmpty) {
+                  val n = requestItems.size - response.unprocessedItems.get(tableName).size
+                  Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
+                } else
+                  Source.single(requestItems.size)
               }
           }
         }
@@ -439,15 +426,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             .single(requestItems).map { requests =>
               BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
             }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
-              if (response.isSuccessful) {
-                if (response.unprocessedItems.get.nonEmpty) {
-                  val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                  Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
-                } else
-                  Source.single(requestItems.size)
-              } else {
-                throw new Exception
-              }
+              if (response.unprocessedItems.get.nonEmpty) {
+                val n = requestItems.size - response.unprocessedItems.get(tableName).size
+                Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
+              } else
+                Source.single(requestItems.size)
             }
         }
       }

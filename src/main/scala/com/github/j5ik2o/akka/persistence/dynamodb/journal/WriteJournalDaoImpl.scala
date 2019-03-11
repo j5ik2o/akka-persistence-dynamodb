@@ -42,8 +42,6 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   import pluginConfig._
 
-  import com.github.j5ik2o.akka.persistence.dynamodb.Columns._
-
   private val logger = LoggerFactory.getLogger(getClass)
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
@@ -143,25 +141,25 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       ).withAttributeUpdates(
         Some(
           Map(
-            MessageColumnName -> AttributeValueUpdate()
+            columnsDefConfig.messageColumnName -> AttributeValueUpdate()
               .withAction(Some(AttributeAction.PUT)).withValue(
                 Some(AttributeValue().withBinary(Some(journalRow.message)))
               ),
-            OrderingColumnName ->
+            columnsDefConfig.orderingColumnName ->
             AttributeValueUpdate()
               .withAction(Some(AttributeAction.PUT)).withValue(
                 Some(
                   AttributeValue().withNumber(Some(journalRow.ordering.toString))
                 )
               ),
-            DeletedColumnName -> AttributeValueUpdate()
+            columnsDefConfig.deletedColumnName -> AttributeValueUpdate()
               .withAction(Some(AttributeAction.PUT)).withValue(
                 Some(AttributeValue().withBool(Some(journalRow.deleted)))
               )
           ) ++ journalRow.tags
             .map { t =>
               Map(
-                TagsColumnName -> AttributeValueUpdate()
+                columnsDefConfig.tagsColumnName -> AttributeValueUpdate()
                   .withAction(Some(AttributeAction.PUT)).withValue(Some(AttributeValue().withString(Some(t))))
               )
             }.getOrElse(Map.empty)

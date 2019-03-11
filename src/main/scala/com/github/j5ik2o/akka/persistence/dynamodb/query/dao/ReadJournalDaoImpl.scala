@@ -68,20 +68,14 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         case None =>
           scan(None)
             .map { v =>
-              if (v.isSuccessful)
-                if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
-                else Some(Some(v.lastEvaluatedKey), v.items.get)
-              else
-                throw new Exception
+              if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
+              else Some(Some(v.lastEvaluatedKey), v.items.get)
             }
         case Some(Some(lastKey)) if lastKey.nonEmpty =>
           scan(Some(lastKey))
             .map { v =>
-              if (v.isSuccessful)
-                if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
-                else Some(Some(v.lastEvaluatedKey), v.items.get)
-              else
-                throw new Exception
+              if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
+              else Some(Some(v.lastEvaluatedKey), v.items.get)
             }
         case _ =>
           Future.successful(None)
@@ -119,10 +113,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       )
     Source
       .single(request).via(streamClient.scanFlow(parallelism)).map { response =>
-        if (response.isSuccessful)
-          response.items.getOrElse(Seq.empty)
-        else
-          throw new Exception
+        response.items.getOrElse(Seq.empty)
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)
@@ -175,10 +166,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
       .via(streamClient.batchGetItemFlow(parallelism))
       .map { batchGetItemResponse =>
-        if (batchGetItemResponse.isSuccessful) {
-          batchGetItemResponse.responses.getOrElse(Map.empty)(tableName).toVector
-        } else
-          throw new Exception
+        batchGetItemResponse.responses.getOrElse(Map.empty)(tableName).toVector
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)
@@ -202,10 +190,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       persistenceId = map(PersistenceIdColumnName).string.get,
       sequenceNumber = map(SequenceNrColumnName).number.get.toLong,
       deleted = map(DeletedColumnName).bool.get,
-      message = {
-        map.get(MessageColumnName).flatMap(_.binary).get
-
-      },
+      message = map.get(MessageColumnName).flatMap(_.binary).get,
       ordering = map(OrderingColumnName).number.get.toLong,
       tags = map.get(TagsColumnName).flatMap(_.string)
     )
@@ -216,10 +201,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .single(QueryRequest().withTableName(Some(tableName)))
       .via(streamClient.queryFlow(parallelism))
       .map { result =>
-        if (result.isSuccessful)
-          result.items.get.map(_(Columns.OrderingColumnName).number.get.toLong)
-        else
-          throw new Exception
+        result.items.get.map(_(Columns.OrderingColumnName).number.get.toLong)
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)

@@ -20,16 +20,16 @@ import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.Columns
+import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 
 class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                       serialization: Serialization,
-                      tableName: String,
-                      parallelism: Int,
-                      batchSize: Int)
+                      pluginConfig: SnapshotPluginConfig)
     extends SnapshotDao {
+  import pluginConfig._
 
   private val serializer                         = new ByteArraySnapshotSerializer(serialization)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
@@ -45,8 +45,8 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKey(
         Some(
           Map(
-            Columns.PersistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
-            Columns.SequenceNrColumnName    -> AttributeValue().withNumber(Some(sequenceNr.toString))
+            columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
+            columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(sequenceNr.toString))
           )
         )
       )
@@ -60,10 +60,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }.mapConcat(_.toVector).grouped(batchSize).map { rows =>
         rows.map { row =>
           SnapshotRow(
-            persistenceId = row(Columns.PersistenceIdColumnName).string.get,
-            sequenceNumber = row(Columns.SequenceNrColumnName).number.get.toLong,
-            snapshot = row(Columns.SnapshotColumnName).binary.get,
-            created = row(Columns.CreatedColumnName).number.get.toLong
+            persistenceId = row(columnsDefConfig.persistenceIdColumnName).string.get,
+            sequenceNumber = row(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+            snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
+            created = row(columnsDefConfig.createdColumnName).number.get.toLong
           )
         }
       }.map { rows =>
@@ -77,8 +77,9 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                       .withKey(
                         Some(
                           Map(
-                            Columns.PersistenceIdColumnName -> AttributeValue().withString(Some(row.persistenceId)),
-                            Columns.SequenceNrColumnName -> AttributeValue()
+                            columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+                              .withString(Some(row.persistenceId)),
+                            columnsDefConfig.sequenceNrColumnName -> AttributeValue()
                               .withNumber(Some(row.sequenceNumber.toString))
                           )
                         )
@@ -97,7 +98,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid" -> Columns.PersistenceIdColumnName, "#snr" -> Columns.SequenceNrColumnName)
+          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -116,7 +117,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid" -> Columns.PersistenceIdColumnName, "#snr" -> Columns.SequenceNrColumnName)
+          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -136,9 +137,9 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> Columns.PersistenceIdColumnName,
-              "#snr"     -> Columns.SequenceNrColumnName,
-              "#created" -> Columns.CreatedColumnName)
+          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
+              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+              "#created" -> columnsDefConfig.createdColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -161,9 +162,9 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> Columns.PersistenceIdColumnName,
-              "#snr"     -> Columns.SequenceNrColumnName,
-              "#created" -> Columns.CreatedColumnName)
+          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
+              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+              "#created" -> columnsDefConfig.createdColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -183,7 +184,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid" -> Columns.PersistenceIdColumnName, "#snr" -> Columns.SequenceNrColumnName)
+          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -204,10 +205,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = row(Columns.PersistenceIdColumnName).string.get,
-                sequenceNumber = row(Columns.SequenceNrColumnName).number.get.toLong,
-                snapshot = row(Columns.SnapshotColumnName).binary.get,
-                created = row(Columns.CreatedColumnName).number.get.toLong
+                persistenceId = row(columnsDefConfig.persistenceIdColumnName).string.get,
+                sequenceNumber = row(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
+                created = row(columnsDefConfig.createdColumnName).number.get.toLong
               )
             ).right.get
         }
@@ -221,9 +222,9 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> Columns.PersistenceIdColumnName,
-              "#snr"     -> Columns.SequenceNrColumnName,
-              "#created" -> Columns.CreatedColumnName)
+          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
+              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+              "#created" -> columnsDefConfig.createdColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -243,10 +244,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = row(Columns.PersistenceIdColumnName).string.get,
-                sequenceNumber = row(Columns.SequenceNrColumnName).number.get.toLong,
-                snapshot = row(Columns.SnapshotColumnName).binary.get,
-                created = row(Columns.CreatedColumnName).number.get.toLong
+                persistenceId = row(columnsDefConfig.persistenceIdColumnName).string.get,
+                sequenceNumber = row(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
+                created = row(columnsDefConfig.createdColumnName).number.get.toLong
               )
             ).right.get
         }
@@ -259,7 +260,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid" -> Columns.PersistenceIdColumnName, "#snr" -> Columns.SequenceNrColumnName)
+          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -278,10 +279,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = row(Columns.PersistenceIdColumnName).string.get,
-                sequenceNumber = row(Columns.SequenceNrColumnName).number.get.toLong,
-                snapshot = row(Columns.SnapshotColumnName).binary.get,
-                created = row(Columns.CreatedColumnName).number.get.toLong
+                persistenceId = row(columnsDefConfig.persistenceIdColumnName).string.get,
+                sequenceNumber = row(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
+                created = row(columnsDefConfig.createdColumnName).number.get.toLong
               )
             ).right.get
         }
@@ -298,9 +299,9 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> Columns.PersistenceIdColumnName,
-              "#snr"     -> Columns.SequenceNrColumnName,
-              "#created" -> Columns.CreatedColumnName)
+          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
+              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+              "#created" -> columnsDefConfig.createdColumnName)
         )
       ).withExpressionAttributeValues(
         Some(
@@ -320,10 +321,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = row(Columns.PersistenceIdColumnName).string.get,
-                sequenceNumber = row(Columns.SequenceNrColumnName).number.get.toLong,
-                snapshot = row(Columns.SnapshotColumnName).binary.get,
-                created = row(Columns.CreatedColumnName).number.get.toLong
+                persistenceId = row(columnsDefConfig.persistenceIdColumnName).string.get,
+                sequenceNumber = row(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
+                created = row(columnsDefConfig.createdColumnName).number.get.toLong
               )
             ).right.get
         }
@@ -339,10 +340,12 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           .withItem(
             Some(
               Map(
-                Columns.PersistenceIdColumnName -> AttributeValue().withString(Some(snapshotRow.persistenceId)),
-                Columns.SequenceNrColumnName    -> AttributeValue().withNumber(Some(snapshotRow.sequenceNumber.toString)),
-                Columns.SnapshotColumnName      -> AttributeValue().withBinary(Some(snapshotRow.snapshot)),
-                Columns.CreatedColumnName       -> AttributeValue().withNumber(Some(snapshotRow.created.toString))
+                columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+                  .withString(Some(snapshotRow.persistenceId)),
+                columnsDefConfig.sequenceNrColumnName -> AttributeValue()
+                  .withNumber(Some(snapshotRow.sequenceNumber.toString)),
+                columnsDefConfig.snapshotColumnName -> AttributeValue().withBinary(Some(snapshotRow.snapshot)),
+                columnsDefConfig.createdColumnName  -> AttributeValue().withNumber(Some(snapshotRow.created.toString))
               )
             )
           )

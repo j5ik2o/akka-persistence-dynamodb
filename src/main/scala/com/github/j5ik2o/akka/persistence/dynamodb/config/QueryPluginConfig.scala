@@ -25,6 +25,7 @@ object QueryPluginConfig {
   def fromConfig(config: Config): QueryPluginConfig = {
     QueryPluginConfig(
       tableName = config.asString("table-name", "Journal"),
+      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       batchSize = config.asInt("batch-size", 16),
@@ -38,6 +39,7 @@ object QueryPluginConfig {
 
 }
 case class QueryPluginConfig(tableName: String,
+                             columnsDefConfig: JournalColumnsDefConfig,
                              tagSeparator: String,
                              bufferSize: Int,
                              batchSize: Int,

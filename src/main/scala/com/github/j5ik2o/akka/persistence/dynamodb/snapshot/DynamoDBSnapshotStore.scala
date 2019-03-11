@@ -22,9 +22,9 @@ import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionC
 import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Materializer }
-import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, SnapshotPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
@@ -54,11 +54,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
 
   protected val snapshotDao: SnapshotDao =
-    new SnapshotDaoImpl(asyncClient,
-                        serialization,
-                        pluginConfig.tableName,
-                        pluginConfig.parallelism,
-                        pluginConfig.batchSize)
+    new SnapshotDaoImpl(asyncClient, serialization, pluginConfig)
 
   override def loadAsync(persistenceId: String,
                          criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {

@@ -115,7 +115,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(_.ordering))
+      .map(_.sortBy(v => (v.persistenceId, v.sequenceNumber)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
@@ -170,7 +170,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(_.ordering))
+      .map(_.sortBy(v => (v.persistenceId, v.sequenceNumber)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()

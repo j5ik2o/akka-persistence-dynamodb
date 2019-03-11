@@ -27,11 +27,13 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.ByteArrayJournalSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils, JournalRow }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient

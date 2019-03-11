@@ -26,7 +26,10 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.{ DynamoDbClientBuilderUtils, HttpClientUtils, JournalRow }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.Config

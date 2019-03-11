@@ -30,7 +30,7 @@ import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ ByteArrayJournalSerializer, WriteJournalDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.WriteJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.query.query.DynamoDBSpecSupport
@@ -90,9 +90,6 @@ class DynamoDBReadJournalSpec
     : ReadJournal with CurrentPersistenceIdsQuery with PersistenceIdsQuery with CurrentEventsByPersistenceIdQuery with EventsByPersistenceIdQuery with CurrentEventsByTagQuery with EventsByTagQuery = {
     PersistenceQuery(system).readJournalFor(DynamoDBReadJournal.Identifier)
   }
-
-  private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator)
 
   override def afterAll(): Unit = {
     underlyingAsync.close()

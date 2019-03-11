@@ -86,13 +86,8 @@ class DynamoDBReadJournalSpec
   val streamClient                       = DynamoDBStreamClientV2(asyncClient)
   val readJournalDao                     = new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig)(ec)
   val writeJournalDao                    = new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig)(ec, mat)
-  val readJournal: ReadJournal
-    with CurrentPersistenceIdsQuery
-    with PersistenceIdsQuery
-    with CurrentEventsByPersistenceIdQuery
-    with EventsByPersistenceIdQuery
-    with CurrentEventsByTagQuery
-    with EventsByTagQuery = {
+  val readJournal
+    : ReadJournal with CurrentPersistenceIdsQuery with PersistenceIdsQuery with CurrentEventsByPersistenceIdQuery with EventsByPersistenceIdQuery with CurrentEventsByTagQuery with EventsByTagQuery = {
     PersistenceQuery(system).readJournalFor(DynamoDBReadJournal.Identifier)
   }
 

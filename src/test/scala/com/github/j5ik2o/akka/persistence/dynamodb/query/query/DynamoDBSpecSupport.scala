@@ -40,20 +40,83 @@ trait DynamoDBSpecSupport
 
   def asyncClient: DynamoDBAsyncClientV2
 
-  val tableName = "Journal"
-
   def deleteTable: Unit = {
-    logger.debug("deleteTable: start")
+    deleteJournalTable
+    deleteSnapshotTable
+  }
+
+  private def deleteJournalTable: Unit = {
+    logger.debug("deleteJournalTable: start")
+    val tableName = "Journal"
     asyncClient.deleteTable(tableName)
     eventually {
       val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
       result.tableNames.fold(true)(v => !v.contains(tableName)) shouldBe true
     }
-    logger.debug("deleteTable: finish")
+    logger.debug("deleteJournalTable: finish")
+  }
+
+  private def deleteSnapshotTable: Unit = {
+    logger.debug("deleteSnapshotTable: start")
+    val tableName = "Snapshot"
+    asyncClient.deleteTable(tableName)
+    eventually {
+      val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
+      result.tableNames.fold(true)(v => !v.contains(tableName)) shouldBe true
+    }
+    logger.debug("deleteSnapshotTable: finish")
   }
 
   def createTable: Unit = {
-    logger.debug("createTable: start")
+    createJournalTable
+    createSnapshotTable
+  }
+
+  def createSnapshotTable: Unit = {
+    logger.debug("createSnapshotTable: start")
+    val tableName = "Snapshot"
+    val createRequest = CreateTableRequest()
+      .withAttributeDefinitions(
+        Some(
+          Seq(
+            AttributeDefinition()
+              .withAttributeName(Some("persistence-id"))
+              .withAttributeType(Some(AttributeType.S)),
+            AttributeDefinition()
+              .withAttributeName(Some("sequence-nr"))
+              .withAttributeType(Some(AttributeType.N))
+          )
+        )
+      )
+      .withKeySchema(
+        Some(
+          Seq(
+            KeySchemaElement()
+              .withAttributeName(Some("persistence-id"))
+              .withKeyType(Some(KeyType.HASH)),
+            KeySchemaElement()
+              .withAttributeName(Some("sequence-nr"))
+              .withKeyType(Some(KeyType.RANGE))
+          )
+        )
+      )
+      .withProvisionedThroughput(
+        Some(
+          ProvisionedThroughput()
+            .withReadCapacityUnits(Some(10L))
+            .withWriteCapacityUnits(Some(10L))
+        )
+      )
+      .withTableName(Some(tableName))
+    val createResponse = asyncClient
+      .createTable(createRequest).futureValue
+    logger.debug("createSnapshotTable: finish")
+    createResponse.isSuccessful shouldBe true
+  }
+
+  private def createJournalTable: Unit = {
+    logger.debug("createJournalTable: start")
+    val tableName = "Journal"
     val createRequest = CreateTableRequest()
       .withTableName(Some(tableName))
       .withAttributeDefinitions(
@@ -118,7 +181,7 @@ trait DynamoDBSpecSupport
       val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
       result.tableNames.fold(false)(_.contains(tableName)) shouldBe true
     }
-    logger.debug("createTable: finish")
+    logger.debug("createJournalTable: finish")
     createResponse.isSuccessful shouldBe true
 
   }

@@ -3,6 +3,10 @@ val scala212Version     = "2.12.8"
 val akkaVersion         = "2.5.19"
 val reactiveAwsDynamoDB = "1.0.5-SNAPSHOT"
 
+sonatypeProfileName := "com.github.j5ik2o"
+
+organization := "com.github.j5ik2o"
+
 name := "akka-persistence-dynamodb"
 
 scalaVersion := scala212Version

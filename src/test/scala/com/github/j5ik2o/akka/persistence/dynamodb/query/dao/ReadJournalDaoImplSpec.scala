@@ -97,7 +97,8 @@ class ReadJournalDaoImplSpec
         JournalRow(PersistenceId(pid), SequenceNumber(n), deleted = false, "ABC".getBytes(), Long.MaxValue)
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
-      val result = readJournalDao.getMessages(pid, 1, 1000, Long.MaxValue).runWith(Sink.seq).futureValue
+      val result = readJournalDao
+        .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(1000), Long.MaxValue).runWith(Sink.seq).futureValue
       result.map(v => (v.persistenceId, v.sequenceNumber, v.deleted)) should contain theSameElementsAs journalRows.map(
         v => (v.persistenceId, v.sequenceNumber, v.deleted)
       )

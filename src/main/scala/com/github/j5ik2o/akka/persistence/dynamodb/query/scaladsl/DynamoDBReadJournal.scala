@@ -27,7 +27,7 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
@@ -116,7 +116,8 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     s"$configPath.akka-persistence-dynamodb-journal-sequence-actor"
   )
 
-  override def currentPersistenceIds(): Source[String, NotUsed] = readJournalDao.allPersistenceIdsSource(Long.MaxValue)
+  override def currentPersistenceIds(): Source[String, NotUsed] =
+    readJournalDao.allPersistenceIdsSource(Long.MaxValue).map(_.value)
 
   override def persistenceIds(): Source[String, NotUsed] =
     Source
@@ -145,7 +146,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
                                                   fromSequenceNr: Long,
                                                   toSequenceNr: Long): Source[PersistentRepr, NotUsed] =
     readJournalDao
-      .getMessages(persistenceId, fromSequenceNr, toSequenceNr, Long.MaxValue)
+      .getMessages(PersistenceId(persistenceId),
+                   SequenceNumber(fromSequenceNr),
+                   SequenceNumber(toSequenceNr),
+                   Long.MaxValue)
       .via(serializer.deserializeFlowWithoutTags)
       .log("currentJournalEventsByPersistenceId")
       .withAttributes(logLevels)

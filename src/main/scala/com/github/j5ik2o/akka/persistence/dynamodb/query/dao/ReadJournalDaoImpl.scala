@@ -23,7 +23,7 @@ import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -55,7 +55,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     )
   }
 
-  override def allPersistenceIdsSource(max: Long): Source[String, NotUsed] = {
+  override def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed] = {
     logger.debug("allPersistenceIdsSource: max = {}", max)
     type State = Option[Map[String, AttributeValue]]
     type Elm   = Seq[Map[String, AttributeValue]]
@@ -86,6 +86,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
       .fold(Set.empty[String]) { case (r, e) => r + e }
       .mapConcat(_.toVector)
+      .map(PersistenceId)
       .take(max)
       .withAttributes(logLevels)
   }
@@ -115,7 +116,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber)))
+      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
@@ -129,14 +130,14 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withAttributes(logLevels)
   }
 
-  override def getMessages(persistenceId: String,
-                           fromSequenceNr: Long,
-                           toSequenceNr: Long,
+  override def getMessages(persistenceId: PersistenceId,
+                           fromSequenceNr: SequenceNumber,
+                           toSequenceNr: SequenceNumber,
                            max: Long,
                            deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
     Source
-      .unfold(fromSequenceNr) {
-        case nr if nr > toSequenceNr =>
+      .unfold(fromSequenceNr.value) {
+        case nr if nr > toSequenceNr.value =>
           None
         case nr =>
           Some(nr + 1, nr)
@@ -152,8 +153,10 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                     Some(
                       seqNos.map { seqNr =>
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
-                          columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString))
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(
+                            Some(persistenceId.asString)
+                          ),
+                          columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
                         )
                       }
                     )
@@ -170,7 +173,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber)))
+      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()

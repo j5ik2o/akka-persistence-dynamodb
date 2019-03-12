@@ -18,14 +18,14 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 
 trait ReadJournalDao {
 
   /**
     * Returns distinct stream of persistenceIds
     */
-  def allPersistenceIdsSource(max: Long): Source[String, NotUsed]
+  def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed]
 
   /**
     * Returns a Source of deserialized data for certain tag from an offset. The result is sorted by
@@ -37,9 +37,9 @@ trait ReadJournalDao {
   /**
     * Returns a Source of bytes for a certain persistenceId
     */
-  def getMessages(persistenceId: String,
-                  fromSequenceNr: Long,
-                  toSequenceNr: Long,
+  def getMessages(persistenceId: PersistenceId,
+                  fromSequenceNr: SequenceNumber,
+                  toSequenceNr: SequenceNumber,
                   max: Long,
                   deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed]
 

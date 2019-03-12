@@ -58,7 +58,7 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map {
         _.items.getOrElse(Seq.empty)
-      }.mapConcat(_.toVector).grouped(batchSize).map { rows =>
+      }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
         rows.map { row =>
           SnapshotRow(
             persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),

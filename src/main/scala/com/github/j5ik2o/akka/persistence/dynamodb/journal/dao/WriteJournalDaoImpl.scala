@@ -316,7 +316,6 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   }
 
   private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
     JournalRow(
       persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
       sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
@@ -325,7 +324,6 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
       tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
     )
-
   }
 
   private def convertToJournalRows(values: Seq[Map[String, AttributeValue]]): Seq[JournalRow] = {
@@ -335,10 +333,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
-    Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { xs =>
-      logger.debug(s"deleteJournalRows.size: ${xs.size}")
-      logger.debug(s"deleteJournalRows: $xs")
-      xs.map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
+    Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { persistenceIdWithSeqNrs =>
+      logger.debug(s"deleteJournalRows.size: ${persistenceIdWithSeqNrs.size}")
+      logger.debug(s"deleteJournalRows: $persistenceIdWithSeqNrs")
+      persistenceIdWithSeqNrs
+        .map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
       def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
         Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
           if (requestItems.isEmpty)
@@ -356,15 +355,17 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               }
           }
         }
-      val requestItems = xs.map { x =>
+      val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
         WriteRequest().withDeleteRequest(
           Some(
             DeleteRequest().withKey(
               Some(
                 Map(
                   columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                    .withString(Some(x.persistenceId.asString)),
-                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(x.sequenceNumber.asString))
+                    .withString(Some(persistenceIdWithSeqNr.persistenceId.asString)),
+                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(
+                    Some(persistenceIdWithSeqNr.sequenceNumber.asString)
+                  )
                 )
               )
             )
@@ -374,50 +375,53 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       Source.single(requestItems).via(loopFlow)
     }
 
-  private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat { xs =>
-    logger.debug(s"putJournalRows.size: ${xs.size}")
-    logger.debug(s"putJournalRows: $xs")
-    xs.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
-    def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
-      Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
-        if (requestItems.isEmpty)
-          Source.single(0L)
-        else {
-          Source
-            .single(requestItems).map { requests =>
-              BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
-            }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
-              if (response.unprocessedItems.get.nonEmpty) {
-                val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
-              } else
-                Source.single(requestItems.size)
-            }
+  private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat {
+    journalRows =>
+      logger.debug(s"putJournalRows.size: ${journalRows.size}")
+      logger.debug(s"putJournalRows: $journalRows")
+      journalRows.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
+      def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
+        Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
+          if (requestItems.isEmpty)
+            Source.single(0L)
+          else {
+            Source
+              .single(requestItems).map { requests =>
+                BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
+              }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
+                if (response.unprocessedItems.get.nonEmpty) {
+                  val n = requestItems.size - response.unprocessedItems.get(tableName).size
+                  Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
+                } else
+                  Source.single(requestItems.size)
+              }
+          }
         }
-      }
-    val requestItems = xs.map { x =>
-      WriteRequest().withPutRequest(
-        Some(
-          PutRequest()
-            .withItem(
-              Some(
-                Map(
-                  columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                    .withString(Some(x.persistenceId.asString)),
-                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(x.sequenceNumber.asString)),
-                  columnsDefConfig.orderingColumnName   -> AttributeValue().withNumber(Some(x.ordering.toString)),
-                  columnsDefConfig.deletedColumnName    -> AttributeValue().withBool(Some(x.deleted)),
-                  columnsDefConfig.messageColumnName    -> AttributeValue().withBinary(Some(x.message))
-                ) ++ x.tags
-                  .map { t =>
-                    Map(columnsDefConfig.tagsColumnName -> AttributeValue().withString(Some(t)))
-                  }.getOrElse(Map.empty)
+      val requestItems = journalRows.map { journalRow =>
+        WriteRequest().withPutRequest(
+          Some(
+            PutRequest()
+              .withItem(
+                Some(
+                  Map(
+                    columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+                      .withString(Some(journalRow.persistenceId.asString)),
+                    columnsDefConfig.sequenceNrColumnName -> AttributeValue()
+                      .withNumber(Some(journalRow.sequenceNumber.asString)),
+                    columnsDefConfig.orderingColumnName -> AttributeValue()
+                      .withNumber(Some(journalRow.ordering.toString)),
+                    columnsDefConfig.deletedColumnName -> AttributeValue().withBool(Some(journalRow.deleted)),
+                    columnsDefConfig.messageColumnName -> AttributeValue().withBinary(Some(journalRow.message))
+                  ) ++ journalRow.tags
+                    .map { tag =>
+                      Map(columnsDefConfig.tagsColumnName -> AttributeValue().withString(Some(tag)))
+                    }.getOrElse(Map.empty)
+                )
               )
-            )
+          )
         )
-      )
-    }
-    Source.single(requestItems).via(loopFlow)
+      }
+      Source.single(requestItems).via(loopFlow)
   }
 
 }

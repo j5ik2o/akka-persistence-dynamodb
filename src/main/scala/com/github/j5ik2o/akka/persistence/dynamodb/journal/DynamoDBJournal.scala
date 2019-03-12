@@ -70,16 +70,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   private val dynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, httpClientBuilder.build())
 
-  private val serialization = SerializationExtension(system)
-
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
+
+  private val serialization = SerializationExtension(system)
 
   protected val journalDao: WriteJournalDao with WriteJournalDaoWithUpdates =
     new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
+
   private val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
@@ -109,7 +110,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    journalDao.deleteMessages(persistenceId, toSequenceNr).runWith(Sink.head)
+    journalDao.deleteMessages(persistenceId, toSequenceNr).runWith(Sink.head).map(_ => ())
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(

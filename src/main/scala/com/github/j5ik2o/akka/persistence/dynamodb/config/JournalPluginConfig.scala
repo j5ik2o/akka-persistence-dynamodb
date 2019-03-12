@@ -31,6 +31,7 @@ object JournalPluginConfig {
       batchSize = config.asInt("batch-size", 16),
       parallelism = config.asInt("parallelism", 32),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
+      softDeleted = config.asBoolean("soft-delete", true),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
     )
   }
@@ -44,5 +45,6 @@ case class JournalPluginConfig(tableName: String,
                                batchSize: Int,
                                parallelism: Int,
                                refreshInterval: FiniteDuration,
+                               softDeleted: Boolean,
                                clientConfig: DynamoDBClientConfig)
     extends PluginConfig

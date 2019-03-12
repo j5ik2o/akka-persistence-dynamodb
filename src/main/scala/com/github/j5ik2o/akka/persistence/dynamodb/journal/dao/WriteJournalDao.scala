@@ -5,7 +5,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 
 trait WriteJournalDao {
 
-  def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Unit, NotUsed]
+  def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Long, NotUsed]
 
   def highestSequenceNr(persistenceId: String, fromSequenceNr: Long): Source[Long, NotUsed]
 

@@ -55,13 +55,8 @@ abstract class QueryJournalSpec(config: String)
 
   val identifier: String = DynamoDBReadJournal.Identifier
 
-  val readJournal: ReadJournal
-    with CurrentPersistenceIdsQuery
-    with PersistenceIdsQuery
-    with CurrentEventsByPersistenceIdQuery
-    with EventsByPersistenceIdQuery
-    with CurrentEventsByTagQuery
-    with EventsByTagQuery = {
+  val readJournal
+    : ReadJournal with CurrentPersistenceIdsQuery with PersistenceIdsQuery with CurrentEventsByPersistenceIdQuery with EventsByPersistenceIdQuery with CurrentEventsByTagQuery with EventsByTagQuery = {
     PersistenceQuery(system).readJournalFor(identifier)
   }
 

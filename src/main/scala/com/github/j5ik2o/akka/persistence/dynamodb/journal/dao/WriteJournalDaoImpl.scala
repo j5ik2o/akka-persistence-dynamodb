@@ -172,97 +172,64 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private def getJournalRows(persistenceId: String,
                              toSequenceNr: Long,
-                             deleted: Boolean = false): Task[Seq[JournalRow]] = {
-    val result = taskClient
-      .query(
-        QueryRequest()
-          .withTableName(Some(tableName))
-          .withKeyConditionExpression(Some("#pid = :pid and #snr <= :snr"))
-          .withFilterExpression(Some("#d = :flg"))
-          .withExpressionAttributeNames(
-            Some(
-              Map("#pid" -> columnsDefConfig.persistenceIdColumnName,
-                  "#snr" -> columnsDefConfig.sequenceNrColumnName,
-                  "#d"   -> columnsDefConfig.deletedColumnName)
-            )
+                             deleted: Boolean = false): Source[Seq[JournalRow], NotUsed] = {
+    val queryRequest = QueryRequest()
+      .withTableName(Some(tableName))
+      .withKeyConditionExpression(Some("#pid = :pid and #snr <= :snr"))
+      .withFilterExpression(Some("#d = :flg"))
+      .withExpressionAttributeNames(
+        Some(
+          Map("#pid" -> columnsDefConfig.persistenceIdColumnName,
+              "#snr" -> columnsDefConfig.sequenceNrColumnName,
+              "#d"   -> columnsDefConfig.deletedColumnName)
+        )
+      )
+      .withExpressionAttributeValues(
+        Some(
+          Map(
+            ":pid" -> AttributeValue().withString(Some(persistenceId)),
+            ":snr" -> AttributeValue().withNumber(Some(toSequenceNr.toString)),
+            ":flg" -> AttributeValue().withBool(Some(deleted))
           )
-          .withExpressionAttributeValues(
-            Some(
-              Map(
-                ":pid" -> AttributeValue().withString(Some(persistenceId)),
-                ":snr" -> AttributeValue().withNumber(Some(toSequenceNr.toString)),
-                ":flg" -> AttributeValue().withBool(Some(deleted))
-              )
-            )
-          )
-      ).flatMap { result =>
-        if (result.isSuccessful)
-          Task.pure(result.items.get)
-        else
-          Task.raiseError(new Exception)
-      }.map(convertToJournalRows).map { result =>
-        logger.debug(s"getJournalRows = $result")
-        result
-      }
-    result
+        )
+      )
+    Source
+      .single(queryRequest)
+      .via(streamClient.queryFlow())
+      .mapConcat(_.items.get.toVector)
+      .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
+      .map(_.result().toVector)
   }
 
-  private def updateJournalRows(journalRows: Seq[JournalRow]): Task[Long] = Task.deferFuture {
-    val f = putMessages(journalRows).runWith(Sink.head)
-    f
-  }
-
-  private def getHighestMarkedSequenceNr(persistenceId: String): Task[Option[Long]] = Task.deferFuture {
-    _highestSequenceNr(persistenceId, deleted = Some(true)).runWith(Sink.headOption)
-  }
-
-  private def deleteBy(persistenceId: String, sequenceNrs: Seq[Long]): Task[Unit] = {
-    logger.debug(s"deleteBy($persistenceId, $sequenceNrs): start")
+  private def deleteBy(persistenceId: String, sequenceNrs: Seq[Long]): Source[Long, NotUsed] = {
     if (sequenceNrs.isEmpty)
-      Task.pure(())
-    else
-      Task.deferFuture {
-        Source
-          .single(sequenceNrs.map(snr => PersistenceIdWithSeqNr(persistenceId, snr))).via(_deleteJournalRows).runWith(
-            Sink.ignore
-          ).map(_ => ())
+      Source.empty
+    else {
+      Source
+        .single(sequenceNrs.map(snr => PersistenceIdWithSeqNr(persistenceId, snr))).via(_deleteJournalRows)
+    }
+  }
+
+  override def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Long, NotUsed] = {
+    getJournalRows(persistenceId, toSequenceNr)
+      .flatMapConcat { journalRows =>
+        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
+      }.flatMapConcat {
+        case (result, journalRows) =>
+          if (!softDeleted) {
+            highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
+              getJournalRows(persistenceId, highestMarkedSequenceNr - 1).flatMapConcat { _ =>
+                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+              }
+            }
+          } else
+            Source.single(result)
       }
   }
 
-  /**
-    * val actions = for {
-    * _ <- * JournalTable
-    *  .filter(_.persistenceId === persistenceId)
-    *  .filter(_.sequenceNumber <= maxSequenceNr)
-    *  .filter(_.deleted === false)
-    *  .map(_.deleted).update(true)
-    *
-    * highestMarkedSequenceNr <- JournalTable.filter(_.persistenceId === persistenceId)
-    *   .filter(_.deleted === true).sortBy(_.sequenceNumber.desc).map(_.sequenceNumber)
-    *
-    * _ <- JournalTable.filter(_.persistenceId === persistenceId)
-    *   .filter(_.sequenceNumber <= highestMarkedSequenceNr.getOrElse(0L) - 1)
-    *   .delete
-    *
-    * } yield ()
-    *
-    * @param persistenceId
-    * @param maxSequenceNr
-    * @return
-    */
-  override def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Unit, NotUsed] = {
-    Source.fromFuture((for {
-      results                 <- getJournalRows(persistenceId, toSequenceNr)
-      _                       <- updateJournalRows(results.map(_.withDeleted))
-      highestMarkedSequenceNr <- getHighestMarkedSequenceNr(persistenceId)
-      journalRows             <- getJournalRows(persistenceId, highestMarkedSequenceNr.getOrElse(0L) - 1)
-      _                       <- deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-    } yield ()).runToFuture)
-  }
-
-  def _highestSequenceNr(persistenceId: String,
-                         fromSequenceNr: Option[Long] = None,
-                         deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
+  def highestSequenceNr(persistenceId: String,
+                        fromSequenceNr: Option[Long] = None,
+                        deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
       .withKeyConditionExpression(
@@ -310,7 +277,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   }
 
   override def highestSequenceNr(persistenceId: String, fromSequenceNr: Long): Source[Long, NotUsed] = {
-    _highestSequenceNr(persistenceId, Some(fromSequenceNr))
+    highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
   override def getMessages(persistenceId: String,
@@ -357,22 +324,26 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           case Some(b) =>
             convertToJournalRows(result(tableName)).filter(_.deleted == b)
         }).sortBy(_.sequenceNumber).toVector
-      }.log("journalRow").withAttributes(logLevels)
+      }.log("journalRow")
       .take(max)
+      .withAttributes(logLevels)
+
+  }
+
+  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
+    JournalRow(
+      persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
+      sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
+      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
+      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
+    )
 
   }
 
   private def convertToJournalRows(values: Seq[Map[String, AttributeValue]]): Seq[JournalRow] = {
-    values.map { map =>
-      JournalRow(
-        persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
-        sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
-        deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-        message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
-        ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
-        tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
-      )
-    }
+    values.map(convertToJournalRow)
   }
 
   case class PersistenceIdWithSeqNr(persistenceId: String, sequenceNumber: Long)

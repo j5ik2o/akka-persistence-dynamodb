@@ -36,38 +36,102 @@ libraryDependencies += Seq(
 
 ## akka-persistence journal plugin
 
+Just this, if you like the default settings.
+
+```hocon
+akka.persistence.journal.plugin = "dynamo-db-journal"
+```
+
+If overwrite the default values.
+
 ```hocon
 akka.persistence.journal.plugin = "dynamo-db-journal"
 
 dynamo-db-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal"
   plugin-dispatcher = "akka.actor.default-dispatcher"
-  
   table-name = "Journal"
   tag-separator = ","
+  buffer-size = 1024
+  parallelism = 32
+  refresh-interval = 0.5 s
+  soft-delete = true
+  dynamodb-client {
+    max-concurrency = 128
+    max-pending-connection-acquires = ?
+    read-timeout = 3 s
+    write-timeout = 3 s
+    connection-timeout = 3 s
+    connection-acquisition-timeout = 3 s
+    connection-time-to-live = 3 s
+    max-idle-connection-timeout = 3 s
+    use-connection-reaper = true
+    threads-of-event-loop-group = 32
+    user-http2 = true
+    max-http2-streams = 32
+    batch-get-item-limit = 100
+    batch-write-item-limit = 25
+  }
   
 }
-
 ```
 
 ## akka-persistence snapshot plugin
+
+Just this, if you like the default settings.
 
 ```hocon
 akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
 ```
 
+If overwrite the default values.
+
+```hocon
+akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
+
+dynamo-db-snapshot {
+
+}
+```
+
 ## akka-persistence query plugin
+
+Just this, if you like the default settings.
 
 ```hocon
 dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
-
   write-plugin = "dynamo-db-journal"
+}
+```
 
+If overwrite the default values.
+
+```hocon
+dynamo-db-read-journal {
+  class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
+  write-plugin = "dynamo-db-journal"
+  table-name = "Journal"
+  tag-separator = ","
+  buffer-size = 1024
+  parallelism = 32
+  refresh-interval = 0.5 s
+  soft-delete = true
   dynamodb-client {
-    access-key-id = "x"
-    secret-access-key = "x"
-    endpoint = "http://127.0.0.1:8000/"
+    max-concurrency = 128
+    max-pending-connection-acquires = ?
+    read-timeout = 3 s
+    write-timeout = 3 s
+    connection-timeout = 3 s
+    connection-acquisition-timeout = 3 s
+    connection-time-to-live = 3 s
+    max-idle-connection-timeout = 3 s
+    use-connection-reaper = true
+    threads-of-event-loop-group = 32
+    user-http2 = true
+    max-http2-streams = 32
+    batch-get-item-limit = 100
+    batch-write-item-limit = 25
   }
 
 }

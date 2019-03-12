@@ -17,6 +17,31 @@ There are the following reasons.
 
 ## akka-persistence query plugin
 
+```hocon
+dynamo-db-read-journal {
+  class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
+
+  write-plugin = "dynamo-db-journal"
+
+  dynamodb-client {
+    access-key-id = "x"
+    secret-access-key = "x"
+    endpoint = "http://127.0.0.1:8000/"
+  }
+
+}
+```
+
+```scala
+val readJournal : ReadJournal 
+  with CurrentPersistenceIdsQuery 
+  with PersistenceIdsQuery 
+  with CurrentEventsByPersistenceIdQuery 
+  with EventsByPersistenceIdQuery 
+  with CurrentEventsByTagQuery 
+  with EventsByTagQuery = PersistenceQuery(system).readJournalFor(DynamoDBReadJournal.Identifier)
+```
+
 ## License
 
 Apache License

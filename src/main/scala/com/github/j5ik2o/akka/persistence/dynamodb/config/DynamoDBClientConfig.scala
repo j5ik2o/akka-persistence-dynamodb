@@ -38,7 +38,9 @@ object DynamoDBClientConfig {
       useConnectionReaper = rootConfig.asBoolean("use-connection-reaper"),
       threadsOfEventLoopGroup = rootConfig.asInt("threads-of-event-loop-group"),
       userHttp2 = rootConfig.asBoolean("user-http2"),
-      maxHttp2Streams = rootConfig.asInt("max-http2-streams")
+      maxHttp2Streams = rootConfig.asInt("max-http2-streams"),
+      batchGetItemLimit = rootConfig.asInt("batch-get-item-limit", 100),
+      batchWriteItemLimit = rootConfig.asInt("batch-write-item-limit", 25)
     )
     result
   }
@@ -48,15 +50,17 @@ object DynamoDBClientConfig {
 case class DynamoDBClientConfig(accessKeyId: Option[String],
                                 secretAccessKey: Option[String],
                                 endpoint: Option[String],
-                                maxConcurrency: Option[Int] = None,
-                                maxPendingConnectionAcquires: Option[Int] = None,
-                                readTimeout: Option[FiniteDuration] = None,
-                                writeTimeout: Option[FiniteDuration] = None,
-                                connectionTimeout: Option[FiniteDuration] = None,
-                                connectionAcquisitionTimeout: Option[FiniteDuration] = None,
-                                connectionTimeToLive: Option[FiniteDuration] = None,
-                                maxIdleConnectionTimeout: Option[FiniteDuration] = None,
-                                useConnectionReaper: Option[Boolean] = None,
-                                threadsOfEventLoopGroup: Option[Int] = None,
-                                userHttp2: Option[Boolean] = None,
-                                maxHttp2Streams: Option[Int] = None)
+                                maxConcurrency: Option[Int],
+                                maxPendingConnectionAcquires: Option[Int],
+                                readTimeout: Option[FiniteDuration],
+                                writeTimeout: Option[FiniteDuration],
+                                connectionTimeout: Option[FiniteDuration],
+                                connectionAcquisitionTimeout: Option[FiniteDuration],
+                                connectionTimeToLive: Option[FiniteDuration],
+                                maxIdleConnectionTimeout: Option[FiniteDuration],
+                                useConnectionReaper: Option[Boolean],
+                                threadsOfEventLoopGroup: Option[Int],
+                                userHttp2: Option[Boolean],
+                                maxHttp2Streams: Option[Int],
+                                batchGetItemLimit: Int,
+                                batchWriteItemLimit: Int)

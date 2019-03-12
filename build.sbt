@@ -1,7 +1,7 @@
 val scala211Version     = "2.11.12"
 val scala212Version     = "2.12.8"
 val akkaVersion         = "2.5.20"
-val reactiveAwsDynamoDB = "1.0.5"
+val reactiveAwsDynamoDB = "1.0.6-SNAPSHOT"
 
 sonatypeProfileName := "com.github.j5ik2o"
 
@@ -73,9 +73,9 @@ pomExtra := {
       </license>
     </licenses>
     <scm>
-      <url>git@github.com:j5ik2o/akka-persistence-dynamod.git</url>
-      <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamod</connection>
-      <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamod.git</developerConnection>
+      <url>git@github.com:j5ik2o/akka-persistence-dynamodb.git</url>
+      <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamodb</connection>
+      <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamodb.git</developerConnection>
     </scm>
     <developers>
       <developer>

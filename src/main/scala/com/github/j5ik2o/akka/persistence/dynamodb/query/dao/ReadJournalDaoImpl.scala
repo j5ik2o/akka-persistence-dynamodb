@@ -23,7 +23,7 @@ import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -115,7 +115,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId, v.sequenceNumber)))
+      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
@@ -141,7 +141,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         case nr =>
           Some(nr + 1, nr)
       }
-      .grouped(batchSize).log("grouped")
+      .grouped(clientConfig.batchGetItemLimit).log("grouped")
       .map { seqNos =>
         BatchGetItemRequest()
           .withRequestItems(
@@ -170,7 +170,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId, v.sequenceNumber)))
+      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
@@ -184,9 +184,10 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   }
 
   private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
+    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
     JournalRow(
-      persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
-      sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
+      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
       deleted = map(columnsDefConfig.deletedColumnName).bool.get,
       message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
       ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,

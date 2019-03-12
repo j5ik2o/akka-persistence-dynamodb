@@ -110,21 +110,22 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    journalDao.deleteMessages(persistenceId, toSequenceNr).runWith(Sink.head).map(_ => ())
+    journalDao
+      .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr)).runWith(Sink.head).map(_ => ())
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
   ): Future[Unit] =
     journalDao
-      .getMessages(persistenceId, fromSequenceNr, toSequenceNr, max)
+      .getMessages(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr), SequenceNumber(toSequenceNr), max)
       .via(serializer.deserializeFlowWithoutTags)
       .runForeach(recoveryCallback)
       .map(_ => ())
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
     def fetchHighestSeqNr(): Future[Long] =
-      journalDao.highestSequenceNr(persistenceId, fromSequenceNr).runWith(Sink.head)
+      journalDao.highestSequenceNr(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
 
     writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()

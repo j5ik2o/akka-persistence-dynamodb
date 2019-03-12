@@ -4,14 +4,15 @@ import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 
 trait WriteJournalDao {
+  import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 
-  def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Long, NotUsed]
+  def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed]
 
-  def highestSequenceNr(persistenceId: String, fromSequenceNr: Long): Source[Long, NotUsed]
+  def highestSequenceNr(persistenceId: PersistenceId, fromSequenceNr: SequenceNumber): Source[Long, NotUsed]
 
-  def getMessages(persistenceId: String,
-                  fromSequenceNr: Long,
-                  toSequenceNr: Long,
+  def getMessages(persistenceId: PersistenceId,
+                  fromSequenceNr: SequenceNumber,
+                  toSequenceNr: SequenceNumber,
                   max: Long,
                   deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed]
 

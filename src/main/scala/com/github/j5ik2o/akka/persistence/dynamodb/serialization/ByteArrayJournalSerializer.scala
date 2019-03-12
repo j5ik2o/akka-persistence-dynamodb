@@ -19,6 +19,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
 
 import scala.util.{ Failure, Success }
 
@@ -26,15 +27,18 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
     extends FlowPersistentReprSerializer[JournalRow] {
 
   override def serialize(persistentRepr: PersistentRepr, tags: Set[String]): Either[Throwable, JournalRow] = {
+    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
     serialization
       .serialize(persistentRepr)
       .map(
-        JournalRow(persistentRepr.persistenceId,
-                   persistentRepr.sequenceNr,
-                   persistentRepr.deleted,
-                   _,
-                   Long.MaxValue,
-                   encodeTags(tags, separator))
+        JournalRow(
+          PersistenceId(persistentRepr.persistenceId),
+          SequenceNumber(persistentRepr.sequenceNr),
+          persistentRepr.deleted,
+          _,
+          System.nanoTime(),
+          encodeTags(tags, separator)
+        )
       ) match {
       case Success(value) => Right(value)
       case Failure(ex)    => Left(ex)

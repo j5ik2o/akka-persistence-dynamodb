@@ -80,7 +80,11 @@ class WriteJournalDaoImplSpec
     "write" in {
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow("a-" + n.toString, 1, deleted = false, Array(1.toByte, 2.toByte, 3.toByte), Long.MaxValue)
+        JournalRow(PersistenceId("a-" + n.toString),
+                   SequenceNumber(1L),
+                   deleted = false,
+                   Array(1.toByte, 2.toByte, 3.toByte),
+                   Long.MaxValue)
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
@@ -89,12 +93,19 @@ class WriteJournalDaoImplSpec
       val pid = "b-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(pid, n, deleted = false, Array(1.toByte, 2.toByte, 3.toByte), Long.MaxValue)
+        JournalRow(PersistenceId(pid),
+                   SequenceNumber(n),
+                   deleted = false,
+                   Array(1.toByte, 2.toByte, 3.toByte),
+                   Long.MaxValue)
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
       val results =
-        writeJournalDao.getMessages(pid, 1, 60, Long.MaxValue).runFold(Seq.empty[JournalRow])(_ :+ _).futureValue
+        writeJournalDao
+          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
+            Seq.empty[JournalRow]
+          )(_ :+ _).futureValue
       results.size shouldBe 60
       results.toVector.zip(journalRows.toVector).foreach {
         case (v1, v2) =>
@@ -110,28 +121,42 @@ class WriteJournalDaoImplSpec
       val pid = "c-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(pid, n, deleted = false, Array(1.toByte, 2.toByte, 3.toByte), Long.MaxValue)
+        JournalRow(PersistenceId(pid),
+                   SequenceNumber(n),
+                   deleted = false,
+                   Array(1.toByte, 2.toByte, 3.toByte),
+                   Long.MaxValue)
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
       writeJournalDao.updateMessage(journalRows.head.withDeleted).runWith(Sink.head).futureValue
       val results =
-        writeJournalDao.getMessages(pid, 1, 60, Long.MaxValue, None).runFold(Seq.empty[JournalRow])(_ :+ _).futureValue
-      results.head.persistenceId shouldBe pid
-      results.head.sequenceNumber shouldBe 1
+        writeJournalDao
+          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue, None).runFold(
+            Seq.empty[JournalRow]
+          )(_ :+ _).futureValue
+      results.head.persistenceId shouldBe PersistenceId(pid)
+      results.head.sequenceNumber shouldBe SequenceNumber(1)
       results.head.deleted shouldBe true
     }
     "delete" in {
       val pid = "d-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(pid, n, deleted = false, Array(1.toByte, 2.toByte, 3.toByte), Long.MaxValue)
+        JournalRow(PersistenceId(pid),
+                   SequenceNumber(n),
+                   deleted = false,
+                   Array(1.toByte, 2.toByte, 3.toByte),
+                   Long.MaxValue)
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
-      writeJournalDao.deleteMessages(pid, 60).runWith(Sink.head).futureValue
+      writeJournalDao.deleteMessages(PersistenceId(pid), SequenceNumber(60)).runWith(Sink.head).futureValue
       val results =
-        writeJournalDao.getMessages(pid, 1, 60, Long.MaxValue).runFold(Seq.empty[JournalRow])(_ :+ _).futureValue
+        writeJournalDao
+          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
+            Seq.empty[JournalRow]
+          )(_ :+ _).futureValue
       results.size shouldBe 0
     }
   }

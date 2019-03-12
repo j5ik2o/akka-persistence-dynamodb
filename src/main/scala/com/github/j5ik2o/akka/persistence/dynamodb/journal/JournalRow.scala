@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-final case class JournalRow(persistenceId: String,
-                            sequenceNumber: Long,
+final case class JournalRow(persistenceId: PersistenceId,
+                            sequenceNumber: SequenceNumber,
                             deleted: Boolean,
                             message: Array[Byte],
                             ordering: Long,

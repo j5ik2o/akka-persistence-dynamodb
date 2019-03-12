@@ -15,5 +15,9 @@
  * limitations under the License.
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 
-case class SnapshotRow(persistenceId: String, sequenceNumber: Long, created: Long, snapshot: Array[Byte])
+case class SnapshotRow(persistenceId: PersistenceId,
+                       sequenceNumber: SequenceNumber,
+                       created: Long,
+                       snapshot: Array[Byte])

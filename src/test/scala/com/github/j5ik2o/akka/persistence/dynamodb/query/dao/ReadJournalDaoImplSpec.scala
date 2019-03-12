@@ -23,7 +23,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -80,21 +80,21 @@ class ReadJournalDaoImplSpec
 
   val sch = Scheduler(ec)
 
-  "ReadJournalDaoImplSpec" - {
+  "ReadJournalDaoImpl" - {
     "allPersistenceIdsSource" in {
       val journalRows = (1 to 100).map { n =>
-        JournalRow(n.toString, 1, deleted = false, "ABC".getBytes(), Long.MaxValue)
+        JournalRow(PersistenceId(n.toString), SequenceNumber(1), deleted = false, "ABC".getBytes(), Long.MaxValue)
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao
         .allPersistenceIdsSource(journalRows.size).runWith(Sink.seq).futureValue
-      val excepted = journalRows.map(_.persistenceId).toList
+      val excepted = journalRows.map(_.persistenceId.value).toList
       result should contain theSameElementsAs excepted
     }
     "getMessages" in {
       val pid = "a-1"
       val journalRows = (1 to 100).map { n =>
-        JournalRow(pid, n, deleted = false, "ABC".getBytes(), Long.MaxValue)
+        JournalRow(PersistenceId(pid), SequenceNumber(n), deleted = false, "ABC".getBytes(), Long.MaxValue)
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao.getMessages(pid, 1, 1000, Long.MaxValue).runWith(Sink.seq).futureValue

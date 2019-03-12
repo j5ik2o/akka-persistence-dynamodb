@@ -19,6 +19,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 import akka.persistence.SnapshotMetadata
 import akka.persistence.serialization.Snapshot
 import akka.serialization.Serialization
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.SnapshotRow
 
 import scala.util.{ Failure, Success }
@@ -31,7 +32,9 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
   ): Either[Throwable, SnapshotRow] = {
     serialization
       .serialize(Snapshot(snapshot))
-      .map(SnapshotRow(metadata.persistenceId, metadata.sequenceNr, metadata.timestamp, _)) match {
+      .map(
+        SnapshotRow(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr), metadata.timestamp, _)
+      ) match {
       case Success(value) => Right(value)
       case Failure(ex)    => Left(ex)
     }
@@ -42,7 +45,7 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
       .deserialize(snapshotRow.snapshot, classOf[Snapshot])
       .map(snapshot => {
         val snapshotMetadata =
-          SnapshotMetadata(snapshotRow.persistenceId, snapshotRow.sequenceNumber, snapshotRow.created)
+          SnapshotMetadata(snapshotRow.persistenceId.asString, snapshotRow.sequenceNumber.value, snapshotRow.created)
         (snapshotMetadata, snapshot.data)
       }) match {
       case Success(value) => Right(value)

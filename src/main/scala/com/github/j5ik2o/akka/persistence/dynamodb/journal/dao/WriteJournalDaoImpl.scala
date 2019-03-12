@@ -40,6 +40,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     mat: Materializer
 ) extends WriteJournalDaoWithUpdates {
 
+  import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
   import pluginConfig._
 
   private val logger = LoggerFactory.getLogger(getClass)
@@ -57,7 +58,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     .flatMapConcat {
       case (promise, rows) =>
         Source(rows.toVector)
-          .grouped(batchSize).log("grouped")
+          .grouped(clientConfig.batchWriteItemLimit).log("grouped")
           .via(putJournalRowsFlow).log("result")
           .async
           .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
@@ -74,7 +75,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     .flatMapConcat {
       case (promise, rows) =>
         Source(rows.toVector)
-          .grouped(batchSize).log("grouped")
+          .grouped(clientConfig.batchWriteItemLimit).log("grouped")
           .via(deleteJournalRowsFlow).log("result")
           .async
           .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
@@ -86,7 +87,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     .withAttributes(logLevels)
     .run()
 
-  private def _putJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
+  private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
     Flow[Seq[JournalRow]].mapAsync(parallelism) { messages =>
       val promise = Promise[Long]()
       putQueue.offer(promise -> messages).flatMap {
@@ -105,7 +106,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
     }
 
-  private def _deleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
+  private def requestDeleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]].mapAsync(parallelism) { messages =>
       val promise = Promise[Long]()
       deleteQueue.offer(promise -> messages).flatMap {
@@ -125,7 +126,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
 
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    Source.single(messages).via(_putJournalRows)
+    Source.single(messages).via(requestPutJournalRows)
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     val updateRequest = UpdateItemRequest()
@@ -133,9 +134,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         Some(
           Map(
             columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-              .withString(Some(journalRow.persistenceId.toString)),
+              .withString(Some(journalRow.persistenceId.asString)),
             columnsDefConfig.sequenceNrColumnName -> AttributeValue()
-              .withNumber(Some(journalRow.sequenceNumber.toString))
+              .withNumber(Some(journalRow.sequenceNumber.asString))
           )
         )
       ).withAttributeUpdates(
@@ -170,8 +171,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
   }
 
-  private def getJournalRows(persistenceId: String,
-                             toSequenceNr: Long,
+  private def getJournalRows(persistenceId: PersistenceId,
+                             toSequenceNr: SequenceNumber,
                              deleted: Boolean = false): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
@@ -187,8 +188,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeValues(
         Some(
           Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId)),
-            ":snr" -> AttributeValue().withNumber(Some(toSequenceNr.toString)),
+            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
+            ":snr" -> AttributeValue().withNumber(Some(toSequenceNr.asString)),
             ":flg" -> AttributeValue().withBool(Some(deleted))
           )
         )
@@ -201,16 +202,16 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .map(_.result().toVector)
   }
 
-  private def deleteBy(persistenceId: String, sequenceNrs: Seq[Long]): Source[Long, NotUsed] = {
+  private def deleteBy(persistenceId: PersistenceId, sequenceNrs: Seq[SequenceNumber]): Source[Long, NotUsed] = {
     if (sequenceNrs.isEmpty)
       Source.empty
     else {
       Source
-        .single(sequenceNrs.map(snr => PersistenceIdWithSeqNr(persistenceId, snr))).via(_deleteJournalRows)
+        .single(sequenceNrs.map(snr => PersistenceIdWithSeqNr(persistenceId, snr))).via(requestDeleteJournalRows)
     }
   }
 
-  override def deleteMessages(persistenceId: String, toSequenceNr: Long): Source[Long, NotUsed] = {
+  override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
     getJournalRows(persistenceId, toSequenceNr)
       .flatMapConcat { journalRows =>
         putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
@@ -218,7 +219,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         case (result, journalRows) =>
           if (!softDeleted) {
             highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
-              getJournalRows(persistenceId, highestMarkedSequenceNr - 1).flatMapConcat { _ =>
+              getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
                 deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
               }
             }
@@ -227,9 +228,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
   }
 
-  def highestSequenceNr(persistenceId: String,
-                        fromSequenceNr: Option[Long] = None,
-                        deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
+  private def highestSequenceNr(persistenceId: PersistenceId,
+                                fromSequenceNr: Option[SequenceNumber] = None,
+                                deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
       .withKeyConditionExpression(
@@ -254,7 +255,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withExpressionAttributeValues(
         Some(
           Map(
-            ":id" -> AttributeValue().withString(Some(persistenceId))
+            ":id" -> AttributeValue().withString(Some(persistenceId.asString))
           ) ++ deleted
             .map { d =>
               Map(
@@ -263,7 +264,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             }.getOrElse(Map.empty) ++ fromSequenceNr
             .map { nr =>
               Map(
-                ":nr" -> AttributeValue().withNumber(Some(nr.toString))
+                ":nr" -> AttributeValue().withNumber(Some(nr.asString))
               )
             }.getOrElse(Map.empty)
         )
@@ -276,23 +277,24 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   }
 
-  override def highestSequenceNr(persistenceId: String, fromSequenceNr: Long): Source[Long, NotUsed] = {
+  override def highestSequenceNr(persistenceId: PersistenceId,
+                                 fromSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
     highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
-  override def getMessages(persistenceId: String,
-                           fromSequenceNr: Long,
-                           toSequenceNr: Long,
+  override def getMessages(persistenceId: PersistenceId,
+                           fromSequenceNr: SequenceNumber,
+                           toSequenceNr: SequenceNumber,
                            max: Long,
                            deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
     Source
-      .unfold(fromSequenceNr) {
-        case nr if nr > toSequenceNr =>
+      .unfold(fromSequenceNr.value) {
+        case nr if nr > toSequenceNr.value =>
           None
         case nr =>
           Some(nr + 1, nr)
       }
-      .grouped(parallelism).log("grouped")
+      .grouped(clientConfig.batchGetItemLimit).log("grouped")
       .map { seqNos =>
         BatchGetItemRequest()
           .withRequestItems(
@@ -303,8 +305,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                     Some(
                       seqNos.map { seqNr =>
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId)),
-                          columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(seqNr.toString))
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(
+                            Some(persistenceId.asString)
+                          ),
+                          columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
                         )
                       }
                     )
@@ -331,9 +335,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   }
 
   private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
+    import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
     JournalRow(
-      persistenceId = map(columnsDefConfig.persistenceIdColumnName).string.get,
-      sequenceNumber = map(columnsDefConfig.sequenceNrColumnName).number.get.toLong,
+      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
+      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
       deleted = map(columnsDefConfig.deletedColumnName).bool.get,
       message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
       ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
@@ -346,7 +351,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     values.map(convertToJournalRow)
   }
 
-  case class PersistenceIdWithSeqNr(persistenceId: String, sequenceNumber: Long)
+  case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { xs =>
@@ -376,8 +381,9 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             DeleteRequest().withKey(
               Some(
                 Map(
-                  columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
-                  columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString))
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+                    .withString(Some(x.persistenceId.asString)),
+                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(x.sequenceNumber.asString))
                 )
               )
             )
@@ -415,11 +421,12 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
             .withItem(
               Some(
                 Map(
-                  columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(x.persistenceId)),
-                  columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(x.sequenceNumber.toString)),
-                  columnsDefConfig.orderingColumnName      -> AttributeValue().withNumber(Some(x.ordering.toString)),
-                  columnsDefConfig.deletedColumnName       -> AttributeValue().withBool(Some(x.deleted)),
-                  columnsDefConfig.messageColumnName       -> AttributeValue().withBinary(Some(x.message))
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue()
+                    .withString(Some(x.persistenceId.asString)),
+                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(x.sequenceNumber.asString)),
+                  columnsDefConfig.orderingColumnName   -> AttributeValue().withNumber(Some(x.ordering.toString)),
+                  columnsDefConfig.deletedColumnName    -> AttributeValue().withBool(Some(x.deleted)),
+                  columnsDefConfig.messageColumnName    -> AttributeValue().withBinary(Some(x.message))
                 ) ++ x.tags
                   .map { t =>
                     Map(columnsDefConfig.tagsColumnName -> AttributeValue().withString(Some(t)))

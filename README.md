@@ -6,10 +6,11 @@
 
 This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
 
-There are the following reasons.
-
-- use non-blocking aws-sdk v2
-- provide snapshot plugin
+| Product                               | DynamoDB support | non-blocking I/O | Journal Plugin | Snapshot Plugin | Query Plugin |
+|:-------------------------------------:|:----------------:|:----------------:|:--------------:|:---------------:|:------------:|
+| **j5ik2o/akka-persistence-dynamodb**  |        ✓         |         ✓        |        ✓       |        ✓        |       ✓      |
+| **akka/akka-persistence-dynamodb**    |        ✓         |         x        |        ✓       |        ✓        |       -      |
+| **akka/akka-persistence-jdbc**        |        x         |         x        |        ✓       |        ✓        |       ✓      |
 
 ## akka-persistence journal plugin
 

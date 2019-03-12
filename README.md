@@ -12,6 +12,11 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)**    |        ✓         |         -        |        ✓       |        ✓        |       -      |
 | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)**        |        -         |         -        |        ✓       |        ✓        |       ✓      |
 
+## Depends on
+
+- akka 2.5.x
+- aws-sdk v2
+
 ## akka-persistence journal plugin
 
 ```hocon

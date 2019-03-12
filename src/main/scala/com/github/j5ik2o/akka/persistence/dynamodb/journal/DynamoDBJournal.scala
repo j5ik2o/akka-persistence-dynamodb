@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
 
 object DynamoDBJournal {
 
@@ -49,21 +50,13 @@ object DynamoDBJournal {
 }
 
 class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
-  import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{
-    WriteJournalDao,
-    WriteJournalDaoImpl,
-    WriteJournalDaoWithUpdates
-  }
 
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem  = context.system
   implicit val mat: Materializer    = ActorMaterializer()
   implicit val scheduler: Scheduler = Scheduler(ec)
 
-  protected val pluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(config)
-
-  protected val tableName: String = pluginConfig.tableName
+  protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
   private val httpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
 
@@ -75,7 +68,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val serialization = SerializationExtension(system)
 
-  protected val journalDao: WriteJournalDao with WriteJournalDaoWithUpdates =
+  protected val journalDao: WriteJournalDao =
     new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
@@ -84,6 +77,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   private val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    log.debug(s"messages = ${messages.map(v => s"l:${v.lowestSequenceNr} - h:${v.highestSequenceNr}")}")
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(messages)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries

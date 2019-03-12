@@ -94,7 +94,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
   override def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed] = {
     val request = ScanRequest()
       .withTableName(Some(tableName))
-      .withIndexName(Some("TagsIndex"))
+      .withIndexName(Some(pluginConfig.tagsIndexName))
       .withFilterExpression(Some("contains(#tags, :tag)"))
       .withExpressionAttributeNames(
         Some(

@@ -10,6 +10,8 @@ trait WriteJournalDao {
 
   def highestSequenceNr(persistenceId: PersistenceId, fromSequenceNr: SequenceNumber): Source[Long, NotUsed]
 
+  def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed]
+
   def getMessages(persistenceId: PersistenceId,
                   fromSequenceNr: SequenceNumber,
                   toSequenceNr: SequenceNumber,

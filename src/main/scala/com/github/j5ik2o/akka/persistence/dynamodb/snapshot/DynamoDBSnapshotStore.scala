@@ -23,6 +23,7 @@ import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
@@ -61,13 +62,15 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
                          criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
     val result = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
-        snapshotDao.latestSnapshot(persistenceId)
+        snapshotDao.latestSnapshot(PersistenceId(persistenceId))
       case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
-        snapshotDao.snapshotForMaxTimestamp(persistenceId, maxTimestamp)
+        snapshotDao.snapshotForMaxTimestamp(PersistenceId(persistenceId), maxTimestamp)
       case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
-        snapshotDao.snapshotForMaxSequenceNr(persistenceId, maxSequenceNr)
+        snapshotDao.snapshotForMaxSequenceNr(PersistenceId(persistenceId), SequenceNumber(maxSequenceNr))
       case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
-        snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(persistenceId, maxSequenceNr, maxTimestamp)
+        snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(PersistenceId(persistenceId),
+                                                            SequenceNumber(maxSequenceNr),
+                                                            maxTimestamp)
       case _ => Source.empty
     }
     result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
@@ -77,21 +80,32 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
 
   override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] =
-    snapshotDao.delete(metadata.persistenceId, metadata.sequenceNr).map(_ => ()).runWith(Sink.ignore).map(_ => ())
+    snapshotDao
+      .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
+        Sink.ignore
+      ).map(_ => ())
 
-  override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = criteria match {
-    case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
-      snapshotDao.deleteAllSnapshots(persistenceId).runWith(Sink.ignore).map(_ => ())
-    case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
-      snapshotDao.deleteUpToMaxTimestamp(persistenceId, maxTimestamp).runWith(Sink.ignore).map(_ => ())
-    case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
-      snapshotDao.deleteUpToMaxSequenceNr(persistenceId, maxSequenceNr).runWith(Sink.ignore).map(_ => ())
-    case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
-      snapshotDao
-        .deleteUpToMaxSequenceNrAndMaxTimestamp(persistenceId, maxSequenceNr, maxTimestamp).runWith(Sink.ignore).map(
-          _ => ()
-        )
-    case _ => Future.successful(())
+  override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
+    val pid = PersistenceId(persistenceId)
+    criteria match {
+      case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
+        snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
+      case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
+        snapshotDao.deleteUpToMaxTimestamp(pid, maxTimestamp).runWith(Sink.ignore).map(_ => ())
+      case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
+        snapshotDao
+          .deleteUpToMaxSequenceNr(pid, SequenceNumber(maxSequenceNr)).runWith(Sink.ignore).map(
+            _ => ()
+          )
+      case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
+        snapshotDao
+          .deleteUpToMaxSequenceNrAndMaxTimestamp(pid, SequenceNumber(maxSequenceNr), maxTimestamp).runWith(
+            Sink.ignore
+          ).map(
+            _ => ()
+          )
+      case _ => Future.successful(())
+    }
   }
 
 }

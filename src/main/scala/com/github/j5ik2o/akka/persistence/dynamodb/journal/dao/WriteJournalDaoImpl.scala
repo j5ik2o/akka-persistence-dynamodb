@@ -21,12 +21,10 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
-import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import monix.eval.Task
 import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
 
@@ -38,9 +36,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                           pluginConfig: JournalPluginConfig)(
     implicit ec: ExecutionContext,
     mat: Materializer
-) extends WriteJournalDaoWithUpdates {
+) extends WriteJournalDao {
 
-  import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
   import pluginConfig._
 
   private val logger = LoggerFactory.getLogger(getClass)
@@ -157,15 +154,15 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                 Some(AttributeValue().withBool(Some(journalRow.deleted)))
               )
           ) ++ journalRow.tags
-            .map { t =>
+            .map { tag =>
               Map(
                 columnsDefConfig.tagsColumnName -> AttributeValueUpdate()
-                  .withAction(Some(AttributeAction.PUT)).withValue(Some(AttributeValue().withString(Some(t))))
+                  .withAction(Some(AttributeAction.PUT)).withValue(Some(AttributeValue().withString(Some(tag))))
               )
             }.getOrElse(Map.empty)
         )
       )
-    Source.single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { result =>
+    Source.single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { _ =>
       ()
     }
   }
@@ -240,15 +237,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
         Some(
           Map(
             "#pid" -> columnsDefConfig.persistenceIdColumnName
-          ) ++ deleted
-            .map { _ =>
-              Map("#d" -> columnsDefConfig.deletedColumnName)
-            }.getOrElse(Map.empty) ++ fromSequenceNr
-            .map { _ =>
-              Map(
-                "#snr" -> columnsDefConfig.sequenceNrColumnName
-              )
-            }.getOrElse(Map.empty)
+          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
         )
       )
       .withExpressionAttributeValues(
@@ -256,16 +246,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
           Map(
             ":id" -> AttributeValue().withString(Some(persistenceId.asString))
           ) ++ deleted
-            .map { d =>
-              Map(
-                ":flg" -> AttributeValue().withBool(Some(d))
-              )
-            }.getOrElse(Map.empty) ++ fromSequenceNr
-            .map { nr =>
-              Map(
-                ":nr" -> AttributeValue().withNumber(Some(nr.asString))
-              )
-            }.getOrElse(Map.empty)
+            .map(d => Map(":flg" -> AttributeValue().withBool(Some(d)))).getOrElse(Map.empty) ++ fromSequenceNr
+            .map(nr => Map(":nr" -> AttributeValue().withNumber(Some(nr.asString)))).getOrElse(Map.empty)
         )
       ).withScanIndexForward(Some(false))
       .withLimit(Some(1))

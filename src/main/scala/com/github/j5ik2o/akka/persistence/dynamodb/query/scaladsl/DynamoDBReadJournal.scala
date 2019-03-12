@@ -79,10 +79,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val pluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(config)
 
+  import pluginConfig._
+
   protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
     pluginConfig.journalSequenceRetrievalConfig
-
-  private val bufferSize = pluginConfig.bufferSize
 
   private val asyncHttpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
   private val dynamoDbAsyncClientBuilder =
@@ -209,7 +209,6 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
                           terminateAfterOffset: Option[Long]): Source[EventEnvelope, NotUsed] = {
     import DynamoDBReadJournal._
     implicit val askTimeout: Timeout = Timeout(journalSequenceRetrievalConfig.askTimeout)
-    val batchSize                    = pluginConfig.bufferSize
     Source
       .unfoldAsync[(Long, FlowControl), Seq[EventEnvelope]]((offset, Continue)) {
         case (from, control) =>

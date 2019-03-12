@@ -47,7 +47,6 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val taskClient: DynamoDBTaskClientV2   = DynamoDBTaskClientV2(asyncClient)
   private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
   private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,

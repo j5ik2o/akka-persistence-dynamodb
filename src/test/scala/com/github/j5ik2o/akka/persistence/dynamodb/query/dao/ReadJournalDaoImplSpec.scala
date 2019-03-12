@@ -88,7 +88,7 @@ class ReadJournalDaoImplSpec
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao
         .allPersistenceIdsSource(journalRows.size).runWith(Sink.seq).futureValue
-      val excepted = journalRows.map(_.persistenceId.value).toList
+      val excepted = journalRows.map(_.persistenceId).toList
       result should contain theSameElementsAs excepted
     }
     "getMessages" in {

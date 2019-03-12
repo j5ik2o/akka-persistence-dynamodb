@@ -13,7 +13,25 @@ There are the following reasons.
 
 ## akka-persistence journal plugin
 
+```hocon
+akka.persistence.journal.plugin = "dynamo-db-journal"
+
+dynamo-db-journal {
+  class = "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal"
+  plugin-dispatcher = "akka.actor.default-dispatcher"
+  
+  table-name = "Journal"
+  tag-separator = ","
+  
+}
+
+```
+
 ## akka-persistence snapshot plugin
+
+```hocon
+akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
+```
 
 ## akka-persistence query plugin
 

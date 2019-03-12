@@ -9,8 +9,8 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 | Product                               | DynamoDB support | non-blocking I/O | Journal Plugin | Snapshot Plugin | Query Plugin |
 |:-------------------------------------:|:----------------:|:----------------:|:--------------:|:---------------:|:------------:|
 | **j5ik2o/akka-persistence-dynamodb**  |        ✓         |         ✓        |        ✓       |        ✓        |       ✓      |
-| **akka/akka-persistence-dynamodb**    |        ✓         |         x        |        ✓       |        ✓        |       -      |
-| **akka/akka-persistence-jdbc**        |        x         |         x        |        ✓       |        ✓        |       ✓      |
+| **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)**    |        ✓         |         -        |        ✓       |        ✓        |       -      |
+| **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)**        |        -         |         -        |        ✓       |        ✓        |       ✓      |
 
 ## akka-persistence journal plugin
 

@@ -15,6 +15,19 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 |Snapshot Plugin|✓|-|✓|
 |Query Plugin|✓|-|✓|
 
+## Installation
+
+Add the following to your sbt build (Scala 2.11.x, 2.12.x):
+
+```scala
+resolvers += "Sonatype OSS Release Repository" at "https://oss.sonatype.org/content/repositories/releases/"
+
+val version = "..."
+
+libraryDependencies += Seq(
+  "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version
+)
+```
 
 ## Depends on
 

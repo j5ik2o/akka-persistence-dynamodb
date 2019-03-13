@@ -12,7 +12,7 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 |Key Sharding|-|✓|-|
 |Non-blocking I/O|✓|-|-|
 |Journal Plugin|✓|✓|✓|
-|Snapshot Plugin|✓|-|✓|
+|Snapshot Plugin|✓|✓|✓|
 |Query Plugin|✓|-|✓|
 
 ## Installation

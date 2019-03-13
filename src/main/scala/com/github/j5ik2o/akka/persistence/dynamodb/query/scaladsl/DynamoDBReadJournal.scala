@@ -35,7 +35,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.typesafe.config.Config
@@ -84,9 +84,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
     pluginConfig.journalSequenceRetrievalConfig
 
-  private val asyncHttpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
+  private val asyncHttpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, asyncHttpClientBuilder.build())
+    DynamoDbClientBuilderUtils.setup(pluginConfig, asyncHttpClientBuilder.build())
 
   protected val javaAsyncClient: DynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
 

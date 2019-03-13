@@ -9,8 +9,8 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbA
 
 object DynamoDbClientBuilderUtils {
 
-  def asyncBuilder(persistencePluginConfig: PluginConfig,
-                   httpClientBuilder: SdkAsyncHttpClient): DynamoDbAsyncClientBuilder = {
+  def setup(persistencePluginConfig: PluginConfig,
+            httpClientBuilder: SdkAsyncHttpClient): DynamoDbAsyncClientBuilder = {
     var dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder)
     val clientConfig               = persistencePluginConfig.clientConfig
     (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {

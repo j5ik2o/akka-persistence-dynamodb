@@ -6,9 +6,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.{ NettyNioAsyncHttpClient, SdkEventLoopGroup }
 
-object HttpClientUtils {
+object HttpClientBuilderUtils {
 
-  def asyncBuilder(pluginConfig: PluginConfig): NettyNioAsyncHttpClient.Builder = {
+  def setup(pluginConfig: PluginConfig): NettyNioAsyncHttpClient.Builder = {
     val result       = NettyNioAsyncHttpClient.builder()
     val clientConfig = pluginConfig.clientConfig
     clientConfig.maxConcurrency.foreach(v => result.maxConcurrency(v))

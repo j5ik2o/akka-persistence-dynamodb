@@ -18,16 +18,16 @@ package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 
 import scala.util.{ Failure, Success }
 
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
     extends FlowPersistentReprSerializer[JournalRow] {
 
-  override def serialize(persistentRepr: PersistentRepr, tags: Set[String]): Either[Throwable, JournalRow] = {
-    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
+  override def serialize(persistentRepr: PersistentRepr,
+                         tags: Set[String],
+                         index: Option[Int]): Either[Throwable, JournalRow] = {
     serialization
       .serialize(persistentRepr)
       .map(

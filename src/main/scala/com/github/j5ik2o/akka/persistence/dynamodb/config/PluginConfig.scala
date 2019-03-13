@@ -19,8 +19,6 @@ import scala.concurrent.duration.FiniteDuration
 
 trait PluginConfig {
   val tableName: String
-  val bufferSize: Int
-  val batchSize: Int
   val parallelism: Int
   val refreshInterval: FiniteDuration
   val clientConfig: DynamoDBClientConfig

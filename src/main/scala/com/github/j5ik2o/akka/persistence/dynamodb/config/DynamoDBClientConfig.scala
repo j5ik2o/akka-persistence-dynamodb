@@ -63,4 +63,7 @@ case class DynamoDBClientConfig(accessKeyId: Option[String],
                                 userHttp2: Option[Boolean],
                                 maxHttp2Streams: Option[Int],
                                 batchGetItemLimit: Int,
-                                batchWriteItemLimit: Int)
+                                batchWriteItemLimit: Int) {
+  require(batchGetItemLimit >= 1 && batchGetItemLimit <= 100)
+  require(batchWriteItemLimit >= 1 && batchWriteItemLimit <= 25)
+}

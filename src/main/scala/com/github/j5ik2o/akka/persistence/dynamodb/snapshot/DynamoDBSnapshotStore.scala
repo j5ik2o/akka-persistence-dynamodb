@@ -25,7 +25,7 @@ import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
@@ -49,9 +49,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  private val httpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
+  private val httpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, httpClientBuilder.build())
+    DynamoDbClientBuilderUtils.setup(pluginConfig, httpClientBuilder.build())
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
 

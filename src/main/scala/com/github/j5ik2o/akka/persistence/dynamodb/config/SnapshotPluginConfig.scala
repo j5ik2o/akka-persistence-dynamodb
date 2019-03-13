@@ -26,8 +26,6 @@ object SnapshotPluginConfig {
     SnapshotPluginConfig(
       tableName = config.asString("table-name", "Snapshot"),
       columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      bufferSize = config.asInt("buffer-size", Int.MaxValue),
-      batchSize = config.asInt("batch-size", 16),
       parallelism = config.asInt("parallelism", 32),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
@@ -38,8 +36,6 @@ object SnapshotPluginConfig {
 
 final case class SnapshotPluginConfig(tableName: String,
                                       columnsDefConfig: SnapshotColumnsDefConfig,
-                                      bufferSize: Int,
-                                      batchSize: Int,
                                       parallelism: Int,
                                       refreshInterval: FiniteDuration,
                                       clientConfig: DynamoDBClientConfig)

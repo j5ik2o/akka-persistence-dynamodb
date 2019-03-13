@@ -22,20 +22,26 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.EitherSeq
 
 trait PersistentReprSerializer[A] {
 
-  def serialize(messages: Seq[AtomicWrite]): Seq[Either[Throwable, Seq[A]]] = {
-    messages.map { atomicWrite =>
-      val serialized = atomicWrite.payload.map(serialize)
+  def serialize(atomicWrites: Seq[AtomicWrite]): Seq[Either[Throwable, Seq[A]]] = {
+    atomicWrites.map { atomicWrite =>
+      val serialized = atomicWrite.payload.zipWithIndex.map {
+        case (v, index) => serialize(v, Some(index))
+      }
       EitherSeq.sequence(serialized)
     }
   }
 
-  def serialize(persistentRepr: PersistentRepr): Either[Throwable, A] = persistentRepr.payload match {
-    case Tagged(payload, tags) =>
-      serialize(persistentRepr.withPayload(payload), tags)
-    case _ => serialize(persistentRepr, Set.empty[String])
-  }
+  def serialize(persistentRepr: PersistentRepr, index: Option[Int]): Either[Throwable, A] =
+    persistentRepr.payload match {
+      case Tagged(payload, tags) =>
+        serialize(persistentRepr.withPayload(payload), tags, index)
+      case _ =>
+        serialize(persistentRepr, Set.empty[String], index)
+    }
 
-  def serialize(persistentRepr: PersistentRepr, tags: Set[String]): Either[Throwable, A]
+  def serialize(persistentRepr: PersistentRepr): Either[Throwable, A] = serialize(persistentRepr, None)
+
+  def serialize(persistentRepr: PersistentRepr, tags: Set[String], index: Option[Int]): Either[Throwable, A]
 
   def deserialize(t: A): Either[Throwable, (PersistentRepr, Set[String], Long)]
 

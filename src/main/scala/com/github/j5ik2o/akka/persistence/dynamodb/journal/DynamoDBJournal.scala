@@ -21,7 +21,7 @@ import akka.actor.{ ActorLogging, ActorSystem }
 import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
-import akka.serialization.SerializationExtension
+import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.Sink
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
@@ -30,16 +30,17 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.Config
 import monix.execution.Scheduler
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbAsyncClientBuilder }
 
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 
 object DynamoDBJournal {
 
@@ -58,27 +59,26 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
-  private val httpClientBuilder = HttpClientUtils.asyncBuilder(pluginConfig)
+  protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder = HttpClientBuilderUtils.setup(pluginConfig)
 
-  private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.asyncBuilder(pluginConfig, httpClientBuilder.build())
+  protected val dynamoDbAsyncClientBuilder: DynamoDbAsyncClientBuilder =
+    DynamoDbClientBuilderUtils.setup(pluginConfig, httpClientBuilder.build())
 
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
 
-  private val serialization = SerializationExtension(system)
+  protected val serialization: Serialization = SerializationExtension(system)
 
   protected val journalDao: WriteJournalDao =
     new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig)
 
-  private val serializer: FlowPersistentReprSerializer[JournalRow] =
+  protected val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
-  private val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
+  protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
-  override def asyncWriteMessages(messages: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    log.debug(s"messages = ${messages.map(v => s"l:${v.lowestSequenceNr} - h:${v.highestSequenceNr}")}")
-    val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(messages)
+  override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
       row          <- serializeTry.right.getOrElse(Seq.empty)
@@ -90,14 +90,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           .map(_.right.map(_ => ()))
     val future =
       journalDao
-        .putMessages(rowsToWrite).runWith(Sink.head).map(
-          _ =>
-            resultWhenWriteComplete.map {
-              case Right(value) => Success(value)
-              case Left(ex)     => Failure(ex)
-            }.to
-        )
-    val persistenceId = messages.head.persistenceId
+        .putMessages(rowsToWrite).runWith(Sink.head).map { _ =>
+          resultWhenWriteComplete.map {
+            case Right(value) => Success(value)
+            case Left(ex)     => Failure(ex)
+          }.to
+        }
+    val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
     future.onComplete(_ => self ! WriteFinished(persistenceId, future))
     future
@@ -130,15 +129,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     }
   }
 
-  override def preStart(): Unit = {
-    super.preStart()
-    log.debug("start")
-  }
-
   override def postStop(): Unit = {
     javaClient.close()
     super.postStop()
-    log.debug("stop")
   }
 
   override def receivePluginInternal: Receive = {

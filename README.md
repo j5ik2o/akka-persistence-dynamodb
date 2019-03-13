@@ -9,7 +9,7 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 | Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
 |:-------:|:----:|:----:|:----:|
 |DynamoDB support|✓|✓|-|
-|Key Sharding|-|✓|-|
+|Sharding|-|✓|-|
 |Non-blocking I/O|✓|-|-|
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|

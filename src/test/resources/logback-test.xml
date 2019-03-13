@@ -10,6 +10,7 @@
         </encoder>
     </appender>
 
+    <logger name="com.github.j5ik2o" level="DEBUG" />
     <logger name="com.almworks.sqlite4java" level="OFF"/>
     <logger name="software.amazon" level="ERROR" />
     <logger name="io.netty" level="ERROR" />

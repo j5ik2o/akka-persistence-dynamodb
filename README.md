@@ -20,7 +20,7 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 
 ### DynamoDB Support
 
-Supports non-blocking based [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2). 
+Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2). 
 
 ### I/O Sharding
 
@@ -38,7 +38,8 @@ By the way, akka/akka-persistence-dynamodb maybe has a heavy maintenance cost be
 
 ### Non-blocking
 
-Implemented by akka-actor, akka-stream.
+- Supports non-blocking I/O by [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2)
+- The other logic implemented by akka-actor, akka-stream also non-blocking and async.
 
 ## Installation
 

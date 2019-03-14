@@ -49,9 +49,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  private val httpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig)
+  private val httpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.setup(pluginConfig, httpClientBuilder.build())
+    DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, httpClientBuilder.build())
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
 

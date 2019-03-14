@@ -108,6 +108,9 @@ trait DynamoDBSpecSupport
         Some(
           Seq(
             AttributeDefinition()
+              .withAttributeName(Some("pkey"))
+              .withAttributeType(Some(AttributeType.S)),
+            AttributeDefinition()
               .withAttributeName(Some("persistence-id"))
               .withAttributeType(Some(AttributeType.S)),
             AttributeDefinition()
@@ -123,7 +126,7 @@ trait DynamoDBSpecSupport
         Some(
           Seq(
             KeySchemaElement()
-              .withAttributeName(Some("persistence-id"))
+              .withAttributeName(Some("pkey"))
               .withKeyType(Some(KeyType.HASH)),
             KeySchemaElement()
               .withAttributeName(Some("sequence-nr"))
@@ -146,6 +149,22 @@ trait DynamoDBSpecSupport
                 Some(
                   Seq(
                     KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("tags"))
+                  )
+                )
+              ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))
+              .withProvisionedThroughput(
+                Some(
+                  ProvisionedThroughput()
+                    .withReadCapacityUnits(Some(10L))
+                    .withWriteCapacityUnits(Some(10L))
+                )
+              ),
+            GlobalSecondaryIndex()
+              .withIndexName(Some("GetJournalRows")).withKeySchema(
+                Some(
+                  Seq(
+                    KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("persistence-id")),
+                    KeySchemaElement().withKeyType(Some(KeyType.RANGE)).withAttributeName(Some("sequence-nr"))
                   )
                 )
               ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))

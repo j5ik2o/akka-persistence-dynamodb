@@ -6,6 +6,7 @@ final case class JournalRow(persistenceId: PersistenceId,
                             message: Array[Byte],
                             ordering: Long,
                             tags: Option[String] = None) {
+  def partitionKey: PartitionKey            = PartitionKey(persistenceId, sequenceNumber)
   def withDeleted: JournalRow               = copy(deleted = true)
   def withOrdering(value: Long): JournalRow = copy(ordering = value)
 }

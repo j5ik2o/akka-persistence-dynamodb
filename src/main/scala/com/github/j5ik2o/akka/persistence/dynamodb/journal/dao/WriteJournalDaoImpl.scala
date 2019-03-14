@@ -21,7 +21,7 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -129,8 +129,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withTableName(Some(tableName)).withKey(
         Some(
           Map(
-            columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-              .withString(Some(journalRow.persistenceId.asString)),
+            columnsDefConfig.partitionKeyColumnName -> AttributeValue()
+              .withString(Some(journalRow.partitionKey.asString(shardCount))),
             columnsDefConfig.sequenceNrColumnName -> AttributeValue()
               .withNumber(Some(journalRow.sequenceNumber.asString))
           )
@@ -172,6 +172,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                              deleted: Boolean = false): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
+      .withIndexName(Some(getJournalRowsIndexName))
       .withKeyConditionExpression(Some("#pid = :pid and #snr <= :snr"))
       .withFilterExpression(Some("#d = :flg"))
       .withExpressionAttributeNames(
@@ -229,6 +230,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                                 deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
+      .withIndexName(Some(getJournalRowsIndexName))
       .withKeyConditionExpression(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
       )
@@ -286,8 +288,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                     Some(
                       seqNos.map { seqNr =>
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(
-                            Some(persistenceId.asString)
+                          columnsDefConfig.partitionKeyColumnName -> AttributeValue().withString(
+                            Some(PartitionKey(persistenceId, SequenceNumber(seqNr)).asString(shardCount))
                           ),
                           columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
                         )
@@ -404,6 +406,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               .withItem(
                 Some(
                   Map(
+                    columnsDefConfig.partitionKeyColumnName -> AttributeValue()
+                      .withString(
+                        Some(PartitionKey(journalRow.persistenceId, journalRow.sequenceNumber).asString(shardCount))
+                      ),
                     columnsDefConfig.persistenceIdColumnName -> AttributeValue()
                       .withString(Some(journalRow.persistenceId.asString)),
                     columnsDefConfig.sequenceNrColumnName -> AttributeValue()

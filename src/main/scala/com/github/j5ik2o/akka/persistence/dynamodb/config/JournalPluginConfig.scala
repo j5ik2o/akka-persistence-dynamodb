@@ -26,11 +26,13 @@ object JournalPluginConfig {
     JournalPluginConfig(
       tableName = config.asString("table-name", "Journal"),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
+      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRows"),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       parallelism = config.asInt("parallelism", 32),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       softDeleted = config.asBoolean("soft-delete", true),
+      shardCount = config.asInt("shard-count", 64),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
     )
   }
@@ -39,10 +41,11 @@ object JournalPluginConfig {
 
 case class JournalPluginConfig(tableName: String,
                                columnsDefConfig: JournalColumnsDefConfig,
+                               getJournalRowsIndexName: String,
                                tagSeparator: String,
                                bufferSize: Int,
                                parallelism: Int,
                                refreshInterval: FiniteDuration,
                                softDeleted: Boolean,
+                               shardCount: Int,
                                clientConfig: DynamoDBClientConfig)
-    extends PluginConfig

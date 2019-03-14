@@ -39,4 +39,3 @@ final case class SnapshotPluginConfig(tableName: String,
                                       parallelism: Int,
                                       refreshInterval: FiniteDuration,
                                       clientConfig: DynamoDBClientConfig)
-    extends PluginConfig

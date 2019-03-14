@@ -23,7 +23,7 @@ import akka.serialization.Serialization
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -153,8 +153,8 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                     Some(
                       seqNos.map { seqNr =>
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(
-                            Some(persistenceId.asString)
+                          columnsDefConfig.partitionKeyColumnName -> AttributeValue().withString(
+                            Some(PartitionKey(persistenceId, SequenceNumber(seqNr)).asString(shardCount))
                           ),
                           columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
                         )

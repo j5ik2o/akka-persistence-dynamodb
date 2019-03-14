@@ -27,6 +27,8 @@ import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCred
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
+import scala.concurrent.duration._
+
 abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJournalSpec(config) {
 
   it should "not find any events for unknown pid" in
@@ -95,13 +97,11 @@ abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJo
   }
 }
 
-//class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
-//
-//class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
-
 class DynamoDBCurrentEventsByPersistenceId1Test
     extends CurrentEventsByPersistenceId1Test("default.conf")
     with DynamoDBSpecSupport {
+
+  override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = 8000
 

@@ -18,7 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 import java.net.URI
 
 import akka.persistence.snapshot.SnapshotStoreSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.query.query.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures

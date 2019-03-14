@@ -25,6 +25,7 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
@@ -44,7 +45,7 @@ class ReadJournalDaoImplSpec
     with FreeSpecLike
     with Matchers
     with ScalaFutures
-    with DynamoDBEmbeddedSpecSupport {
+    with DynamoDBSpecSupport {
 
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
@@ -105,44 +106,8 @@ class ReadJournalDaoImplSpec
     }
   }
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    val tableName = "Journal"
-    val createRequest = CreateTableRequest()
-      .withAttributeDefinitions(
-        Some(
-          Seq(
-            AttributeDefinition()
-              .withAttributeName(Some("persistence-id"))
-              .withAttributeType(Some(AttributeType.S)),
-            AttributeDefinition()
-              .withAttributeName(Some("sequence-nr"))
-              .withAttributeType(Some(AttributeType.N))
-          )
-        )
-      )
-      .withKeySchema(
-        Some(
-          Seq(
-            KeySchemaElement()
-              .withAttributeName(Some("persistence-id"))
-              .withKeyType(Some(KeyType.HASH)),
-            KeySchemaElement()
-              .withAttributeName(Some("sequence-nr"))
-              .withKeyType(Some(KeyType.RANGE))
-          )
-        )
-      )
-      .withProvisionedThroughput(
-        Some(
-          ProvisionedThroughput()
-            .withReadCapacityUnits(Some(10L))
-            .withWriteCapacityUnits(Some(10L))
-        )
-      )
-      .withTableName(Some(tableName))
-    val createResponse = asyncClient
-      .createTable(createRequest).futureValue
-    createResponse.isSuccessful shouldBe true
-  }
+  before { createTable }
+
+  after { deleteTable }
+
 }

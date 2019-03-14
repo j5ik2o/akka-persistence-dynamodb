@@ -26,15 +26,15 @@ Supports non-blocking based [aws-sdk-java-v2](https://github.com/aws/aws-sdk-jav
 
 This plugin does a simple sharding to avoid the throttle of write on DynamoDB.
 
-- Partition Key = ${PersistenceId}-${SequenceNumber % 64}
-- Sort Key = ${SequenceNumber}
+- Primary Index
+  - Partition Key = ${PersistenceId}-${SequenceNumber % ShardCount}
+  - Sort Key = ${SequenceNumber}
 
-GSI: GetJournalRows
+- GSI: GetJournalRows
+  - PartitionKey = ${PersistenceId}
+  - Sort Key = ${SequenceNumber}
 
-- PartitionKey = ${PersistenceId}
-- Sort Key = ${SequenceNumber}
-
-By the way, akka/akka-persistence-dynamodb has a heavy maintenance cost because it provides complicated sharding.
+By the way, akka/akka-persistence-dynamodb maybe has a heavy maintenance cost because it provides complicated sharding.
 
 ### Non-blocking
 

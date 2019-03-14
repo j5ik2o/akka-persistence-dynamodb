@@ -126,7 +126,35 @@ If overwrite the default values.
 akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
 
 dynamo-db-snapshot {
-
+  table-name = "Snapshot"
+  parallelism = 32
+  refresh-interval = 0.5 s
+  shard-count = 64
+  columns-def {
+    partition-key-column-name = "pkey"
+    persistence-id-column-name = "persistence-id"
+    sequence-nr-column-name = "sequence-nr"
+    deleted-column-name = "deleted"
+    message-column-name = "message"
+    ordering-column-name = "ordering"
+    tags-column-name = "tags"
+  }
+  dynamodb-client {
+    max-concurrency = 128
+    max-pending-connection-acquires = ?
+    read-timeout = 3 s
+    write-timeout = 3 s
+    connection-timeout = 3 s
+    connection-acquisition-timeout = 3 s
+    connection-time-to-live = 3 s
+    max-idle-connection-timeout = 3 s
+    use-connection-reaper = true
+    threads-of-event-loop-group = 32
+    user-http2 = true
+    max-http2-streams = 32
+    batch-get-item-limit = 100
+    batch-write-item-limit = 25
+  }
 }
 ```
 

@@ -32,6 +32,7 @@ object QueryPluginConfig {
       batchSize = config.asInt("batch-size", 16),
       parallelism = config.asInt("parallelism", 32),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
+      shardCount = config.asInt("shard-count", 64),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
@@ -47,6 +48,6 @@ case class QueryPluginConfig(tableName: String,
                              batchSize: Int,
                              parallelism: Int,
                              refreshInterval: FiniteDuration,
+                             shardCount: Int,
                              journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
                              clientConfig: DynamoDBClientConfig)
-    extends PluginConfig

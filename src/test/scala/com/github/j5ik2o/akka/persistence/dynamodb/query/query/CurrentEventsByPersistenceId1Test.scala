@@ -21,10 +21,13 @@ import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+
+import scala.concurrent.duration._
 
 abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJournalSpec(config) {
 
@@ -94,13 +97,11 @@ abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJo
   }
 }
 
-//class LevelDbCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("leveldb.conf")
-//
-//class InMemoryCurrentEventsByPersistenceId1Test extends CurrentEventsByPersistenceId1Test("inmemory.conf")
-
 class DynamoDBCurrentEventsByPersistenceId1Test
     extends CurrentEventsByPersistenceId1Test("default.conf")
     with DynamoDBSpecSupport {
+
+  override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = 8000
 

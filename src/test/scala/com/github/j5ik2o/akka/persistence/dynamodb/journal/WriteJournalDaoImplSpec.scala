@@ -8,14 +8,10 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{
-  DynamoDBAsyncClientV2,
-  DynamoDBEmbeddedSpecSupport,
-  DynamoDBSyncClientV2
-}
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBSyncClientV2 }
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
@@ -31,7 +27,7 @@ class WriteJournalDaoImplSpec
     with FreeSpecLike
     with Matchers
     with ScalaFutures
-    with DynamoDBEmbeddedSpecSupport {
+    with DynamoDBSpecSupport {
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
   val underlyingAsync: DynamoDbAsyncClient = DynamoDbAsyncClient
@@ -160,44 +156,9 @@ class WriteJournalDaoImplSpec
       results.size shouldBe 0
     }
   }
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    val tableName = "Journal"
-    val createRequest = CreateTableRequest()
-      .withAttributeDefinitions(
-        Some(
-          Seq(
-            AttributeDefinition()
-              .withAttributeName(Some("persistence-id"))
-              .withAttributeType(Some(AttributeType.S)),
-            AttributeDefinition()
-              .withAttributeName(Some("sequence-nr"))
-              .withAttributeType(Some(AttributeType.N))
-          )
-        )
-      )
-      .withKeySchema(
-        Some(
-          Seq(
-            KeySchemaElement()
-              .withAttributeName(Some("persistence-id"))
-              .withKeyType(Some(KeyType.HASH)),
-            KeySchemaElement()
-              .withAttributeName(Some("sequence-nr"))
-              .withKeyType(Some(KeyType.RANGE))
-          )
-        )
-      )
-      .withProvisionedThroughput(
-        Some(
-          ProvisionedThroughput()
-            .withReadCapacityUnits(Some(10L))
-            .withWriteCapacityUnits(Some(10L))
-        )
-      )
-      .withTableName(Some(tableName))
-    val createResponse = asyncClient
-      .createTable(createRequest).futureValue
-    createResponse.isSuccessful shouldBe true
-  }
+
+  before { createTable }
+
+  after { deleteTable }
+
 }

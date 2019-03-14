@@ -59,10 +59,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
-  protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder = HttpClientBuilderUtils.setup(pluginConfig)
+  protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
+    HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
 
   protected val dynamoDbAsyncClientBuilder: DynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.setup(pluginConfig, httpClientBuilder.build())
+    DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, httpClientBuilder.build())
 
   protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
   protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)

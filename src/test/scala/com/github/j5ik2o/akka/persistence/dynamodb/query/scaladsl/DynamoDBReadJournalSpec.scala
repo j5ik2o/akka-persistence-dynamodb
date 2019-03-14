@@ -32,7 +32,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig,
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
-import com.github.j5ik2o.akka.persistence.dynamodb.query.query.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2

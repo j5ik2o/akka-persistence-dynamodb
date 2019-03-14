@@ -9,11 +9,35 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 | Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
 |:-------:|:----:|:----:|:----:|
 |DynamoDB support|✓|✓|-|
-|Sharding|-|✓|-|
+|I/O Sharding|✓|✓|-|
 |Non-blocking I/O|✓|-|-|
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
 |Query Plugin|✓|-|✓|
+
+## Features
+
+### DynamoDB Support
+
+Supports non-blocking based [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2). 
+
+### I/O Sharding
+
+This plugin does a simple sharding to avoid the throttle of write on DynamoDB.
+
+Partition Key = ${PersistenceId}-${SequenceNumber % 64}
+Sort Key = ${SequenceNumber}
+
+GSI: GetJournalRows
+
+PartitionKey = ${PersistenceId}
+Sort Key = ${SequenceNumber}
+
+By the way, akka/akka-persistence-dynamodb has a heavy maintenance cost because it provides complicated sharding.
+
+### Non-blocking
+
+Implemented by akka-actor, akka-stream.
 
 ## Installation
 

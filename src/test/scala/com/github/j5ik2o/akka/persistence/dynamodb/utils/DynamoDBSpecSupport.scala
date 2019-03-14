@@ -1,19 +1,4 @@
-/*
- * Copyright 2019 Junichi Kato
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.github.j5ik2o.akka.persistence.dynamodb.query.query
+package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
@@ -123,6 +108,9 @@ trait DynamoDBSpecSupport
         Some(
           Seq(
             AttributeDefinition()
+              .withAttributeName(Some("pkey"))
+              .withAttributeType(Some(AttributeType.S)),
+            AttributeDefinition()
               .withAttributeName(Some("persistence-id"))
               .withAttributeType(Some(AttributeType.S)),
             AttributeDefinition()
@@ -138,7 +126,7 @@ trait DynamoDBSpecSupport
         Some(
           Seq(
             KeySchemaElement()
-              .withAttributeName(Some("persistence-id"))
+              .withAttributeName(Some("pkey"))
               .withKeyType(Some(KeyType.HASH)),
             KeySchemaElement()
               .withAttributeName(Some("sequence-nr"))
@@ -161,6 +149,22 @@ trait DynamoDBSpecSupport
                 Some(
                   Seq(
                     KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("tags"))
+                  )
+                )
+              ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))
+              .withProvisionedThroughput(
+                Some(
+                  ProvisionedThroughput()
+                    .withReadCapacityUnits(Some(10L))
+                    .withWriteCapacityUnits(Some(10L))
+                )
+              ),
+            GlobalSecondaryIndex()
+              .withIndexName(Some("GetJournalRows")).withKeySchema(
+                Some(
+                  Seq(
+                    KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("persistence-id")),
+                    KeySchemaElement().withKeyType(Some(KeyType.RANGE)).withAttributeName(Some("sequence-nr"))
                   )
                 )
               ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))

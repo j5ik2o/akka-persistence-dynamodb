@@ -84,9 +84,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
     pluginConfig.journalSequenceRetrievalConfig
 
-  private val asyncHttpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig)
+  private val asyncHttpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
   private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.setup(pluginConfig, asyncHttpClientBuilder.build())
+    DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, asyncHttpClientBuilder.build())
 
   protected val javaAsyncClient: DynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
 

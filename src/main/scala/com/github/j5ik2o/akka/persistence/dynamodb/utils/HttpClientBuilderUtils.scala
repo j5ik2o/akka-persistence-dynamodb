@@ -2,15 +2,14 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.time.{ Duration => JavaDuration }
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ DynamoDBClientConfig, PluginConfig }
 import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.{ NettyNioAsyncHttpClient, SdkEventLoopGroup }
 
 object HttpClientBuilderUtils {
 
-  def setup(pluginConfig: PluginConfig): NettyNioAsyncHttpClient.Builder = {
-    val result       = NettyNioAsyncHttpClient.builder()
-    val clientConfig = pluginConfig.clientConfig
+  def setup(clientConfig: DynamoDBClientConfig): NettyNioAsyncHttpClient.Builder = {
+    val result = NettyNioAsyncHttpClient.builder()
     clientConfig.maxConcurrency.foreach(v => result.maxConcurrency(v))
     clientConfig.maxPendingConnectionAcquires.foreach(v => result.maxPendingConnectionAcquires(v))
     clientConfig.readTimeout.foreach(v => result.readTimeout(JavaDuration.ofMillis(v.toMillis)))

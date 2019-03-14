@@ -76,11 +76,22 @@ dynamo-db-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal"
   plugin-dispatcher = "akka.actor.default-dispatcher"
   table-name = "Journal"
+  get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
   buffer-size = 1024
   parallelism = 32
   refresh-interval = 0.5 s
   soft-delete = true
+  shard-count = 64
+  columns-def {
+    partition-key-column-name = "pkey"
+    persistence-id-column-name = "persistence-id"
+    sequence-nr-column-name = "sequence-nr"
+    deleted-column-name = "deleted"
+    message-column-name = "message"
+    ordering-column-name = "ordering"
+    tags-column-name = "tags"
+  }
   dynamodb-client {
     max-concurrency = 128
     max-pending-connection-acquires = ?
@@ -135,13 +146,25 @@ If overwrite the default values.
 ```hocon
 dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
+  plugin-dispatcher = "akka.actor.default-dispatcher"
   write-plugin = "dynamo-db-journal"
   table-name = "Journal"
+  get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
   buffer-size = 1024
   parallelism = 32
   refresh-interval = 0.5 s
   soft-delete = true
+  shard-count = 64
+  columns-def {
+    partition-key-column-name = "pkey"
+    persistence-id-column-name = "persistence-id"
+    sequence-nr-column-name = "sequence-nr"
+    deleted-column-name = "deleted"
+    message-column-name = "message"
+    ordering-column-name = "ordering"
+    tags-column-name = "tags"
+  }
   dynamodb-client {
     max-concurrency = 128
     max-pending-connection-acquires = ?

@@ -25,7 +25,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 | Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
 |:-------:|:----:|:----:|:----:|
 |DynamoDB support|✓|✓|-|
-|I/O Sharding|✓|✓|-|
+|Write Sharding|✓|✓|-|
 |Non-blocking I/O|✓|-|-|
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
@@ -35,15 +35,15 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2). 
 
-### I/O Sharding
+### Write Sharding
 
 This plugin does a simple sharding to avoid the throttle of write on DynamoDB.
 
-- Primary Index
+- Primary Index(for Writing)
   - Partition Key = ${PersistenceId}-${SequenceNumber % ShardCount}
   - Sort Key = ${SequenceNumber}
 
-- GSI: GetJournalRows
+- GSI: GetJournalRows(for Reading)
   - PartitionKey = ${PersistenceId}
   - Sort Key = ${SequenceNumber}
 

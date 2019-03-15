@@ -17,6 +17,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 - Scala: `2.11.x` or `2.12.x`  
 - Akka: `2.5.x+`
+- AWS-SDK: `2.4.x`
 - Java: `1.8+`
 
 ## Features
@@ -29,8 +30,6 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
 |Query Plugin|✓|-|✓|
-
-
 
 ### DynamoDB Support
 
@@ -68,11 +67,6 @@ libraryDependencies += Seq(
   "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version
 )
 ```
-
-## Depends on
-
-- akka 2.5.x
-- aws-sdk v2
 
 ## akka-persistence journal plugin
 

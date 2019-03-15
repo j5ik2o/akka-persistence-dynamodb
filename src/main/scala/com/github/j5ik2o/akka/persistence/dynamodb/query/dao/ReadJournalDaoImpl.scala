@@ -135,51 +135,34 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                            toSequenceNr: SequenceNumber,
                            max: Long,
                            deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
-    Source
-      .unfold(fromSequenceNr.value) {
-        case nr if nr > toSequenceNr.value =>
-          None
-        case nr =>
-          Some(nr + 1, nr)
-      }
-      .grouped(clientConfig.batchGetItemLimit).log("grouped")
-      .map { seqNos =>
-        BatchGetItemRequest()
-          .withRequestItems(
-            Some(
-              Map(
-                tableName -> KeysAndAttributes()
-                  .withKeys(
-                    Some(
-                      seqNos.map { seqNr =>
-                        Map(
-                          columnsDefConfig.partitionKeyColumnName -> AttributeValue().withString(
-                            Some(PartitionKey(persistenceId, SequenceNumber(seqNr)).asString(shardCount))
-                          ),
-                          columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
-                        )
-                      }
-                    )
-                  )
-              )
+    def loop(lastKey: Option[Map[String, AttributeValue]]): Source[Map[String, AttributeValue], NotUsed] = {
+      val queryRequest = QueryRequest()
+        .withTableName(Some(tableName)).withIndexName(Some(getJournalRowsIndexName)).withKeyConditionExpression(
+          Some("#pid = :pid and #snr between :min and :max")
+        ).withExpressionAttributeNames(
+          Some(Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName))
+        ).withExpressionAttributeValues(
+          Some(
+            Map(
+              ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
+              ":min" -> AttributeValue().withNumber(Some(fromSequenceNr.asString)),
+              ":max" -> AttributeValue().withNumber(Some(toSequenceNr.asString))
             )
           )
-      }
-      .via(streamClient.batchGetItemFlow(parallelism))
-      .map { batchGetItemResponse =>
-        batchGetItemResponse.responses.getOrElse(Map.empty)(tableName).toVector
-      }
-      .takeWhile(_.nonEmpty)
-      .mapConcat(_.toVector)
+        ).withExclusiveStartKey(lastKey)
+      Source
+        .single(queryRequest).via(streamClient.queryFlow(parallelism)).takeWhile(_.count.exists(_ > 0)).flatMapConcat {
+          response =>
+            val last = response.lastEvaluatedKey.getOrElse(Map.empty)
+            if (last.isEmpty) {
+              Source(response.items.get.toVector)
+            } else {
+              loop(response.lastEvaluatedKey)
+            }
+        }
+    }
+    loop(None)
       .map(convertToJournalRow)
-      .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
-      .mapConcat(_.toVector)
-      .statefulMapConcat { () =>
-        val index = new AtomicLong()
-        journalRow =>
-          List(journalRow.withOrdering(index.incrementAndGet()))
-      }
       .filter(_.deleted == false).log("journalRow")
       .take(max)
       .withAttributes(logLevels)

@@ -26,7 +26,7 @@ object JournalPluginConfig {
     JournalPluginConfig(
       tableName = config.asString("table-name", "Journal"),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRows"),
+      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRowsIndex"),
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       parallelism = config.asInt("parallelism", 32),

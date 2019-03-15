@@ -32,7 +32,6 @@ class WriteJournalDaoImplSpec
 
   val underlyingAsync: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )
@@ -41,7 +40,6 @@ class WriteJournalDaoImplSpec
 
   val underlyingSync: DynamoDbClient = DynamoDbClient
     .builder()
-    .httpClient(ApacheHttpClient.builder().maxConnections(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

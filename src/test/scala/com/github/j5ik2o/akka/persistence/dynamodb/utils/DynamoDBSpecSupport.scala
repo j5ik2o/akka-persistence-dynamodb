@@ -160,7 +160,7 @@ trait DynamoDBSpecSupport
                 )
               ),
             GlobalSecondaryIndex()
-              .withIndexName(Some("GetJournalRows")).withKeySchema(
+              .withIndexName(Some("GetJournalRowsIndex")).withKeySchema(
                 Some(
                   Seq(
                     KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("persistence-id")),

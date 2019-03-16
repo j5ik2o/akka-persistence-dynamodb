@@ -20,10 +20,10 @@ import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.serialization.Serialization
-import akka.stream.Attributes
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
@@ -35,25 +35,19 @@ import scala.concurrent.{ ExecutionContext, Future }
 class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                          serialization: Serialization,
                          pluginConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
-    extends ReadJournalDao {
+    extends ReadJournalDao
+    with DaoSupport {
+
   import pluginConfig._
+
   private val logger = LoggerFactory.getLogger(getClass)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
-                                               onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Debug)
+  override protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
-  private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
-
-  private def scan(lastKey: Option[Map[String, AttributeValue]]): Future[ScanResponse] = {
-    asyncClient.scan(
-      ScanRequest()
-        .withTableName(Some(tableName))
-        .withSelect(Some(Select.ALL_ATTRIBUTES))
-        .withLimit(Some(batchSize))
-        .withExclusiveStartKey(lastKey)
-    )
-  }
+  override val tableName: String                         = pluginConfig.tableName
+  override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
+  override val parallelism: Int                          = pluginConfig.parallelism
+  override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
   override def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed] = {
     logger.debug("allPersistenceIdsSource: max = {}", max)
@@ -89,6 +83,16 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .map(PersistenceId)
       .take(max)
       .withAttributes(logLevels)
+  }
+
+  private def scan(lastKey: Option[Map[String, AttributeValue]]): Future[ScanResponse] = {
+    asyncClient.scan(
+      ScanRequest()
+        .withTableName(Some(tableName))
+        .withSelect(Some(Select.ALL_ATTRIBUTES))
+        .withLimit(Some(batchSize))
+        .withExclusiveStartKey(lastKey)
+    )
   }
 
   override def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed] = {
@@ -130,73 +134,17 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withAttributes(logLevels)
   }
 
-  override def getMessages(persistenceId: PersistenceId,
-                           fromSequenceNr: SequenceNumber,
-                           toSequenceNr: SequenceNumber,
-                           max: Long,
-                           deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
-    Source
-      .unfold(fromSequenceNr.value) {
-        case nr if nr > toSequenceNr.value =>
-          None
-        case nr =>
-          Some(nr + 1, nr)
-      }
-      .grouped(clientConfig.batchGetItemLimit).log("grouped")
-      .map { seqNos =>
-        BatchGetItemRequest()
-          .withRequestItems(
-            Some(
-              Map(
-                tableName -> KeysAndAttributes()
-                  .withKeys(
-                    Some(
-                      seqNos.map { seqNr =>
-                        Map(
-                          columnsDefConfig.partitionKeyColumnName -> AttributeValue().withString(
-                            Some(PartitionKey(persistenceId, SequenceNumber(seqNr)).asString(shardCount))
-                          ),
-                          columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(Some(seqNr.toString))
-                        )
-                      }
-                    )
-                  )
-              )
-            )
-          )
-      }
-      .via(streamClient.batchGetItemFlow(parallelism))
-      .map { batchGetItemResponse =>
-        batchGetItemResponse.responses.getOrElse(Map.empty)(tableName).toVector
-      }
-      .takeWhile(_.nonEmpty)
-      .mapConcat(_.toVector)
-      .map(convertToJournalRow)
-      .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
-      .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
-      .mapConcat(_.toVector)
-      .statefulMapConcat { () =>
-        val index = new AtomicLong()
-        journalRow =>
-          List(journalRow.withOrdering(index.incrementAndGet()))
-      }
-      .filter(_.deleted == false).log("journalRow")
-      .take(max)
-      .withAttributes(logLevels)
-
-  }
-
-  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
-    JournalRow(
-      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
-      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
-      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
-      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
-    )
-  }
+//  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
+//    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
+//    JournalRow(
+//      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
+//      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
+//      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+//      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
+//      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
+//      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
+//    )
+//  }
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
     Source

@@ -1,9 +1,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
-
 import java.net.URI
 
 import akka.persistence.CapabilityFlag
-import akka.persistence.journal.JournalSpec
+import akka.persistence.journal.JournalPerfSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.typesafe.config.ConfigFactory
@@ -13,13 +12,16 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 
 import scala.concurrent.duration._
 
-class DynamoDBJournalSpec
-    extends JournalSpec(ConfigFactory.load("default.conf"))
+class DynamoDBJournalPerfSpec
+    extends JournalPerfSpec(ConfigFactory.load("default.conf"))
     with ScalaFutures
     with DynamoDBSpecSupport {
-  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = CapabilityFlag.on()
+  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 
-  implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
+  // override def awaitDurationMillis: Long = 1.minutes.toMillis
+  override def eventsCount: Int = 10
+
+  implicit val pc: PatienceConfig = PatienceConfig(1 minutes, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = 8000
 
@@ -38,5 +40,4 @@ class DynamoDBJournalSpec
   before { createTable }
 
   after { deleteTable }
-
 }

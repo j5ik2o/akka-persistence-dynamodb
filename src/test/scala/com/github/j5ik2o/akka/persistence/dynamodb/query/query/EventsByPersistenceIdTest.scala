@@ -126,7 +126,6 @@ class DynamoDBEventsByPersistenceIdTest extends EventsByPersistenceIdTest("defau
 
   val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

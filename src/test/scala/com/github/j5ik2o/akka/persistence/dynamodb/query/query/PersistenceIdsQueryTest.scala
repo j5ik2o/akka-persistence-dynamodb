@@ -126,10 +126,6 @@ abstract class PersistenceIdsQueryTest(config: String) extends QueryJournalSpec(
   }
 }
 
-// class LevelDbPersistenceIdsQueryTest extends PersistenceIdsQueryTest("leveldb.conf")
-
-// class InMemoryPersistenceIdsQueryTest extends PersistenceIdsQueryTest("inmemory.conf")
-
 class DynamoDBPersistenceIdsQueryTest extends PersistenceIdsQueryTest("default.conf") with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
@@ -138,7 +134,6 @@ class DynamoDBPersistenceIdsQueryTest extends PersistenceIdsQueryTest("default.c
 
   val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

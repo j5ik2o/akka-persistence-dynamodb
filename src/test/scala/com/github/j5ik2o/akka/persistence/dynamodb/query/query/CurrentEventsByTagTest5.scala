@@ -166,10 +166,6 @@ abstract class CurrentEventsByTagTest5(config: String) extends QueryJournalSpec(
   }
 }
 
-//class LevelDbCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("leveldb.conf")
-//
-//class InMemoryCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("inmemory.conf")
-
 class DynamoDBCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("default.conf") with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
@@ -178,7 +174,6 @@ class DynamoDBCurrentEventsByTagTest5 extends CurrentEventsByTagTest5("default.c
 
   val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

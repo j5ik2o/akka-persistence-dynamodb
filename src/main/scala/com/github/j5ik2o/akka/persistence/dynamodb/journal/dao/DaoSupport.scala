@@ -16,8 +16,8 @@ trait DaoSupport {
   protected val columnsDefConfig: JournalColumnsDefConfig
 
   protected val logLevels: Attributes = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
-                                                 onFailure = Attributes.LogLevels.Error,
-                                                 onFinish = Attributes.LogLevels.Debug)
+                                                             onFailure = Attributes.LogLevels.Error,
+                                                             onFinish = Attributes.LogLevels.Debug)
 
   def getMessages(persistenceId: PersistenceId,
                   fromSequenceNr: SequenceNumber,

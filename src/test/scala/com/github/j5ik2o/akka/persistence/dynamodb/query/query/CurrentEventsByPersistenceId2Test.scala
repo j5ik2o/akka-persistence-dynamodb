@@ -102,10 +102,6 @@ abstract class CurrentEventsByPersistenceId2Test(config: String) extends QueryJo
   }
 }
 
-//class LevelDbCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("leveldb.conf")
-//
-//class InMemoryCurrentEventsByPersistenceId2Test extends CurrentEventsByPersistenceId2Test("inmemory.conf")
-
 class DynamoDBCurrentEventsByPersistenceId2Test
     extends CurrentEventsByPersistenceId2Test("default.conf")
     with DynamoDBSpecSupport {
@@ -114,7 +110,6 @@ class DynamoDBCurrentEventsByPersistenceId2Test
 
   val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

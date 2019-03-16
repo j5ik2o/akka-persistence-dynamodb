@@ -76,12 +76,6 @@ abstract class CurrentEventsByPersistenceIdDeleteEventsTest(config: String) exte
   }
 }
 
-//class LevelDbCurrentEventsByPersistenceIdDeleteEventsTest
-//    extends CurrentEventsByPersistenceIdDeleteEventsTest("leveldb.conf")
-//
-//class InmemoryCurrentEventsByPersistenceIdDeleteEventsTest
-//    extends CurrentEventsByPersistenceIdDeleteEventsTest("inmemory.conf")
-
 class DynamoDBCurrentEventsByPersistenceIdDeleteEventsTest
     extends CurrentEventsByPersistenceIdDeleteEventsTest("default.conf")
     with DynamoDBSpecSupport {
@@ -92,7 +86,6 @@ class DynamoDBCurrentEventsByPersistenceIdDeleteEventsTest
 
   val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
     .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
     )

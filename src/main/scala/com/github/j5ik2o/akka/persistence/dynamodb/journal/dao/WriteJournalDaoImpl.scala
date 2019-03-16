@@ -16,13 +16,11 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
-import java.util.concurrent.atomic.AtomicLong
-
 import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
-import akka.stream.{ Attributes, Materializer, OverflowStrategy, QueueOfferResult }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import akka.stream.{ Materializer, OverflowStrategy, QueueOfferResult }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
@@ -38,7 +36,8 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
                           pluginConfig: JournalPluginConfig)(
     implicit ec: ExecutionContext,
     mat: Materializer
-) extends WriteJournalDao {
+) extends WriteJournalDao
+    with DaoSupport {
 
   import pluginConfig._
 
@@ -46,11 +45,13 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
+  override protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
-                                               onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Debug)
+  override val tableName: String                         = pluginConfig.tableName
+  override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
+  override val parallelism: Int                          = pluginConfig.parallelism
+  override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+
   private val putQueue = Source
     .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
     .flatMapConcat {
@@ -84,47 +85,6 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     .toMat(Sink.ignore)(Keep.left)
     .withAttributes(logLevels)
     .run()
-
-  private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
-    Flow[Seq[JournalRow]].mapAsync(parallelism) { messages =>
-      val promise = Promise[Long]()
-      putQueue.offer(promise -> messages).flatMap {
-        case QueueOfferResult.Enqueued =>
-          promise.future
-        case QueueOfferResult.Failure(t) =>
-          Future.failed(new Exception("Failed to write journal row batch", t))
-        case QueueOfferResult.Dropped =>
-          Future.failed(
-            new Exception(
-              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
-            )
-          )
-        case QueueOfferResult.QueueClosed =>
-          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
-      }
-    }
-
-  private def requestDeleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
-    Flow[Seq[PersistenceIdWithSeqNr]].mapAsync(parallelism) { messages =>
-      val promise = Promise[Long]()
-      deleteQueue.offer(promise -> messages).flatMap {
-        case QueueOfferResult.Enqueued =>
-          promise.future
-        case QueueOfferResult.Failure(t) =>
-          Future.failed(new Exception("Failed to write journal row batch", t))
-        case QueueOfferResult.Dropped =>
-          Future.failed(
-            new Exception(
-              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
-            )
-          )
-        case QueueOfferResult.QueueClosed =>
-          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
-      }
-    }
-
-  override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    Source.single(messages).via(requestPutJournalRows)
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     val updateRequest = UpdateItemRequest()
@@ -169,6 +129,45 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
   }
 
+  override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
+    getJournalRows(persistenceId, toSequenceNr)
+      .flatMapConcat { journalRows =>
+        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
+      }.flatMapConcat {
+        case (result, journalRows) =>
+          if (!softDeleted) {
+            highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
+              getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
+                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+              }
+            }
+          } else
+            Source.single(result)
+      }
+  }
+
+  override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
+    Source.single(messages).via(requestPutJournalRows)
+
+  private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
+    Flow[Seq[JournalRow]].mapAsync(parallelism) { messages =>
+      val promise = Promise[Long]()
+      putQueue.offer(promise -> messages).flatMap {
+        case QueueOfferResult.Enqueued =>
+          promise.future
+        case QueueOfferResult.Failure(t) =>
+          Future.failed(new Exception("Failed to write journal row batch", t))
+        case QueueOfferResult.Dropped =>
+          Future.failed(
+            new Exception(
+              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+            )
+          )
+        case QueueOfferResult.QueueClosed =>
+          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
+      }
+    }
+
   private def getJournalRows(persistenceId: PersistenceId,
                              toSequenceNr: SequenceNumber,
                              deleted: Boolean = false): Source[Seq[JournalRow], NotUsed] = {
@@ -210,22 +209,24 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     }
   }
 
-  override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
-    getJournalRows(persistenceId, toSequenceNr)
-      .flatMapConcat { journalRows =>
-        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-      }.flatMapConcat {
-        case (result, journalRows) =>
-          if (!softDeleted) {
-            highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
-              getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
-                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-              }
-            }
-          } else
-            Source.single(result)
+  private def requestDeleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
+    Flow[Seq[PersistenceIdWithSeqNr]].mapAsync(parallelism) { messages =>
+      val promise = Promise[Long]()
+      deleteQueue.offer(promise -> messages).flatMap {
+        case QueueOfferResult.Enqueued =>
+          promise.future
+        case QueueOfferResult.Failure(t) =>
+          Future.failed(new Exception("Failed to write journal row batch", t))
+        case QueueOfferResult.Dropped =>
+          Future.failed(
+            new Exception(
+              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+            )
+          )
+        case QueueOfferResult.QueueClosed =>
+          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
       }
-  }
+    }
 
   private def highestSequenceNr(persistenceId: PersistenceId,
                                 fromSequenceNr: Option[SequenceNumber] = None,
@@ -267,68 +268,13 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
-  override def getMessages(persistenceId: PersistenceId,
-                           fromSequenceNr: SequenceNumber,
-                           toSequenceNr: SequenceNumber,
-                           max: Long,
-                           deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
-    def loop(lastKey: Option[Map[String, AttributeValue]]): Source[Map[String, AttributeValue], NotUsed] = {
-      val queryRequest = QueryRequest()
-        .withTableName(Some(tableName)).withIndexName(Some(getJournalRowsIndexName)).withKeyConditionExpression(
-          Some("#pid = :pid and #snr between :min and :max")
-        ).withExpressionAttributeNames(
-          Some(Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName))
-        ).withExpressionAttributeValues(
-          Some(
-            Map(
-              ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-              ":min" -> AttributeValue().withNumber(Some(fromSequenceNr.asString)),
-              ":max" -> AttributeValue().withNumber(Some(toSequenceNr.asString))
-            )
-          )
-        ).withExclusiveStartKey(lastKey)
-      Source
-        .single(queryRequest).via(streamClient.queryFlow(parallelism)).takeWhile(_.count.exists(_ > 0)).flatMapConcat {
-          response =>
-            val last = response.lastEvaluatedKey.getOrElse(Map.empty)
-            if (last.isEmpty) {
-              Source(response.items.get.toVector)
-            } else {
-              loop(response.lastEvaluatedKey)
-            }
-        }
-    }
-    loop(None)
-      .map(convertToJournalRow)
-      .filter(_.deleted == false).log("journalRow")
-      .take(max)
-      .withAttributes(logLevels)
-
-  }
-
-  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    JournalRow(
-      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
-      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
-      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
-      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
-    )
-  }
-
-  private def convertToJournalRows(values: Seq[Map[String, AttributeValue]]): Seq[JournalRow] = {
-    values.map(convertToJournalRow)
-  }
-
-  case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
-
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]].flatMapConcat { persistenceIdWithSeqNrs =>
       logger.debug(s"deleteJournalRows.size: ${persistenceIdWithSeqNrs.size}")
       logger.debug(s"deleteJournalRows: $persistenceIdWithSeqNrs")
       persistenceIdWithSeqNrs
         .map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
+
       def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
         Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
           if (requestItems.isEmpty)
@@ -346,6 +292,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               }
           }
         }
+
       val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
         WriteRequest().withDeleteRequest(
           Some(
@@ -371,6 +318,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       logger.debug(s"putJournalRows.size: ${journalRows.size}")
       logger.debug(s"putJournalRows: $journalRows")
       journalRows.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
+
       def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
         Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
           if (requestItems.isEmpty)
@@ -388,6 +336,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
               }
           }
         }
+
       val requestItems = journalRows.map { journalRow =>
         WriteRequest().withPutRequest(
           Some(
@@ -418,5 +367,7 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
       Source.single(requestItems).via(loopFlow)
   }
+
+  case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
 
 }

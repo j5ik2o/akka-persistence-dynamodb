@@ -25,9 +25,11 @@ import scala.util.{ Failure, Success }
 class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
     extends FlowPersistentReprSerializer[JournalRow] {
 
-  override def serialize(persistentRepr: PersistentRepr,
-                         tags: Set[String],
-                         index: Option[Int]): Either[Throwable, JournalRow] = {
+  override def serialize(
+      persistentRepr: PersistentRepr,
+      tags: Set[String],
+      index: Option[Int]
+  ): Either[Throwable, JournalRow] = {
     serialization
       .serialize(persistentRepr)
       .map(

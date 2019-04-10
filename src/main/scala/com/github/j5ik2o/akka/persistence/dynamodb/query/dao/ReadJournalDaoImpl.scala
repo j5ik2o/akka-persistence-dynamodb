@@ -32,9 +32,11 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 
-class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
-                         serialization: Serialization,
-                         pluginConfig: QueryPluginConfig)(implicit ec: ExecutionContext)
+class ReadJournalDaoImpl(
+    asyncClient: DynamoDBAsyncClientV2,
+    serialization: Serialization,
+    pluginConfig: QueryPluginConfig
+)(implicit ec: ExecutionContext)
     extends ReadJournalDao
     with DaoSupport {
 
@@ -124,8 +126,7 @@ class ReadJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
-        journalRow =>
-          List(journalRow.withOrdering(index.incrementAndGet()))
+        journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
       }
       .filter { row =>
         row.ordering > offset && row.ordering <= maxOffset

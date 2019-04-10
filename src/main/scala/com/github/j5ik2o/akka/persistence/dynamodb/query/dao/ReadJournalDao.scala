@@ -37,11 +37,13 @@ trait ReadJournalDao {
   /**
     * Returns a Source of bytes for a certain persistenceId
     */
-  def getMessages(persistenceId: PersistenceId,
-                  fromSequenceNr: SequenceNumber,
-                  toSequenceNr: SequenceNumber,
-                  max: Long,
-                  deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed]
+  def getMessages(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      max: Long,
+      deleted: Option[Boolean] = Some(false)
+  ): Source[JournalRow, NotUsed]
 
   /**
     * @param offset Minimum value to retrieve

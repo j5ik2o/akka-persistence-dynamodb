@@ -33,8 +33,10 @@ object JournalSequenceRetrievalConfig {
 
 }
 
-case class JournalSequenceRetrievalConfig(batchSize: Int,
-                                          maxTries: Int,
-                                          queryDelay: FiniteDuration,
-                                          maxBackoffQueryDelay: FiniteDuration,
-                                          askTimeout: FiniteDuration)
+case class JournalSequenceRetrievalConfig(
+    batchSize: Int,
+    maxTries: Int,
+    queryDelay: FiniteDuration,
+    maxBackoffQueryDelay: FiniteDuration,
+    askTimeout: FiniteDuration
+)

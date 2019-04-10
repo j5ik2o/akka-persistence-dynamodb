@@ -97,10 +97,12 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     * @param moduloCounter A counter which is incremented every time a new query have been executed, modulo `maxTries`
     * @param previousDelay The last used delay (may change in case failures occur)
     */
-  def receive(currentMaxOrdering: OrderingId,
-              missingByCounter: Map[Int, MissingElements],
-              moduloCounter: Int,
-              previousDelay: FiniteDuration = queryDelay): Receive = {
+  def receive(
+      currentMaxOrdering: OrderingId,
+      missingByCounter: Map[Int, MissingElements],
+      moduloCounter: Int,
+      previousDelay: FiniteDuration = queryDelay
+  ): Receive = {
 
     case ScheduleAssumeMaxOrderingId(max) =>
       // All elements smaller than max can be assumed missing after this delay
@@ -141,10 +143,12 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
   /**
     * This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
     */
-  def findGaps(elements: Seq[OrderingId],
-               currentMaxOrdering: OrderingId,
-               missingByCounter: Map[Int, MissingElements],
-               moduloCounter: Int): Unit = {
+  def findGaps(
+      elements: Seq[OrderingId],
+      currentMaxOrdering: OrderingId,
+      missingByCounter: Map[Int, MissingElements],
+      moduloCounter: Int
+  ): Unit = {
 
     // list of elements that will be considered as genuine gaps.
     // `givenUp` is either empty or is was filled on a previous iteration
@@ -152,9 +156,11 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
 
     val (nextMax, _, missingElems) =
       // using the ordering elements that were fetched, we verify if there are any gaps
-      elements.foldLeft[(OrderingId, OrderingId, MissingElements)](currentMaxOrdering,
-                                                                   currentMaxOrdering,
-                                                                   MissingElements.empty) {
+      elements.foldLeft[(OrderingId, OrderingId, MissingElements)](
+        currentMaxOrdering,
+        currentMaxOrdering,
+        MissingElements.empty
+      ) {
 
         case ((currentMax, previousElement, missing), currentElement) =>
           // we must decide if we move the cursor forward

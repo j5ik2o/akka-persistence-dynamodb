@@ -35,14 +35,18 @@ class DynamoDBReadJournal(underlying: ScalaDynamoDBReadJournal)
 
   override def persistenceIds(): Source[String, NotUsed] = underlying.persistenceIds().asJava
 
-  override def currentEventsByPersistenceId(persistenceId: String,
-                                            fromSequenceNr: Long,
-                                            toSequenceNr: Long): Source[EventEnvelope, NotUsed] =
+  override def currentEventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     underlying.currentEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr).asJava
 
-  override def eventsByPersistenceId(persistenceId: String,
-                                     fromSequenceNr: Long,
-                                     toSequenceNr: Long): Source[EventEnvelope, NotUsed] =
+  override def eventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     underlying.eventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr).asJava
 
   override def currentEventsByTag(tag: String, offset: Offset): Source[EventEnvelope, NotUsed] =

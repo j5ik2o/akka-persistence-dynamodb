@@ -34,8 +34,10 @@ object SnapshotPluginConfig {
 
 }
 
-final case class SnapshotPluginConfig(tableName: String,
-                                      columnsDefConfig: SnapshotColumnsDefConfig,
-                                      parallelism: Int,
-                                      refreshInterval: FiniteDuration,
-                                      clientConfig: DynamoDBClientConfig)
+final case class SnapshotPluginConfig(
+    tableName: String,
+    columnsDefConfig: SnapshotColumnsDefConfig,
+    parallelism: Int,
+    refreshInterval: FiniteDuration,
+    clientConfig: DynamoDBClientConfig
+)

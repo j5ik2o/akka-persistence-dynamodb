@@ -41,15 +41,17 @@ object QueryPluginConfig {
   }
 
 }
-case class QueryPluginConfig(tableName: String,
-                             columnsDefConfig: JournalColumnsDefConfig,
-                             tagsIndexName: String,
-                             getJournalRowsIndexName: String,
-                             tagSeparator: String,
-                             bufferSize: Int,
-                             batchSize: Int,
-                             parallelism: Int,
-                             refreshInterval: FiniteDuration,
-                             shardCount: Int,
-                             journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
-                             clientConfig: DynamoDBClientConfig)
+case class QueryPluginConfig(
+    tableName: String,
+    columnsDefConfig: JournalColumnsDefConfig,
+    tagsIndexName: String,
+    getJournalRowsIndexName: String,
+    tagSeparator: String,
+    bufferSize: Int,
+    batchSize: Int,
+    parallelism: Int,
+    refreshInterval: FiniteDuration,
+    shardCount: Int,
+    journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
+    clientConfig: DynamoDBClientConfig
+)

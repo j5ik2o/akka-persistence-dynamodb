@@ -12,11 +12,13 @@ trait WriteJournalDao {
 
   def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed]
 
-  def getMessages(persistenceId: PersistenceId,
-                  fromSequenceNr: SequenceNumber,
-                  toSequenceNr: SequenceNumber,
-                  max: Long,
-                  deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed]
+  def getMessages(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      max: Long,
+      deleted: Option[Boolean] = Some(false)
+  ): Source[JournalRow, NotUsed]
 
   def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed]
 

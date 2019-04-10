@@ -15,15 +15,19 @@ trait DaoSupport {
   protected val parallelism: Int
   protected val columnsDefConfig: JournalColumnsDefConfig
 
-  protected val logLevels: Attributes = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
-                                                             onFailure = Attributes.LogLevels.Error,
-                                                             onFinish = Attributes.LogLevels.Debug)
+  protected val logLevels: Attributes = Attributes.logLevels(
+    onElement = Attributes.LogLevels.Debug,
+    onFailure = Attributes.LogLevels.Error,
+    onFinish = Attributes.LogLevels.Debug
+  )
 
-  def getMessages(persistenceId: PersistenceId,
-                  fromSequenceNr: SequenceNumber,
-                  toSequenceNr: SequenceNumber,
-                  max: Long,
-                  deleted: Option[Boolean] = Some(false)): Source[JournalRow, NotUsed] = {
+  def getMessages(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      max: Long,
+      deleted: Option[Boolean] = Some(false)
+  ): Source[JournalRow, NotUsed] = {
     def loop(lastKey: Option[Map[String, AttributeValue]]): Source[Map[String, AttributeValue], NotUsed] = {
       val queryRequest = QueryRequest()
         .withTableName(Some(tableName)).withIndexName(Some(getJournalRowsIndexName)).withKeyConditionExpression(

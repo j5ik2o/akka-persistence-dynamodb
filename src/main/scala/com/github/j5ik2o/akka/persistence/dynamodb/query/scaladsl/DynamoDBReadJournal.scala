@@ -105,9 +105,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   private val delaySource =
     Source.tick(pluginConfig.refreshInterval, 0.seconds, 0).take(1)
 
-  private val logLevels = Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
-                                               onFailure = Attributes.LogLevels.Error,
-                                               onFinish = Attributes.LogLevels.Debug)
+  private val logLevels = Attributes.logLevels(
+    onElement = Attributes.LogLevels.Debug,
+    onFailure = Attributes.LogLevels.Error,
+    onFinish = Attributes.LogLevels.Debug
+  )
 
   private val refreshInterval = pluginConfig.refreshInterval
 
@@ -142,30 +144,38 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     adapter.fromJournal(persistentRepr.payload, persistentRepr.manifest).events.map(persistentRepr.withPayload).toVector
   }
 
-  private def currentJournalEventsByPersistenceId(persistenceId: String,
-                                                  fromSequenceNr: Long,
-                                                  toSequenceNr: Long): Source[PersistentRepr, NotUsed] =
+  private def currentJournalEventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[PersistentRepr, NotUsed] =
     readJournalDao
-      .getMessages(PersistenceId(persistenceId),
-                   SequenceNumber(fromSequenceNr),
-                   SequenceNumber(toSequenceNr),
-                   Long.MaxValue)
+      .getMessages(
+        PersistenceId(persistenceId),
+        SequenceNumber(fromSequenceNr),
+        SequenceNumber(toSequenceNr),
+        Long.MaxValue
+      )
       .via(serializer.deserializeFlowWithoutTags)
       .log("currentJournalEventsByPersistenceId")
       .withAttributes(logLevels)
 
-  override def currentEventsByPersistenceId(persistenceId: String,
-                                            fromSequenceNr: Long,
-                                            toSequenceNr: Long): Source[EventEnvelope, NotUsed] =
+  override def currentEventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     currentJournalEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr)
       .mapConcat(adaptEvents)
       .map(repr => EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload))
       .log("currentEventsByPersistenceId")
       .withAttributes(logLevels)
 
-  override def eventsByPersistenceId(persistenceId: String,
-                                     fromSequenceNr: Long,
-                                     toSequenceNr: Long): Source[EventEnvelope, NotUsed] =
+  override def eventsByPersistenceId(
+      persistenceId: String,
+      fromSequenceNr: Long,
+      toSequenceNr: Long
+  ): Source[EventEnvelope, NotUsed] =
     Source
       .unfoldAsync[Long, Seq[EventEnvelope]](Math.max(1, fromSequenceNr)) { from: Long =>
         def nextFromSeqNr(xs: Seq[EventEnvelope]): Long = {
@@ -188,10 +198,12 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         }
       }.mapConcat(_.toVector)
 
-  private def currentJournalEventsByTag(tag: String,
-                                        offset: Long,
-                                        max: Long,
-                                        latestOrdering: MaxOrderingId): Source[EventEnvelope, NotUsed] = {
+  private def currentJournalEventsByTag(
+      tag: String,
+      offset: Long,
+      max: Long,
+      latestOrdering: MaxOrderingId
+  ): Source[EventEnvelope, NotUsed] = {
     if (latestOrdering.maxOrdering < offset) Source.empty
     else {
       readJournalDao
@@ -204,9 +216,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     }
   }
 
-  private def eventsByTag(tag: String,
-                          offset: Long,
-                          terminateAfterOffset: Option[Long]): Source[EventEnvelope, NotUsed] = {
+  private def eventsByTag(
+      tag: String,
+      offset: Long,
+      terminateAfterOffset: Option[Long]
+  ): Source[EventEnvelope, NotUsed] = {
     import DynamoDBReadJournal._
     implicit val askTimeout: Timeout = Timeout(journalSequenceRetrievalConfig.askTimeout)
     Source

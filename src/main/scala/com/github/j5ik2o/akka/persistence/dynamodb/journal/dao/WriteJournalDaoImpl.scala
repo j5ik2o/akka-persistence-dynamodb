@@ -31,9 +31,11 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
-class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
-                          serialization: Serialization,
-                          pluginConfig: JournalPluginConfig)(
+class WriteJournalDaoImpl(
+    asyncClient: DynamoDBAsyncClientV2,
+    serialization: Serialization,
+    pluginConfig: JournalPluginConfig
+)(
     implicit ec: ExecutionContext,
     mat: Materializer
 ) extends WriteJournalDao
@@ -168,9 +170,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
     }
 
-  private def getJournalRows(persistenceId: PersistenceId,
-                             toSequenceNr: SequenceNumber,
-                             deleted: Boolean = false): Source[Seq[JournalRow], NotUsed] = {
+  private def getJournalRows(
+      persistenceId: PersistenceId,
+      toSequenceNr: SequenceNumber,
+      deleted: Boolean = false
+  ): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
       .withIndexName(Some(getJournalRowsIndexName))
@@ -178,9 +182,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#d = :flg"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid" -> columnsDefConfig.persistenceIdColumnName,
-              "#snr" -> columnsDefConfig.sequenceNrColumnName,
-              "#d"   -> columnsDefConfig.deletedColumnName)
+          Map(
+            "#pid" -> columnsDefConfig.persistenceIdColumnName,
+            "#snr" -> columnsDefConfig.sequenceNrColumnName,
+            "#d"   -> columnsDefConfig.deletedColumnName
+          )
         )
       )
       .withExpressionAttributeValues(
@@ -228,9 +234,11 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
     }
 
-  private def highestSequenceNr(persistenceId: PersistenceId,
-                                fromSequenceNr: Option[SequenceNumber] = None,
-                                deleted: Option[Boolean] = None): Source[Long, NotUsed] = {
+  private def highestSequenceNr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: Option[SequenceNumber] = None,
+      deleted: Option[Boolean] = None
+  ): Source[Long, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName))
       .withIndexName(Some(getJournalRowsIndexName))
@@ -263,8 +271,10 @@ class WriteJournalDaoImpl(asyncClient: DynamoDBAsyncClientV2,
 
   }
 
-  override def highestSequenceNr(persistenceId: PersistenceId,
-                                 fromSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
+  override def highestSequenceNr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber
+  ): Source[Long, NotUsed] = {
     highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 

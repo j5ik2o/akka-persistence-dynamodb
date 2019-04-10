@@ -58,8 +58,10 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   protected val snapshotDao: SnapshotDao =
     new SnapshotDaoImpl(asyncClient, serialization, pluginConfig)
 
-  override def loadAsync(persistenceId: String,
-                         criteria: SnapshotSelectionCriteria): Future[Option[SelectedSnapshot]] = {
+  override def loadAsync(
+      persistenceId: String,
+      criteria: SnapshotSelectionCriteria
+  ): Future[Option[SelectedSnapshot]] = {
     val result = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.latestSnapshot(PersistenceId(persistenceId))
@@ -68,9 +70,11 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
         snapshotDao.snapshotForMaxSequenceNr(PersistenceId(persistenceId), SequenceNumber(maxSequenceNr))
       case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
-        snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(PersistenceId(persistenceId),
-                                                            SequenceNumber(maxSequenceNr),
-                                                            maxTimestamp)
+        snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(
+          PersistenceId(persistenceId),
+          SequenceNumber(maxSequenceNr),
+          maxTimestamp
+        )
       case _ => Source.empty
     }
     result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)

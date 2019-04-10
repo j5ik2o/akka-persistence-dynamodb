@@ -26,10 +26,11 @@ import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
 import com.github.j5ik2o.reactive.aws.dynamodb.model._
 
-class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
-                      serialization: Serialization,
-                      pluginConfig: SnapshotPluginConfig)
-    extends SnapshotDao {
+class SnapshotDaoImpl(
+    asyncClient: DynamoDBAsyncClientV2,
+    serialization: Serialization,
+    pluginConfig: SnapshotPluginConfig
+) extends SnapshotDao {
   import pluginConfig._
 
   private val serializer                         = new ByteArraySnapshotSerializer(serialization)
@@ -113,8 +114,10 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     queryDelete(queryRequest)
   }
 
-  override def deleteUpToMaxSequenceNr(persistenceId: PersistenceId,
-                                       maxSequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
+  override def deleteUpToMaxSequenceNr(
+      persistenceId: PersistenceId,
+      maxSequenceNr: SequenceNumber
+  ): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withExpressionAttributeNames(
@@ -139,9 +142,11 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
-              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-              "#created" -> columnsDefConfig.createdColumnName)
+          Map(
+            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+            "#created" -> columnsDefConfig.createdColumnName
+          )
         )
       ).withExpressionAttributeValues(
         Some(
@@ -156,17 +161,21 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
     queryDelete(queryRequest)
   }
 
-  override def deleteUpToMaxSequenceNrAndMaxTimestamp(persistenceId: PersistenceId,
-                                                      maxSequenceNr: SequenceNumber,
-                                                      maxTimestamp: Long): Source[Unit, NotUsed] = {
+  override def deleteUpToMaxSequenceNrAndMaxTimestamp(
+      persistenceId: PersistenceId,
+      maxSequenceNr: SequenceNumber,
+      maxTimestamp: Long
+  ): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
-              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-              "#created" -> columnsDefConfig.createdColumnName)
+          Map(
+            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+            "#created" -> columnsDefConfig.createdColumnName
+          )
         )
       ).withExpressionAttributeValues(
         Some(
@@ -217,16 +226,20 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       }
   }
 
-  override def snapshotForMaxTimestamp(persistenceId: PersistenceId,
-                                       maxTimestamp: Long): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+  override def snapshotForMaxTimestamp(
+      persistenceId: PersistenceId,
+      maxTimestamp: Long
+  ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = QueryRequest()
       .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
-              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-              "#created" -> columnsDefConfig.createdColumnName)
+          Map(
+            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+            "#created" -> columnsDefConfig.createdColumnName
+          )
         )
       ).withExpressionAttributeValues(
         Some(
@@ -303,9 +316,11 @@ class SnapshotDaoImpl(asyncClient: DynamoDBAsyncClientV2,
       .withFilterExpression(Some("#created <= :maxTimestamp"))
       .withExpressionAttributeNames(
         Some(
-          Map("#pid"     -> columnsDefConfig.persistenceIdColumnName,
-              "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-              "#created" -> columnsDefConfig.createdColumnName)
+          Map(
+            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+            "#created" -> columnsDefConfig.createdColumnName
+          )
         )
       ).withExpressionAttributeValues(
         Some(

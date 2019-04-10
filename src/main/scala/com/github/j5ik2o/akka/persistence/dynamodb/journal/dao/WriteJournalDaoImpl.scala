@@ -22,17 +22,19 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
+import software.amazon.awssdk.core.SdkBytes
+import software.amazon.awssdk.services.dynamodb.model._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class WriteJournalDaoImpl(
-    asyncClient: DynamoDBAsyncClientV2,
+    asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: JournalPluginConfig
 )(
@@ -47,7 +49,7 @@ class WriteJournalDaoImpl(
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  override protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
+  override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
 
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
@@ -89,43 +91,44 @@ class WriteJournalDaoImpl(
     .run()
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
-    val updateRequest = UpdateItemRequest()
-      .withTableName(Some(tableName)).withKey(
-        Some(
-          Map(
-            columnsDefConfig.partitionKeyColumnName -> AttributeValue()
-              .withString(Some(journalRow.partitionKey.asString(shardCount))),
-            columnsDefConfig.sequenceNrColumnName -> AttributeValue()
-              .withNumber(Some(journalRow.sequenceNumber.asString))
-          )
+    val updateRequest = UpdateItemRequest
+      .builder()
+      .tableName(tableName).keyAsScala(
+        Map(
+          columnsDefConfig.partitionKeyColumnName -> AttributeValue
+            .builder()
+            .s(journalRow.partitionKey.asString(shardCount)).build(),
+          columnsDefConfig.sequenceNrColumnName -> AttributeValue
+            .builder()
+            .n(journalRow.sequenceNumber.asString).build()
         )
-      ).withAttributeUpdates(
-        Some(
-          Map(
-            columnsDefConfig.messageColumnName -> AttributeValueUpdate()
-              .withAction(Some(AttributeAction.PUT)).withValue(
-                Some(AttributeValue().withBinary(Some(journalRow.message)))
-              ),
-            columnsDefConfig.orderingColumnName ->
-            AttributeValueUpdate()
-              .withAction(Some(AttributeAction.PUT)).withValue(
-                Some(
-                  AttributeValue().withNumber(Some(journalRow.ordering.toString))
-                )
-              ),
-            columnsDefConfig.deletedColumnName -> AttributeValueUpdate()
-              .withAction(Some(AttributeAction.PUT)).withValue(
-                Some(AttributeValue().withBool(Some(journalRow.deleted)))
-              )
-          ) ++ journalRow.tags
-            .map { tag =>
-              Map(
-                columnsDefConfig.tagsColumnName -> AttributeValueUpdate()
-                  .withAction(Some(AttributeAction.PUT)).withValue(Some(AttributeValue().withString(Some(tag))))
-              )
-            }.getOrElse(Map.empty)
-        )
-      )
+      ).attributeUpdatesAsScala(
+        Map(
+          columnsDefConfig.messageColumnName -> AttributeValueUpdate
+            .builder()
+            .action(AttributeAction.PUT).value(
+              AttributeValue.builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
+            ).build(),
+          columnsDefConfig.orderingColumnName ->
+          AttributeValueUpdate
+            .builder()
+            .action(AttributeAction.PUT).value(
+              AttributeValue.builder().n(journalRow.ordering.toString).build()
+            ).build(),
+          columnsDefConfig.deletedColumnName -> AttributeValueUpdate
+            .builder()
+            .action(AttributeAction.PUT).value(
+              AttributeValue.builder().bool(journalRow.deleted).build()
+            ).build()
+        ) ++ journalRow.tags
+          .map { tag =>
+            Map(
+              columnsDefConfig.tagsColumnName -> AttributeValueUpdate
+                .builder()
+                .action(AttributeAction.PUT).value(AttributeValue.builder().s(tag).build()).build()
+            )
+          }.getOrElse(Map.empty)
+      ).build()
     Source.single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { _ =>
       ()
     }
@@ -175,33 +178,32 @@ class WriteJournalDaoImpl(
       toSequenceNr: SequenceNumber,
       deleted: Boolean = false
   ): Source[Seq[JournalRow], NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName))
-      .withIndexName(Some(getJournalRowsIndexName))
-      .withKeyConditionExpression(Some("#pid = :pid and #snr <= :snr"))
-      .withFilterExpression(Some("#d = :flg"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid" -> columnsDefConfig.persistenceIdColumnName,
-            "#snr" -> columnsDefConfig.sequenceNrColumnName,
-            "#d"   -> columnsDefConfig.deletedColumnName
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .indexName(getJournalRowsIndexName)
+      .keyConditionExpression("#pid = :pid and #snr <= :snr")
+      .filterExpression("#d = :flg")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> columnsDefConfig.sequenceNrColumnName,
+          "#d"   -> columnsDefConfig.deletedColumnName
         )
       )
-      .withExpressionAttributeValues(
+      .expressionAttributeValuesAsScala(
         Some(
           Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":snr" -> AttributeValue().withNumber(Some(toSequenceNr.asString)),
-            ":flg" -> AttributeValue().withBool(Some(deleted))
+            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+            ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
+            ":flg" -> AttributeValue.builder().bool(deleted).build()
           )
         )
-      )
+      ).build()
     Source
       .single(queryRequest)
       .via(streamClient.queryFlow())
-      .mapConcat(_.items.get.toVector)
+      .mapConcat(_.itemsAsScala.get.toVector)
       .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
       .map(_.result().toVector)
   }
@@ -239,34 +241,31 @@ class WriteJournalDaoImpl(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): Source[Long, NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName))
-      .withIndexName(Some(getJournalRowsIndexName))
-      .withKeyConditionExpression(
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .indexName(getJournalRowsIndexName)
+      .keyConditionExpressionAsScala(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
       )
-      .withFilterExpression(deleted.map(_ => "#d = :flg"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid" -> columnsDefConfig.persistenceIdColumnName
-          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-        )
+      .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> columnsDefConfig.persistenceIdColumnName
+        ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+        fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
       )
-      .withExpressionAttributeValues(
-        Some(
-          Map(
-            ":id" -> AttributeValue().withString(Some(persistenceId.asString))
-          ) ++ deleted
-            .map(d => Map(":flg" -> AttributeValue().withBool(Some(d)))).getOrElse(Map.empty) ++ fromSequenceNr
-            .map(nr => Map(":nr" -> AttributeValue().withNumber(Some(nr.asString)))).getOrElse(Map.empty)
-        )
-      ).withScanIndexForward(Some(false))
-      .withLimit(Some(1))
+      .expressionAttributeValuesAsScala(
+        Map(
+          ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
+        ) ++ deleted
+          .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+      ).scanIndexForward(false)
+      .limit(1).build()
     Source
       .single(queryRequest).via(streamClient.queryFlow()).map {
-        _.items.get.map(_(columnsDefConfig.sequenceNrColumnName).number.get.toLong).headOption.getOrElse(0)
+        _.itemsAsScala.get.map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0)
       }
 
   }
@@ -292,11 +291,11 @@ class WriteJournalDaoImpl(
           else {
             Source
               .single(requestItems).map { requests =>
-                BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
+                BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build()
               }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
-                if (response.unprocessedItems.get.nonEmpty) {
+                if (response.unprocessedItemsAsScala.get.nonEmpty) {
                   val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                  Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
+                  Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
                 } else
                   Source.single(requestItems.size)
               }
@@ -304,21 +303,21 @@ class WriteJournalDaoImpl(
         }
 
       val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
-        WriteRequest().withDeleteRequest(
-          Some(
-            DeleteRequest().withKey(
-              Some(
+        WriteRequest
+          .builder().deleteRequest(
+            DeleteRequest
+              .builder().keyAsScala(
                 Map(
-                  columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                    .withString(Some(persistenceIdWithSeqNr.persistenceId.asString)),
-                  columnsDefConfig.sequenceNrColumnName -> AttributeValue().withNumber(
-                    Some(persistenceIdWithSeqNr.sequenceNumber.asString)
-                  )
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                    .builder()
+                    .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
+                  columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                    .builder().n(
+                      persistenceIdWithSeqNr.sequenceNumber.asString
+                    ).build()
                 )
-              )
-            )
-          )
-        )
+              ).build()
+          ).build()
       }
       Source.single(requestItems).via(loopFlow)
     }
@@ -336,11 +335,11 @@ class WriteJournalDaoImpl(
           else {
             Source
               .single(requestItems).map { requests =>
-                BatchWriteItemRequest().withRequestItems(Some(Map(tableName -> requests)))
+                BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
               }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
-                if (response.unprocessedItems.get.nonEmpty) {
+                if (response.unprocessedItemsAsScala.get.nonEmpty) {
                   val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                  Source.single(response.unprocessedItems.get(tableName)).via(loopFlow).map(_ + n)
+                  Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
                 } else
                   Source.single(requestItems.size)
               }
@@ -348,32 +347,35 @@ class WriteJournalDaoImpl(
         }
 
       val requestItems = journalRows.map { journalRow =>
-        WriteRequest().withPutRequest(
-          Some(
-            PutRequest()
-              .withItem(
-                Some(
-                  Map(
-                    columnsDefConfig.partitionKeyColumnName -> AttributeValue()
-                      .withString(
-                        Some(PartitionKey(journalRow.persistenceId, journalRow.sequenceNumber).asString(shardCount))
-                      ),
-                    columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                      .withString(Some(journalRow.persistenceId.asString)),
-                    columnsDefConfig.sequenceNrColumnName -> AttributeValue()
-                      .withNumber(Some(journalRow.sequenceNumber.asString)),
-                    columnsDefConfig.orderingColumnName -> AttributeValue()
-                      .withNumber(Some(journalRow.ordering.toString)),
-                    columnsDefConfig.deletedColumnName -> AttributeValue().withBool(Some(journalRow.deleted)),
-                    columnsDefConfig.messageColumnName -> AttributeValue().withBinary(Some(journalRow.message))
-                  ) ++ journalRow.tags
-                    .map { tag =>
-                      Map(columnsDefConfig.tagsColumnName -> AttributeValue().withString(Some(tag)))
-                    }.getOrElse(Map.empty)
-                )
-              )
-          )
-        )
+        WriteRequest
+          .builder().putRequest(
+            PutRequest
+              .builder()
+              .itemAsScala(
+                Map(
+                  columnsDefConfig.partitionKeyColumnName -> AttributeValue
+                    .builder()
+                    .s(
+                      PartitionKey(journalRow.persistenceId, journalRow.sequenceNumber).asString(shardCount)
+                    ).build(),
+                  columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                    .builder()
+                    .s(journalRow.persistenceId.asString).build(),
+                  columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                    .builder()
+                    .n(journalRow.sequenceNumber.asString).build(),
+                  columnsDefConfig.orderingColumnName -> AttributeValue
+                    .builder()
+                    .n(journalRow.ordering.toString).build(),
+                  columnsDefConfig.deletedColumnName -> AttributeValue.builder().bool(journalRow.deleted).build(),
+                  columnsDefConfig.messageColumnName -> AttributeValue
+                    .builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
+                ) ++ journalRow.tags
+                  .map { tag =>
+                    Map(columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build())
+                  }.getOrElse(Map.empty)
+              ).build()
+          ).build()
       }
       Source.single(requestItems).via(loopFlow)
   }

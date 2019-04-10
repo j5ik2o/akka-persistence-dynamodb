@@ -22,19 +22,21 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import software.amazon.awssdk.core.SdkBytes
+import software.amazon.awssdk.services.dynamodb.model._
 
 class SnapshotDaoImpl(
-    asyncClient: DynamoDBAsyncClientV2,
+    asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig
 ) extends SnapshotDao {
   import pluginConfig._
 
-  private val serializer                         = new ByteArraySnapshotSerializer(serialization)
-  private val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
+  private val serializer                       = new ByteArraySnapshotSerializer(serialization)
+  private val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
 
   def toSnapshotData(row: SnapshotRow): (SnapshotMetadata, Any) =
     serializer.deserialize(row) match {
@@ -43,74 +45,70 @@ class SnapshotDaoImpl(
     }
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
-    val req = DeleteItemRequest()
-      .withTableName(Some(tableName)).withKey(
-        Some(
-          Map(
-            columnsDefConfig.persistenceIdColumnName -> AttributeValue().withString(Some(persistenceId.asString)),
-            columnsDefConfig.sequenceNrColumnName    -> AttributeValue().withNumber(Some(sequenceNr.asString))
-          )
+    val req = DeleteItemRequest
+      .builder()
+      .tableName(tableName).keyAsScala(
+        Map(
+          columnsDefConfig.persistenceIdColumnName -> AttributeValue.builder().s(persistenceId.asString).build(),
+          columnsDefConfig.sequenceNrColumnName    -> AttributeValue.builder().n(sequenceNr.asString).build()
         )
-      )
+      ).build()
     Source.single(req).via(streamClient.deleteItemFlow(parallelism)).map(_ => ())
   }
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map {
-        _.items.getOrElse(Seq.empty)
+        _.itemsAsScala.getOrElse(Seq.empty)
       }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
         rows.map { row =>
           SnapshotRow(
-            persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),
-            sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-            snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
-            created = row(columnsDefConfig.createdColumnName).number.get.toLong
+            persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+            sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+            snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+            created = row(columnsDefConfig.createdColumnName).n.toLong
           )
         }
       }.map { rows =>
-        BatchWriteItemRequest().withRequestItems(
-          Some(
+        BatchWriteItemRequest
+          .builder().requestItemsAsScala(
             Map(
               tableName -> rows.map { row =>
-                WriteRequest().withDeleteRequest(
-                  Some(
-                    DeleteRequest()
-                      .withKey(
-                        Some(
-                          Map(
-                            columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                              .withString(Some(row.persistenceId.asString)),
-                            columnsDefConfig.sequenceNrColumnName -> AttributeValue()
-                              .withNumber(Some(row.sequenceNumber.asString))
-                          )
+                WriteRequest
+                  .builder().deleteRequest(
+                    DeleteRequest
+                      .builder()
+                      .keyAsScala(
+                        Map(
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                            .builder()
+                            .s(row.persistenceId.asString).build(),
+                          columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                            .builder()
+                            .n(row.sequenceNumber.asString).build()
                         )
-                      )
-                  )
-                )
+                      ).build()
+                  ).build()
               }
             )
-          )
-        )
+          ).build()
       }.via(streamClient.batchWriteItemFlow(parallelism)).map(_ => ())
   }
 
   override def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withExpressionAttributeNames(
-        Some(
-          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .expressionAttributeNamesAsScala(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min" -> AttributeValue.builder().n(0.toString).build(),
+          ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString))
-          )
-        )
-      )
+      ).build()
     queryDelete(queryRequest)
   }
 
@@ -118,46 +116,42 @@ class SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   ): Source[Unit, NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withExpressionAttributeNames(
-        Some(
-          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .expressionAttributeNamesAsScala(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min" -> AttributeValue.builder().n(0.toString).build(),
+          ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(maxSequenceNr.asString))
-          )
-        )
-      )
+      ).build()
     queryDelete(queryRequest)
   }
 
   override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long): Source[Unit, NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withFilterExpression(Some("#created <= :maxTimestamp"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
-            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-            "#created" -> columnsDefConfig.createdColumnName
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .filterExpression("#created <= :maxTimestamp")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+          "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+          "#created" -> columnsDefConfig.createdColumnName
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid"          -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min"          -> AttributeValue().withNumber(Some(0.toString)),
-            ":max"          -> AttributeValue().withNumber(Some(Long.MaxValue.toString)),
-            ":maxTimestamp" -> AttributeValue().withNumber(Some(maxTimestamp.toString))
-          )
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min"          -> AttributeValue.builder().n(0.toString).build(),
+          ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
+          ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      )
+      ).build()
     queryDelete(queryRequest)
   }
 
@@ -166,60 +160,56 @@ class SnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   ): Source[Unit, NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withFilterExpression(Some("#created <= :maxTimestamp"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
-            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-            "#created" -> columnsDefConfig.createdColumnName
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .filterExpression("#created <= :maxTimestamp")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+          "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+          "#created" -> columnsDefConfig.createdColumnName
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid"          -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min"          -> AttributeValue().withNumber(Some(0.toString)),
-            ":max"          -> AttributeValue().withNumber(Some(maxSequenceNr.asString)),
-            ":maxTimestamp" -> AttributeValue().withNumber(Some(maxTimestamp.toString))
-          )
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min"          -> AttributeValue.builder().n(0.toString).build(),
+          ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
+          ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      )
+      ).build()
     queryDelete(queryRequest)
   }
 
   override def latestSnapshot(persistenceId: PersistenceId): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withExpressionAttributeNames(
-        Some(
-          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
-        )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(Long.MaxValue.toString))
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .expressionAttributeNamesAsScala(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min" -> AttributeValue.builder().n(0.toString).build(),
+          ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         )
       )
-      .withScanIndexForward(Some(false))
-      .withLimit(Some(1))
+      .scanIndexForward(false)
+      .limit(1).build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
-        response.items.get.headOption
+        response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
-                created = row(columnsDefConfig.createdColumnName).number.get.toLong
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ).right.get
         }
@@ -230,39 +220,37 @@ class SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxTimestamp: Long
   ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withFilterExpression(Some("#created <= :maxTimestamp"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
-            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-            "#created" -> columnsDefConfig.createdColumnName
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .filterExpression("#created <= :maxTimestamp")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+          "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+          "#created" -> columnsDefConfig.createdColumnName
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid"          -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min"          -> AttributeValue().withNumber(Some(0.toString)),
-            ":max"          -> AttributeValue().withNumber(Some(Long.MaxValue.toString)),
-            ":maxTimestamp" -> AttributeValue().withNumber(Some(maxTimestamp.toString))
-          )
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min"          -> AttributeValue.builder().n(0.toString).build(),
+          ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
+          ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).withScanIndexForward(Some(false))
+      ).scanIndexForward(false).build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
-        response.items.get.headOption
+        response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
-                created = row(columnsDefConfig.createdColumnName).number.get.toLong
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ).right.get
         }
@@ -273,33 +261,31 @@ class SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withExpressionAttributeNames(
-        Some(
-          Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .expressionAttributeNamesAsScala(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min" -> AttributeValue.builder().n(0.toString).build(),
+          ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid" -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min" -> AttributeValue().withNumber(Some(0.toString)),
-            ":max" -> AttributeValue().withNumber(Some(maxSequenceNr.asString))
-          )
-        )
-      ).withScanIndexForward(Some(false))
+      ).scanIndexForward(false).build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
-        response.items.get.headOption
+        response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
-                created = row(columnsDefConfig.createdColumnName).number.get.toLong
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ).right.get
         }
@@ -311,39 +297,37 @@ class SnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = QueryRequest()
-      .withTableName(Some(tableName)).withKeyConditionExpression(Some("#pid = :pid and #snr between :min and :max"))
-      .withFilterExpression(Some("#created <= :maxTimestamp"))
-      .withExpressionAttributeNames(
-        Some(
-          Map(
-            "#pid"     -> columnsDefConfig.persistenceIdColumnName,
-            "#snr"     -> columnsDefConfig.sequenceNrColumnName,
-            "#created" -> columnsDefConfig.createdColumnName
-          )
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpression("#pid = :pid and #snr between :min and :max")
+      .filterExpression("#created <= :maxTimestamp")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid"     -> columnsDefConfig.persistenceIdColumnName,
+          "#snr"     -> columnsDefConfig.sequenceNrColumnName,
+          "#created" -> columnsDefConfig.createdColumnName
         )
-      ).withExpressionAttributeValues(
-        Some(
-          Map(
-            ":pid"          -> AttributeValue().withString(Some(persistenceId.asString)),
-            ":min"          -> AttributeValue().withNumber(Some(0.toString)),
-            ":max"          -> AttributeValue().withNumber(Some(maxSequenceNr.asString)),
-            ":maxTimestamp" -> AttributeValue().withNumber(Some(maxTimestamp.toString))
-          )
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min"          -> AttributeValue.builder().n(0.toString).build(),
+          ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
+          ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).withScanIndexForward(Some(false))
+      ).scanIndexForward(false).build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
-        response.items.get.headOption
+        response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
           serializer
             .deserialize(
               SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).string.get),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).binary.get,
-                created = row(columnsDefConfig.createdColumnName).number.get.toLong
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ).right.get
         }
@@ -354,20 +338,22 @@ class SnapshotDaoImpl(
     serializer
       .serialize(snapshotMetadata, snapshot) match {
       case Right(snapshotRow) =>
-        val req = PutItemRequest()
-          .withTableName(Some(tableName))
-          .withItem(
-            Some(
-              Map(
-                columnsDefConfig.persistenceIdColumnName -> AttributeValue()
-                  .withString(Some(snapshotRow.persistenceId.asString)),
-                columnsDefConfig.sequenceNrColumnName -> AttributeValue()
-                  .withNumber(Some(snapshotRow.sequenceNumber.asString)),
-                columnsDefConfig.snapshotColumnName -> AttributeValue().withBinary(Some(snapshotRow.snapshot)),
-                columnsDefConfig.createdColumnName  -> AttributeValue().withNumber(Some(snapshotRow.created.toString))
-              )
+        val req = PutItemRequest
+          .builder()
+          .tableName(tableName)
+          .itemAsScala(
+            Map(
+              columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                .builder()
+                .s(snapshotRow.persistenceId.asString).build(),
+              columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                .builder()
+                .n(snapshotRow.sequenceNumber.asString).build(),
+              columnsDefConfig.snapshotColumnName -> AttributeValue
+                .builder().b(SdkBytes.fromByteArray(snapshotRow.snapshot)).build(),
+              columnsDefConfig.createdColumnName -> AttributeValue.builder().n(snapshotRow.created.toString).build()
             )
-          )
+          ).build()
         Source.single(req).via(streamClient.putItemFlow(parallelism)).map(_ => ())
       case Left(ex) =>
         Source.failed(ex)

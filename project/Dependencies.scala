@@ -5,29 +5,34 @@ object Scala {
 }
 
 object Akka {
-  private val version     = "2.5.19"
-  val actor: ModuleID     = "com.typesafe.akka" %% "akka-actor" % version
-  val stream: ModuleID    = "com.typesafe.akka" %% "akka-stream" % version
-  val testkit: ModuleID   = "com.typesafe.akka" %% "akka-testkit" % version
-  val slf4j: ModuleID     = "com.typesafe.akka" %% "akka-slf4j" % version
-  val persistence = "com.typesafe.akka" %% "akka-persistence" % version
-  val cluster = "com.typesafe.akka" %% "akka-cluster" % version
-  val clusterSharding = "com.typesafe.akka" %% "akka-cluster-sharding" % version
+  private val version   = "2.5.19"
+  val actor: ModuleID   = "com.typesafe.akka" %% "akka-actor" % version
+  val stream: ModuleID  = "com.typesafe.akka" %% "akka-stream" % version
+  val testkit: ModuleID = "com.typesafe.akka" %% "akka-testkit" % version
+  val slf4j: ModuleID   = "com.typesafe.akka" %% "akka-slf4j" % version
+  val persistence       = "com.typesafe.akka" %% "akka-persistence" % version
+  val cluster           = "com.typesafe.akka" %% "akka-cluster" % version
+  val clusterSharding   = "com.typesafe.akka" %% "akka-cluster-sharding" % version
 
   private val httpVersion = "10.1.7"
   val http                = "com.typesafe.akka" %% "akka-http" % httpVersion
   val httpTestKit         = "com.typesafe.akka" %% "akka-http-testkit" % httpVersion
 
   private val akkaManagementVersion = "0.18.0"
-  val discoveryK8sAPI = "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaManagementVersion
-  val discoveryDns = "com.lightbend.akka.discovery" %% "akka-discovery-dns" % akkaManagementVersion
-  val management = "com.lightbend.akka.management" %% "akka-management" % akkaManagementVersion
-  val managementClusterHttp = "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaManagementVersion
-  val managementClusterBootstrap = "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaManagementVersion
-  val clusterCustomDowning = "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12"
-  val managementAll = Seq(discoveryK8sAPI, discoveryDns, management, managementClusterHttp, managementClusterBootstrap, clusterCustomDowning)
-}
+  val discoveryK8sAPI               = "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaManagementVersion
+  val discoveryDns                  = "com.lightbend.akka.discovery" %% "akka-discovery-dns" % akkaManagementVersion
+  val management                    = "com.lightbend.akka.management" %% "akka-management" % akkaManagementVersion
+  val managementClusterHttp         = "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaManagementVersion
+  val managementClusterBootstrap    = "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaManagementVersion
+  val clusterCustomDowning          = "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % "0.0.12"
 
+  val managementAll = Seq(discoveryK8sAPI,
+                          discoveryDns,
+                          management,
+                          managementClusterHttp,
+                          managementClusterBootstrap,
+                          clusterCustomDowning)
+}
 
 object Redis {
   val rediscala: ModuleID = "com.github.etaty" %% "rediscala"     % "1.8.0"
@@ -65,6 +70,7 @@ object Logback {
 
 object LogstashLogbackEncoder {
   private val version = "4.11"
+
   val encoder = "net.logstash.logback" % "logstash-logback-encoder" % version excludeAll (
     ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-core"),
     ExclusionRule(organization = "com.fasterxml.jackson.core", name = "jackson-databind")
@@ -84,6 +90,7 @@ object ChatWork {
 
   object AkkaGuard {
     val version = "1.4.0"
+
     val http = "com.chatwork" %% "akka-guard-http" % version excludeAll (
       ExclusionRule(organization = "io.circe"),
       ExclusionRule(organization = "org.typelevel"),
@@ -121,7 +128,7 @@ object ScalaDddBase {
 }
 
 object ReactiveDynamoDB {
-  val test = "com.github.j5ik2o" %% "reactive-dynamodb-test" % "1.0.6"
+  val test = "com.github.j5ik2o" %% "reactive-dynamodb-test" % "1.1.0"
 }
 
 object Airframe {
@@ -222,14 +229,6 @@ object GatlingDeps {
   val highcharts: ModuleID    = "io.gatling.highcharts" % "gatling-charts-highcharts" % version
   val testFramework: ModuleID = "io.gatling" % "gatling-test-framework" % version
   val app: ModuleID           = "io.gatling" % "gatling-app" % version
-}
-
-object AWSSDK {
-  val version        = "1.11.169"
-  val core: ModuleID = "com.amazonaws" % "aws-java-sdk-core" % version
-  val s3: ModuleID   = "com.amazonaws" % "aws-java-sdk-s3" % version
-  val sqs: ModuleID  = "com.amazonaws" % "aws-java-sdk-sqs" % version
-  val kms: ModuleID  = "com.amazonaws" % "aws-java-sdk-kms" % version
 }
 
 object Aws {

@@ -1,11 +1,13 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBEmbeddedSpecSupport, DynamoDbAsyncClient }
+import com.sun.xml.internal.bind.v2.schemagen.xmlschema.AttributeType
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.{ BeforeAndAfter, Matchers, Suite }
 import org.slf4j.bridge.SLF4JBridgeHandler
 import org.slf4j.{ Logger, LoggerFactory }
+import software.amazon.awssdk.services.dynamodb.model._
 
 import scala.concurrent.duration._
 
@@ -23,7 +25,7 @@ trait DynamoDBSpecSupport
 
   val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  def asyncClient: DynamoDBAsyncClientV2
+  def asyncClient: DynamoDbAsyncClient
 
   def deleteTable: Unit = {
     deleteJournalTable
@@ -35,8 +37,8 @@ trait DynamoDBSpecSupport
     val tableName = "Journal"
     asyncClient.deleteTable(tableName)
     eventually {
-      val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
-      result.tableNames.fold(true)(v => !v.contains(tableName)) shouldBe true
+      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
+      result.tableNamesAsScala.fold(true)(v => !v.contains(tableName)) shouldBe true
     }
     logger.debug("deleteJournalTable: finish")
   }
@@ -46,8 +48,8 @@ trait DynamoDBSpecSupport
     val tableName = "Snapshot"
     asyncClient.deleteTable(tableName)
     eventually {
-      val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
-      result.tableNames.fold(true)(v => !v.contains(tableName)) shouldBe true
+      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
+      result.tableNamesAsScala.fold(true)(v => !v.contains(tableName)) shouldBe true
     }
     logger.debug("deleteSnapshotTable: finish")
   }
@@ -60,133 +62,130 @@ trait DynamoDBSpecSupport
   def createSnapshotTable: Unit = {
     logger.debug("createSnapshotTable: start")
     val tableName = "Snapshot"
-    val createRequest = CreateTableRequest()
-      .withAttributeDefinitions(
-        Some(
-          Seq(
-            AttributeDefinition()
-              .withAttributeName(Some("persistence-id"))
-              .withAttributeType(Some(AttributeType.S)),
-            AttributeDefinition()
-              .withAttributeName(Some("sequence-nr"))
-              .withAttributeType(Some(AttributeType.N))
-          )
+    val createRequest = CreateTableRequest
+      .builder()
+      .attributeDefinitionsAsScala(
+        Seq(
+          AttributeDefinition
+            .builder()
+            .attributeName("persistence-id")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("sequence-nr")
+            .attributeType(ScalarAttributeType.N).build()
         )
       )
-      .withKeySchema(
-        Some(
-          Seq(
-            KeySchemaElement()
-              .withAttributeName(Some("persistence-id"))
-              .withKeyType(Some(KeyType.HASH)),
-            KeySchemaElement()
-              .withAttributeName(Some("sequence-nr"))
-              .withKeyType(Some(KeyType.RANGE))
-          )
+      .keySchemaAsScala(
+        Seq(
+          KeySchemaElement
+            .builder()
+            .attributeName("persistence-id")
+            .keyType(KeyType.HASH).build(),
+          KeySchemaElement
+            .builder()
+            .attributeName("sequence-nr")
+            .keyType(KeyType.RANGE).build()
         )
       )
-      .withProvisionedThroughput(
-        Some(
-          ProvisionedThroughput()
-            .withReadCapacityUnits(Some(10L))
-            .withWriteCapacityUnits(Some(10L))
-        )
+      .provisionedThroughput(
+        ProvisionedThroughput
+          .builder()
+          .readCapacityUnits(10L)
+          .writeCapacityUnits(10L).build()
       )
-      .withTableName(Some(tableName))
+      .tableName(tableName).build()
     val createResponse = asyncClient
       .createTable(createRequest).futureValue
     logger.debug("createSnapshotTable: finish")
-    createResponse.isSuccessful shouldBe true
+    createResponse.sdkHttpResponse().isSuccessful shouldBe true
   }
 
   private def createJournalTable: Unit = {
     logger.debug("createJournalTable: start")
     val tableName = "Journal"
-    val createRequest = CreateTableRequest()
-      .withTableName(Some(tableName))
-      .withAttributeDefinitions(
-        Some(
-          Seq(
-            AttributeDefinition()
-              .withAttributeName(Some("pkey"))
-              .withAttributeType(Some(AttributeType.S)),
-            AttributeDefinition()
-              .withAttributeName(Some("persistence-id"))
-              .withAttributeType(Some(AttributeType.S)),
-            AttributeDefinition()
-              .withAttributeName(Some("sequence-nr"))
-              .withAttributeType(Some(AttributeType.N)),
-            AttributeDefinition()
-              .withAttributeName(Some("tags"))
-              .withAttributeType(Some(AttributeType.S))
-          )
+    val createRequest = CreateTableRequest
+      .builder()
+      .tableName(tableName)
+      .attributeDefinitionsAsScala(
+        Seq(
+          AttributeDefinition
+            .builder()
+            .attributeName("pkey")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("persistence-id")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("sequence-nr")
+            .attributeType(ScalarAttributeType.N).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("tags")
+            .attributeType(ScalarAttributeType.S).build()
         )
       )
-      .withKeySchema(
-        Some(
-          Seq(
-            KeySchemaElement()
-              .withAttributeName(Some("pkey"))
-              .withKeyType(Some(KeyType.HASH)),
-            KeySchemaElement()
-              .withAttributeName(Some("sequence-nr"))
-              .withKeyType(Some(KeyType.RANGE))
-          )
+      .keySchemaAsScala(
+        Seq(
+          KeySchemaElement
+            .builder()
+            .attributeName("pkey")
+            .keyType(KeyType.HASH).build(),
+          KeySchemaElement
+            .builder()
+            .attributeName("sequence-nr")
+            .keyType(KeyType.RANGE).build()
         )
       )
-      .withProvisionedThroughput(
-        Some(
-          ProvisionedThroughput()
-            .withReadCapacityUnits(Some(10L))
-            .withWriteCapacityUnits(Some(10L))
-        )
+      .provisionedThroughput(
+        ProvisionedThroughput
+          .builder()
+          .readCapacityUnits(10L)
+          .writeCapacityUnits(10L).build()
       )
-      .withGlobalSecondaryIndexes(
-        Some(
-          Seq(
-            GlobalSecondaryIndex()
-              .withIndexName(Some("TagsIndex")).withKeySchema(
-                Some(
-                  Seq(
-                    KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("tags"))
-                  )
-                )
-              ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))
-              .withProvisionedThroughput(
-                Some(
-                  ProvisionedThroughput()
-                    .withReadCapacityUnits(Some(10L))
-                    .withWriteCapacityUnits(Some(10L))
-                )
-              ),
-            GlobalSecondaryIndex()
-              .withIndexName(Some("GetJournalRowsIndex")).withKeySchema(
-                Some(
-                  Seq(
-                    KeySchemaElement().withKeyType(Some(KeyType.HASH)).withAttributeName(Some("persistence-id")),
-                    KeySchemaElement().withKeyType(Some(KeyType.RANGE)).withAttributeName(Some("sequence-nr"))
-                  )
-                )
-              ).withProjection(Some(Projection().withProjectionType(Some(ProjectionType.ALL))))
-              .withProvisionedThroughput(
-                Some(
-                  ProvisionedThroughput()
-                    .withReadCapacityUnits(Some(10L))
-                    .withWriteCapacityUnits(Some(10L))
-                )
+      .globalSecondaryIndexesAsScala(
+        Seq(
+          GlobalSecondaryIndex
+            .builder()
+            .indexName("TagsIndex")
+            .keySchemaAsScala(
+              Seq(
+                KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("tags").build()
               )
-          )
+            ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+            .provisionedThroughput(
+              ProvisionedThroughput
+                .builder()
+                .readCapacityUnits(10L)
+                .writeCapacityUnits(10L).build()
+            ).build(),
+          GlobalSecondaryIndex
+            .builder()
+            .indexName("GetJournalRowsIndex").keySchemaAsScala(
+              Seq(
+                KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("persistence-id").build(),
+                KeySchemaElement.builder().keyType(KeyType.RANGE).attributeName("sequence-nr").build()
+              )
+            ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+            .provisionedThroughput(
+              ProvisionedThroughput
+                .builder()
+                .readCapacityUnits(10L)
+                .writeCapacityUnits(10L).build()
+            ).build()
         )
-      )
+      ).build()
 
     val createResponse = asyncClient
       .createTable(createRequest).futureValue
     eventually {
-      val result = asyncClient.listTables(ListTablesRequest().withLimit(Some(1))).futureValue
+      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
       result.tableNames.fold(false)(_.contains(tableName)) shouldBe true
     }
     logger.debug("createJournalTable: finish")
-    createResponse.isSuccessful shouldBe true
+    createResponse.sdkHttpResponse().isSuccessful shouldBe true
 
   }
 }

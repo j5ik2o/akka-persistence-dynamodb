@@ -26,21 +26,24 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.Config
 import monix.execution.Scheduler
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbAsyncClientBuilder }
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbAsyncClientBuilder => JavaDynamoDbAsyncClientBuilder
+}
 
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 
 object DynamoDBJournal {
 
@@ -62,11 +65,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
     HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
 
-  protected val dynamoDbAsyncClientBuilder: DynamoDbAsyncClientBuilder =
+  protected val dynamoDbAsyncClientBuilder: JavaDynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, httpClientBuilder.build())
 
-  protected val javaClient: DynamoDbAsyncClient    = dynamoDbAsyncClientBuilder.build()
-  protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaClient)
+  protected val javaClient: JavaDynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
+  protected val asyncClient: DynamoDbAsyncClient    = DynamoDbAsyncClient(javaClient)
 
   protected val serialization: Serialization = SerializationExtension(system)
 

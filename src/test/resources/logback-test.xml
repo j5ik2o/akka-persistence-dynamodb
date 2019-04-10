@@ -15,7 +15,7 @@
     <logger name="software.amazon" level="ERROR" />
     <logger name="io.netty" level="ERROR" />
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="console"/>
     </root>
 

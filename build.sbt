@@ -1,7 +1,7 @@
 val scala211Version     = "2.11.12"
 val scala212Version     = "2.12.8"
 val akkaVersion         = "2.5.20"
-val reactiveAwsDynamoDB = "1.0.6"
+val reactiveAwsDynamoDB = "1.1.0"
 
 sonatypeProfileName := "com.github.j5ik2o"
 
@@ -40,8 +40,8 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.github.j5ik2o" %% "reactive-aws-dynamodb-v2-monix" % reactiveAwsDynamoDB,
-  "com.github.j5ik2o" %% "reactive-aws-dynamodb-v2-akka"  % reactiveAwsDynamoDB,
+  "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
+  "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
   "com.typesafe.akka" %% "akka-persistence"               % akkaVersion,
   "com.typesafe.akka" %% "akka-persistence-query"         % akkaVersion,
   "com.typesafe.akka" %% "akka-stream"                    % akkaVersion,

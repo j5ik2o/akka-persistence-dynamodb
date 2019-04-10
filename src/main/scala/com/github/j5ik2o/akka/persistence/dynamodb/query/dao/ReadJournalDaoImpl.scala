@@ -24,16 +24,17 @@ import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import org.slf4j.LoggerFactory
+import software.amazon.awssdk.services.dynamodb.model._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 
 class ReadJournalDaoImpl(
-    asyncClient: DynamoDBAsyncClientV2,
+    asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: QueryPluginConfig
 )(implicit ec: ExecutionContext)
@@ -44,7 +45,7 @@ class ReadJournalDaoImpl(
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  override protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
+  override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
 
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
@@ -60,14 +61,14 @@ class ReadJournalDaoImpl(
         case None =>
           scan(None)
             .map { v =>
-              if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
-              else Some(Some(v.lastEvaluatedKey), v.items.get)
+              if (v.lastEvaluatedKeyAsScala.isEmpty) Some(None, v.itemsAsScala.get)
+              else Some(Some(v.lastEvaluatedKeyAsScala), v.itemsAsScala.get)
             }
         case Some(Some(lastKey)) if lastKey.nonEmpty =>
           scan(Some(lastKey))
             .map { v =>
-              if (v.lastEvaluatedKey.isEmpty) Some(None, v.items.get)
-              else Some(Some(v.lastEvaluatedKey), v.items.get)
+              if (v.lastEvaluatedKeyAsScala.isEmpty) Some(None, v.itemsAsScala.get)
+              else Some(Some(v.lastEvaluatedKeyAsScala), v.itemsAsScala.get)
             }
         case _ =>
           Future.successful(None)
@@ -78,7 +79,7 @@ class ReadJournalDaoImpl(
         v(columnsDefConfig.deletedColumnName).bool.get
       }
       .map { map =>
-        map(columnsDefConfig.persistenceIdColumnName).string.get
+        map(columnsDefConfig.persistenceIdColumnName).s.get
       }
       .fold(Set.empty[String]) { case (r, e) => r + e }
       .mapConcat(_.toVector)
@@ -89,34 +90,32 @@ class ReadJournalDaoImpl(
 
   private def scan(lastKey: Option[Map[String, AttributeValue]]): Future[ScanResponse] = {
     asyncClient.scan(
-      ScanRequest()
-        .withTableName(Some(tableName))
-        .withSelect(Some(Select.ALL_ATTRIBUTES))
-        .withLimit(Some(batchSize))
-        .withExclusiveStartKey(lastKey)
+      ScanRequest
+        .builder()
+        .tableName(tableName)
+        .select(Select.ALL_ATTRIBUTES)
+        .limit(batchSize)
+        .exclusiveStartKeyAsScala(lastKey).build()
     )
   }
 
   override def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed] = {
-    val request = ScanRequest()
-      .withTableName(Some(tableName))
-      .withIndexName(Some(pluginConfig.tagsIndexName))
-      .withFilterExpression(Some("contains(#tags, :tag)"))
-      .withExpressionAttributeNames(
-        Some(
-          Map("#tags" -> columnsDefConfig.tagsColumnName)
-        )
+    val request = ScanRequest
+      .builder()
+      .tableName(tableName)
+      .indexName(pluginConfig.tagsIndexName)
+      .filterExpression("contains(#tags, :tag)")
+      .expressionAttributeNamesAsScala(
+        Map("#tags" -> columnsDefConfig.tagsColumnName)
       )
-      .withExpressionAttributeValues(
-        Some(
-          Map(
-            ":tag" -> AttributeValue().withString(Some(tag))
-          )
+      .expressionAttributeValuesAsScala(
+        Map(
+          ":tag" -> AttributeValue.builder().s(tag).build()
         )
-      )
+      ).build()
     Source
       .single(request).via(streamClient.scanFlow(parallelism)).map { response =>
-        response.items.getOrElse(Seq.empty)
+        response.itemsAsScala.getOrElse(Seq.empty)
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)
@@ -149,10 +148,10 @@ class ReadJournalDaoImpl(
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
     Source
-      .single(QueryRequest().withTableName(Some(tableName)))
+      .single(QueryRequest.builder().tableName(tableName).build())
       .via(streamClient.queryFlow(parallelism))
       .map { result =>
-        result.items.get.map(_(columnsDefConfig.orderingColumnName).number.get.toLong)
+        result.itemsAsScala.get.map(_(columnsDefConfig.orderingColumnName).n.toLong)
       }
       .takeWhile(_.nonEmpty)
       .mapConcat(_.toVector)

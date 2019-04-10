@@ -22,10 +22,9 @@ import java.net.URI
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -85,7 +84,7 @@ class DynamoDBCurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest
 
   override protected lazy val dynamoDBPort: Int = 8000
 
-  val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
+  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
@@ -93,7 +92,7 @@ class DynamoDBCurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  override def asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(underlying)
+  override def asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   override def afterAll(): Unit = {
     underlying.close()

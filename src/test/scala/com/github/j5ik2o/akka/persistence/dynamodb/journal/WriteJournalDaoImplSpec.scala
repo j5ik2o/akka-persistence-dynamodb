@@ -9,16 +9,17 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBSyncClientV2 }
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.apache.ApacheHttpClient
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbClient
+}
 
 import scala.concurrent.duration._
 
@@ -30,7 +31,7 @@ class WriteJournalDaoImplSpec
     with DynamoDBSpecSupport {
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  val underlyingAsync: DynamoDbAsyncClient = DynamoDbAsyncClient
+  val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
@@ -38,7 +39,7 @@ class WriteJournalDaoImplSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  val underlyingSync: DynamoDbClient = DynamoDbClient
+  val underlyingSync: JavaDynamoDbClient = JavaDynamoDbClient
     .builder()
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
@@ -48,12 +49,10 @@ class WriteJournalDaoImplSpec
 
   import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  val asyncClient  = DynamoDBAsyncClientV2(underlyingAsync)
-  val syncClient   = DynamoDBSyncClientV2(underlyingSync)
-  val taskClient   = DynamoDBTaskClientV2(asyncClient)
-  val streamClient = DynamoDBStreamClientV2(asyncClient)
+  val asyncClient  = DynamoDbAsyncClient(underlyingAsync)
+  val syncClient   = DynamoDbSyncClient(underlyingSync)
+  val taskClient   = DynamoDbMonixClient(asyncClient)
+  val streamClient = DynamoDbAkkaClient(asyncClient)
 
   private val serialization = SerializationExtension(system)
 
@@ -74,11 +73,13 @@ class WriteJournalDaoImplSpec
     "write" in {
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(PersistenceId("a-" + n.toString),
-                   SequenceNumber(1L),
-                   deleted = false,
-                   Array(1.toByte, 2.toByte, 3.toByte),
-                   Long.MaxValue)
+        JournalRow(
+          PersistenceId("a-" + n.toString),
+          SequenceNumber(1L),
+          deleted = false,
+          Array(1.toByte, 2.toByte, 3.toByte),
+          Long.MaxValue
+        )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
@@ -87,11 +88,13 @@ class WriteJournalDaoImplSpec
       val pid = "b-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(PersistenceId(pid),
-                   SequenceNumber(n),
-                   deleted = false,
-                   Array(1.toByte, 2.toByte, 3.toByte),
-                   Long.MaxValue)
+        JournalRow(
+          PersistenceId(pid),
+          SequenceNumber(n),
+          deleted = false,
+          Array(1.toByte, 2.toByte, 3.toByte),
+          Long.MaxValue
+        )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
@@ -115,11 +118,13 @@ class WriteJournalDaoImplSpec
       val pid = "c-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(PersistenceId(pid),
-                   SequenceNumber(n),
-                   deleted = false,
-                   Array(1.toByte, 2.toByte, 3.toByte),
-                   Long.MaxValue)
+        JournalRow(
+          PersistenceId(pid),
+          SequenceNumber(n),
+          deleted = false,
+          Array(1.toByte, 2.toByte, 3.toByte),
+          Long.MaxValue
+        )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
@@ -137,11 +142,13 @@ class WriteJournalDaoImplSpec
       val pid = "d-1"
       val max = 60
       val journalRows = (1 to max).map { n =>
-        JournalRow(PersistenceId(pid),
-                   SequenceNumber(n),
-                   deleted = false,
-                   Array(1.toByte, 2.toByte, 3.toByte),
-                   Long.MaxValue)
+        JournalRow(
+          PersistenceId(pid),
+          SequenceNumber(n),
+          deleted = false,
+          Array(1.toByte, 2.toByte, 3.toByte),
+          Long.MaxValue
+        )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max

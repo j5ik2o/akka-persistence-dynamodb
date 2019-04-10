@@ -26,17 +26,15 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig,
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.model._
-import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDBTaskClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBAsyncClientV2, DynamoDBEmbeddedSpecSupport }
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -49,7 +47,7 @@ class ReadJournalDaoImplSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  val underlyingAsync: DynamoDbAsyncClient = DynamoDbAsyncClient
+  val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
@@ -59,11 +57,9 @@ class ReadJournalDaoImplSpec
 
   import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  val asyncClient  = DynamoDBAsyncClientV2(underlyingAsync)
-  val taskClient   = DynamoDBTaskClientV2(asyncClient)
-  val streamClient = DynamoDBStreamClientV2(asyncClient)
+  val asyncClient  = DynamoDbAsyncClient(underlyingAsync)
+  val taskClient   = DynamoDbMonixClient(asyncClient)
+  val streamClient = DynamoDbAkkaClient(asyncClient)
 
   private val serialization = SerializationExtension(system)
 

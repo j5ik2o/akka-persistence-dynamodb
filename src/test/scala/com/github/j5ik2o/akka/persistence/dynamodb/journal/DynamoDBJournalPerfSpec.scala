@@ -4,11 +4,11 @@ import java.net.URI
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalPerfSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -25,7 +25,7 @@ class DynamoDBJournalPerfSpec
 
   override protected lazy val dynamoDBPort: Int = 8000
 
-  val underlying: DynamoDbAsyncClient = DynamoDbAsyncClient
+  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
     .credentialsProvider(
       StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
@@ -33,9 +33,7 @@ class DynamoDBJournalPerfSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  override def asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(underlying)
+  override def asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   before { createTable }
 

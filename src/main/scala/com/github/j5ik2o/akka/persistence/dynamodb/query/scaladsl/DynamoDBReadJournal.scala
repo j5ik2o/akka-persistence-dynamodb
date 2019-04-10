@@ -36,11 +36,11 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDBAsyncClientV2
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDBStreamClient
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.collection.immutable.Iterable
 import scala.concurrent.duration._
@@ -88,11 +88,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   private val dynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, asyncHttpClientBuilder.build())
 
-  protected val javaAsyncClient: DynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
+  protected val javaAsyncClient: JavaDynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
 
-  protected val asyncClient: DynamoDBAsyncClientV2 = DynamoDBAsyncClientV2(javaAsyncClient)
-  protected val streamClient: DynamoDBStreamClient = DynamoDBStreamClient(asyncClient)
-  private val serialization: Serialization         = SerializationExtension(system)
+  protected val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaAsyncClient)
+  protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
+  private val serialization: Serialization       = SerializationExtension(system)
 
   private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig)
 

@@ -34,10 +34,12 @@ object JournalColumnsDefConfig {
   }
 
 }
-case class JournalColumnsDefConfig(partitionKeyColumnName: String,
-                                   persistenceIdColumnName: String,
-                                   sequenceNrColumnName: String,
-                                   deletedColumnName: String,
-                                   messageColumnName: String,
-                                   orderingColumnName: String,
-                                   tagsColumnName: String)
+case class JournalColumnsDefConfig(
+    partitionKeyColumnName: String,
+    persistenceIdColumnName: String,
+    sequenceNrColumnName: String,
+    deletedColumnName: String,
+    messageColumnName: String,
+    orderingColumnName: String,
+    tagsColumnName: String
+)

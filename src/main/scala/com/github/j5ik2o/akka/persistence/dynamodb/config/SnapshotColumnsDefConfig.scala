@@ -32,7 +32,9 @@ object SnapshotColumnsDefConfig {
 
 }
 
-case class SnapshotColumnsDefConfig(persistenceIdColumnName: String,
-                                    sequenceNrColumnName: String,
-                                    snapshotColumnName: String,
-                                    createdColumnName: String)
+case class SnapshotColumnsDefConfig(
+    persistenceIdColumnName: String,
+    sequenceNrColumnName: String,
+    snapshotColumnName: String,
+    createdColumnName: String
+)

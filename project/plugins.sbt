@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.seasar.util" % "s2util"     % "0.0.1"
 )
 
-addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.15")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.0")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.2")
 

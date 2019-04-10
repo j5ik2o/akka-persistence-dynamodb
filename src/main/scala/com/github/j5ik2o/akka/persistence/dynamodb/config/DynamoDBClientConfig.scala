@@ -47,23 +47,25 @@ object DynamoDBClientConfig {
 
 }
 
-case class DynamoDBClientConfig(accessKeyId: Option[String],
-                                secretAccessKey: Option[String],
-                                endpoint: Option[String],
-                                maxConcurrency: Option[Int],
-                                maxPendingConnectionAcquires: Option[Int],
-                                readTimeout: Option[FiniteDuration],
-                                writeTimeout: Option[FiniteDuration],
-                                connectionTimeout: Option[FiniteDuration],
-                                connectionAcquisitionTimeout: Option[FiniteDuration],
-                                connectionTimeToLive: Option[FiniteDuration],
-                                maxIdleConnectionTimeout: Option[FiniteDuration],
-                                useConnectionReaper: Option[Boolean],
-                                threadsOfEventLoopGroup: Option[Int],
-                                userHttp2: Option[Boolean],
-                                maxHttp2Streams: Option[Int],
-                                batchGetItemLimit: Int,
-                                batchWriteItemLimit: Int) {
+case class DynamoDBClientConfig(
+    accessKeyId: Option[String],
+    secretAccessKey: Option[String],
+    endpoint: Option[String],
+    maxConcurrency: Option[Int],
+    maxPendingConnectionAcquires: Option[Int],
+    readTimeout: Option[FiniteDuration],
+    writeTimeout: Option[FiniteDuration],
+    connectionTimeout: Option[FiniteDuration],
+    connectionAcquisitionTimeout: Option[FiniteDuration],
+    connectionTimeToLive: Option[FiniteDuration],
+    maxIdleConnectionTimeout: Option[FiniteDuration],
+    useConnectionReaper: Option[Boolean],
+    threadsOfEventLoopGroup: Option[Int],
+    userHttp2: Option[Boolean],
+    maxHttp2Streams: Option[Int],
+    batchGetItemLimit: Int,
+    batchWriteItemLimit: Int
+) {
   require(batchGetItemLimit >= 1 && batchGetItemLimit <= 100)
   require(batchWriteItemLimit >= 1 && batchWriteItemLimit <= 25)
 }

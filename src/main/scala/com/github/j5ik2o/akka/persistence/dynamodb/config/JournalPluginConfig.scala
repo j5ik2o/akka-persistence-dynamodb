@@ -39,13 +39,15 @@ object JournalPluginConfig {
 
 }
 
-case class JournalPluginConfig(tableName: String,
-                               columnsDefConfig: JournalColumnsDefConfig,
-                               getJournalRowsIndexName: String,
-                               tagSeparator: String,
-                               bufferSize: Int,
-                               parallelism: Int,
-                               refreshInterval: FiniteDuration,
-                               softDeleted: Boolean,
-                               shardCount: Int,
-                               clientConfig: DynamoDBClientConfig)
+case class JournalPluginConfig(
+    tableName: String,
+    columnsDefConfig: JournalColumnsDefConfig,
+    getJournalRowsIndexName: String,
+    tagSeparator: String,
+    bufferSize: Int,
+    parallelism: Int,
+    refreshInterval: FiniteDuration,
+    softDeleted: Boolean,
+    shardCount: Int,
+    clientConfig: DynamoDBClientConfig
+)

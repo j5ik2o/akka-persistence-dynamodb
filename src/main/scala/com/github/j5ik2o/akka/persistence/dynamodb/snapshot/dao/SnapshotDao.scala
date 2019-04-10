@@ -29,21 +29,29 @@ trait SnapshotDao {
 
   def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long): Source[Unit, NotUsed]
 
-  def deleteUpToMaxSequenceNrAndMaxTimestamp(persistenceId: PersistenceId,
-                                             maxSequenceNr: SequenceNumber,
-                                             maxTimestamp: Long): Source[Unit, NotUsed]
+  def deleteUpToMaxSequenceNrAndMaxTimestamp(
+      persistenceId: PersistenceId,
+      maxSequenceNr: SequenceNumber,
+      maxTimestamp: Long
+  ): Source[Unit, NotUsed]
 
   def latestSnapshot(persistenceId: PersistenceId): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
-  def snapshotForMaxTimestamp(persistenceId: PersistenceId,
-                              timestamp: Long): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  def snapshotForMaxTimestamp(
+      persistenceId: PersistenceId,
+      timestamp: Long
+  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
-  def snapshotForMaxSequenceNr(persistenceId: PersistenceId,
-                               sequenceNr: SequenceNumber): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  def snapshotForMaxSequenceNr(
+      persistenceId: PersistenceId,
+      sequenceNr: SequenceNumber
+  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
-  def snapshotForMaxSequenceNrAndMaxTimestamp(persistenceId: PersistenceId,
-                                              sequenceNr: SequenceNumber,
-                                              timestamp: Long): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  def snapshotForMaxSequenceNrAndMaxTimestamp(
+      persistenceId: PersistenceId,
+      sequenceNr: SequenceNumber,
+      timestamp: Long
+  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
   def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed]
 

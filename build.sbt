@@ -53,6 +53,12 @@ libraryDependencies ++= Seq(
   "org.slf4j"         % "jul-to-slf4j"                    % "1.7.26" % Test
 )
 
+dependencyOverrides ++= Seq(
+  "io.netty" % "netty-codec-http" % "4.1.32.Final",
+  "io.netty" % "netty-handler" % "4.1.32.Final",
+  "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
+)
+
 parallelExecution in Test := false
 
 publishMavenStyle := true
@@ -93,5 +99,3 @@ credentials := {
 }
 
 scalafmtOnCompile in ThisBuild := true
-
-scalafmtTestOnCompile in ThisBuild := true

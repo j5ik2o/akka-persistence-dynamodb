@@ -37,7 +37,7 @@ Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2).
 
 ### Write Sharding
 
-This plugin does a simple sharding to avoid the throttle of write on DynamoDB.
+This plugin supports a simple sharding to avoid the throttle of write on DynamoDB.
 
 - Primary Index(for Writing)
   - Partition Key = ${PersistenceId}-${SequenceNumber % ShardCount}

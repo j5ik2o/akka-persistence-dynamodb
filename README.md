@@ -13,7 +13,7 @@ This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/
 
 It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc).
 
-## Supported versions: 
+## Supported versions:
 
 - Scala: `2.11.x` or `2.12.x`  
 - Akka: `2.5.x+`
@@ -33,7 +33,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 ### DynamoDB Support
 
-Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2). 
+Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2).
 
 ### Write Sharding
 
@@ -117,7 +117,7 @@ dynamo-db-journal {
     batch-get-item-limit = 100
     batch-write-item-limit = 25
   }
-  
+
 }
 ```
 
@@ -223,14 +223,34 @@ dynamo-db-read-journal {
 ```
 
 ```scala
-val readJournal : ReadJournal 
-  with CurrentPersistenceIdsQuery 
-  with PersistenceIdsQuery 
-  with CurrentEventsByPersistenceIdQuery 
-  with EventsByPersistenceIdQuery 
-  with CurrentEventsByTagQuery 
+val readJournal : ReadJournal
+  with CurrentPersistenceIdsQuery
+  with PersistenceIdsQuery
+  with CurrentEventsByPersistenceIdQuery
+  with EventsByPersistenceIdQuery
+  with CurrentEventsByTagQuery
   with EventsByTagQuery = PersistenceQuery(system).readJournalFor(DynamoDBReadJournal.Identifier)
 ```
+
+## DynamoDB setup
+
+Assuming the default values are used (adjust as necessary if not):
+
+| type | name | partition key | sort key | comments |
+|:----:|:----:|:--------------|:---------|:---------|
+|table | Journal | `pkey` (String) | n/a | Provision capacity as necessary for your application. |
+|index | GetJournalRows (GSI) | `persistence-id` (String) | `sequence-nr` (Number) | Index on the Journal table. |
+|table | Snapshots | `persistence-id` (String) | `sequence-nr` (Number) | No indices necessary. |
+
+I also found it necessary to specify the journal index name in the configuration:
+
+```hocon
+dynamo-db-read-journal {
+  table-name = "Journal"
+  get-journal-rows-index-name = "GetJournalRows"
+}
+```
+As the access to the DynamoDB instance is via the AWS Java SDK, use the methods for the SDK, which are documented at [docs.aws.amazon.com](https://docs.aws.amazon.com/sdk-for-java/v2/developer-guide/credentials.html)
 
 ## License
 
@@ -240,5 +260,3 @@ This product was made by duplicating or referring to the code of the following p
 
 - [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
 - [dnvriend/akka-persistence-query-test](https://github.com/dnvriend/akka-persistence-query-test)
-
-

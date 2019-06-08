@@ -237,7 +237,7 @@ val readJournal : ReadJournal
 Assuming the default values are used (adjust as necessary if not):
 
 | type | name | partition key | sort key | comments |
-|:-----:|:-----:|:--------|:--------||:------|
+|:----:|:----:|:--------------|:---------|:---------|
 |table | Journal | `pkey` (String) | n/a | Provision capacity as necessary for your application. |
 |index | GetJournalRows (GSI) | `persistence-id` (String) | `sequence-nr` (Number) | Index on the Journal table. |
 |table | Snapshots | `persistence-id` (String) | `sequence-nr` (Number) | No indices necessary. |

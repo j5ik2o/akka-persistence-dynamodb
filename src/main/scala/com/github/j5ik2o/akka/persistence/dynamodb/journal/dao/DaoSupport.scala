@@ -4,9 +4,10 @@ import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
 
 trait DaoSupport {
@@ -15,6 +16,8 @@ trait DaoSupport {
   protected val getJournalRowsIndexName: String
   protected val parallelism: Int
   protected val columnsDefConfig: JournalColumnsDefConfig
+
+  protected val metricsFunctions: MetricsFunctions
 
   protected val logLevels: Attributes = Attributes.logLevels(
     onElement = Attributes.LogLevels.Debug,
@@ -51,25 +54,40 @@ trait DaoSupport {
           ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
         ).exclusiveStartKeyAsScala(lastKey).build()
       Source
-        .single(queryRequest).via(streamClient.queryFlow(parallelism)).takeWhile(_.count.exists(_ > 0)).flatMapConcat {
-          response =>
-            val last = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-            if (last.isEmpty) {
-              Source(response.itemsAsScala.get.toVector)
-            } else {
-              loop(response.lastEvaluatedKeyAsScala)
-            }
+        .single(System.nanoTime()).flatMapConcat { start =>
+          Source.single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
+            val duration = System.nanoTime() - start
+            metricsFunctions.setMessagesDuration(duration)
+            metricsFunctions.incrementMessagesCounter()
+            response
+          }
+        }
+        .takeWhile(_.count.exists(_ > 0)).flatMapConcat { response =>
+          val last = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+          if (last.isEmpty) {
+            Source(response.itemsAsScala.get.toVector)
+          } else {
+            loop(response.lastEvaluatedKeyAsScala)
+          }
         }
     }
 
     if (fromSequenceNr > toSequenceNr)
       Source.empty
     else
-      loop(None)
-        .map(convertToJournalRow)
-        .take(max)
-        .withAttributes(logLevels)
-
+      Source
+        .single(System.nanoTime()).flatMapConcat { start =>
+          loop(None)
+            .map(convertToJournalRow)
+            .take(max)
+            .withAttributes(logLevels)
+            .map { response =>
+              val duration = System.nanoTime() - start
+              metricsFunctions.setMessagesTotalDuration(duration)
+              metricsFunctions.incrementMessagesTotalCounter()
+              response
+            }
+        }
   }
 
   protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {

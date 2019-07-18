@@ -186,6 +186,7 @@ dynamo-db-read-journal {
   plugin-dispatcher = "akka.actor.default-dispatcher"
   write-plugin = "dynamo-db-journal"
   table-name = "Journal"
+  tags-index-name = "TagsIndex"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
   buffer-size = 1024

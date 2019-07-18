@@ -16,6 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import java.lang.management.ManagementFactory
+
 import akka.Done
 import akka.actor.{ ActorLogging, ActorSystem }
 import akka.pattern.pipe
@@ -25,6 +27,7 @@ import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.Sink
 import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.jmx.{ JournalDaoStatus, MetricsFunctions }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
@@ -34,6 +37,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.Config
+import javax.management.ObjectName
 import monix.execution.Scheduler
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{
@@ -60,6 +64,34 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   implicit val mat: Materializer    = ActorMaterializer()
   implicit val scheduler: Scheduler = Scheduler(ec)
 
+  private val daoStatus = new JournalDaoStatus()
+  private val daoStatusName = new ObjectName(
+    "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal:type=JournalDaoStatus"
+  )
+  private val server = ManagementFactory.getPlatformMBeanServer
+  if (!server.isRegistered(daoStatusName)) {
+    server.registerMBean(daoStatus, daoStatusName)
+  }
+
+  private val metricsFunctions = MetricsFunctions(
+    setPutJournalRowsDuration = { v =>
+      daoStatus.setPutJournalRowsDuration(v)
+    },
+    addPutJournalRowsCounter = daoStatus.addPutJournalRowsCounter,
+    setPutJournalRowsTotalDuration = daoStatus.setPutJournalRowsTotalDuration,
+    incrementPutJournalRowsTotalCounter = () => daoStatus.incrementPutJournalRowsTotalCounter(),
+    setDeleteJournalRowsDuration = daoStatus.setDeleteJournalRowsDuration,
+    addDeleteJournalRowsCounter = daoStatus.addDeleteJournalRowsCounter,
+    setDeleteJournalRowsTotalDuration = daoStatus.setDeleteJournalRowsTotalDuration,
+    incrementDeleteJournalRowsTotalCounter = () => daoStatus.incrementDeleteJournalRowsTotalCounter(),
+    setHighestSequenceNrTotalDuration = daoStatus.setHighestSequenceNrTotalDuration,
+    incrementHighestSequenceNrTotalCounter = () => daoStatus.incrementHighestSequenceNrTotalCounter(),
+    setMessagesDuration = daoStatus.setMessagesDuration,
+    incrementMessagesCounter = () => daoStatus.incrementMessagesCounter(),
+    setMessagesTotalDuration = daoStatus.setMessagesTotalDuration,
+    incrementMessagesTotalCounter = () => daoStatus.incrementMessagesTotalCounter()
+  )
+
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
   protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
@@ -74,7 +106,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val serialization: Serialization = SerializationExtension(system)
 
   protected val journalDao: WriteJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig)
+    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsFunctions)
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)

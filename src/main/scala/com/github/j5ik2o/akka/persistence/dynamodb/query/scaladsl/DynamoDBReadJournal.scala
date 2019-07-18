@@ -16,8 +16,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
-import java.lang.management.ManagementFactory
-
 import akka.NotUsed
 import akka.actor.ExtendedActorSystem
 import akka.pattern._
@@ -29,8 +27,8 @@ import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.{ MetricsFunctions, QueryDaoStatus }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
@@ -42,7 +40,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilder
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.typesafe.config.Config
-import javax.management.ObjectName
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
@@ -85,34 +82,6 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
 
   import pluginConfig._
 
-  private val daoStatus = new QueryDaoStatus
-  private val daoStatusName = new ObjectName(
-    "com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal:type=QueryDaoStatus"
-  )
-  private val server = ManagementFactory.getPlatformMBeanServer
-  if (!server.isRegistered(daoStatusName)) {
-    server.registerMBean(daoStatus, daoStatusName)
-  }
-
-  protected val metricsFunctions = MetricsFunctions(
-    setMessagesTotalDuration = daoStatus.setMessagesTotalDuration,
-    incrementMessagesTotalCounter = () => daoStatus.incrementMessagesTotalCounter(),
-    setMessagesDuration = daoStatus.setMessagesDuration,
-    incrementMessagesCounter = () => daoStatus.incrementMessagesCounter(),
-    setAllPersistenceIdsDuration = daoStatus.setAllPersistenceIdsDuration,
-    addAllPersistenceIdsCounter = daoStatus.addAllPersistenceIdsCounter,
-    setAllPersistenceIdsTotalDuration = daoStatus.setAllPersistenceIdsTotalDuration,
-    incrementAllPersistenceIdsTotalCounter = () => daoStatus.incrementAllPersistenceIdsTotalCounter(),
-    setEventsByTagDuration = daoStatus.setEventsByTagDuration,
-    addEventsByTagCounter = daoStatus.setEventsByTagCounter,
-    setEventsByTagTotalDuration = daoStatus.setEventsByTagTotalDuration,
-    incrementEventsByTagTotalCounter = () => daoStatus.incrementEventsByTagTotalCounter(),
-    setJournalSequenceDuration = daoStatus.setJournalSequenceDuration,
-    addJournalSequenceCounter = daoStatus.addJournalSequenceCounter,
-    setJournalSequenceTotalDuration = daoStatus.setJournalSequenceTotalDuration,
-    incrementJournalSequenceTotalCounter = () => daoStatus.incrementJournalSequenceTotalCounter()
-  )
-
   protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
     pluginConfig.journalSequenceRetrievalConfig
 
@@ -126,7 +95,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
   private val serialization: Serialization       = SerializationExtension(system)
 
-  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsFunctions)
+  protected val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
+
+  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsReporter)
 
   private val writePluginId = config.getString("write-plugin")
   private val eventAdapters = Persistence(system).adaptersFor(writePluginId)

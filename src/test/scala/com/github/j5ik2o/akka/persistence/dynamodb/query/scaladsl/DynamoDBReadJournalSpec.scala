@@ -29,8 +29,8 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
@@ -80,13 +80,15 @@ class DynamoDBReadJournalSpec
 
   private val serialization = SerializationExtension(system)
 
-  val asyncClient    = DynamoDbAsyncClient(underlyingAsync)
-  val taskClient     = DynamoDbMonixClient(asyncClient)
-  val streamClient   = DynamoDbAkkaClient(asyncClient)
-  val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, MetricsFunctions())(ec)
+  val asyncClient  = DynamoDbAsyncClient(underlyingAsync)
+  val taskClient   = DynamoDbMonixClient(asyncClient)
+  val streamClient = DynamoDbAkkaClient(asyncClient)
+
+  val readJournalDao =
+    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, MetricsFunctions())(ec, mat)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, mat)
 
   val readJournal: ReadJournal
     with CurrentPersistenceIdsQuery

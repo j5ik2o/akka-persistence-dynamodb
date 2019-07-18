@@ -21,8 +21,8 @@ import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
 import akka.stream.{ Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
@@ -38,7 +38,7 @@ class WriteJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: JournalPluginConfig,
-    protected val metricsFunctions: MetricsFunctions
+    protected val metricsReporter: MetricsReporter
 )(
     implicit ec: ExecutionContext,
     mat: Materializer
@@ -46,18 +46,14 @@ class WriteJournalDaoImpl(
     with DaoSupport {
 
   import pluginConfig._
-
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  private implicit val scheduler: Scheduler = Scheduler(ec)
-
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
 
+  private implicit val scheduler: Scheduler              = Scheduler(ec)
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
   override val parallelism: Int                          = pluginConfig.parallelism
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-
+  private val logger                                     = LoggerFactory.getLogger(getClass)
   private val putQueue = Source
     .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
     .flatMapConcat {
@@ -238,6 +234,13 @@ class WriteJournalDaoImpl(
       }
     }
 
+  override def highestSequenceNr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber
+  ): Source[Long, NotUsed] = {
+    highestSequenceNr(persistenceId, Some(fromSequenceNr))
+  }
+
   private def highestSequenceNr(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber] = None,
@@ -271,20 +274,13 @@ class WriteJournalDaoImpl(
           .single(queryRequest).via(streamClient.queryFlow()).map {
             _.itemsAsScala.get.map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0L)
           }.map { response =>
-            metricsFunctions
+            metricsReporter
               .setHighestSequenceNrTotalDuration(System.nanoTime() - start)
-            metricsFunctions.incrementHighestSequenceNrTotalCounter()
+            metricsReporter.incrementHighestSequenceNrTotalCounter()
             response
           }
       }
 
-  }
-
-  override def highestSequenceNr(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber
-  ): Source[Long, NotUsed] = {
-    highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
@@ -305,8 +301,8 @@ class WriteJournalDaoImpl(
                   .single(requestItems).map { requests =>
                     BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build()
                   }.via(streamClient.batchWriteItemFlow()).map { response =>
-                    metricsFunctions.setDeleteJournalRowsDuration(System.nanoTime() - start)
-                    metricsFunctions.addDeleteJournalRowsCounter(requestItems.size - response.unprocessedItems().size)
+                    metricsReporter.setDeleteJournalRowsDuration(System.nanoTime() - start)
+                    metricsReporter.addDeleteJournalRowsCounter(requestItems.size - response.unprocessedItems().size)
                     response
                   }
               }.flatMapConcat { response =>
@@ -339,8 +335,8 @@ class WriteJournalDaoImpl(
       Source
         .single(System.nanoTime()).flatMapConcat { start =>
           Source.single(requestItems).via(loopFlow).map { response =>
-            metricsFunctions.setDeleteJournalRowsTotalDuration(System.nanoTime() - start)
-            metricsFunctions.incrementDeleteJournalRowsTotalCounter()
+            metricsReporter.setDeleteJournalRowsTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementDeleteJournalRowsTotalCounter()
             response
           }
         }
@@ -363,8 +359,8 @@ class WriteJournalDaoImpl(
                   .single(requestItems).map { requests =>
                     BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
                   }.via(streamClient.batchWriteItemFlow()).map { response =>
-                    metricsFunctions.setPutJournalRowsDuration(System.nanoTime() - start)
-                    metricsFunctions.addPutJournalRowsCounter(requestItems.size - response.unprocessedItems().size())
+                    metricsReporter.setPutJournalRowsDuration(System.nanoTime() - start)
+                    metricsReporter.addPutJournalRowsCounter(requestItems.size - response.unprocessedItems().size())
                     response
                   }
               }.flatMapConcat { response =>
@@ -411,8 +407,8 @@ class WriteJournalDaoImpl(
       Source
         .single(System.nanoTime()).flatMapConcat { start =>
           Source.single(requestItems).via(loopFlow).map { response =>
-            metricsFunctions.setPutJournalRowsTotalDuration(System.nanoTime() - start)
-            metricsFunctions.incrementPutJournalRowsTotalCounter()
+            metricsReporter.setPutJournalRowsTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementPutJournalRowsTotalCounter()
             response
           }
         }

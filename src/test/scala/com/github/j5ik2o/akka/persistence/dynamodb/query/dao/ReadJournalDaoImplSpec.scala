@@ -23,8 +23,8 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -73,10 +73,11 @@ class ReadJournalDaoImplSpec
   implicit val mat = ActorMaterializer()
   implicit val ec  = system.dispatcher
 
-  val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, MetricsFunctions())(ec)
+  val readJournalDao =
+    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, MetricsFunctions())(ec, mat)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, mat)
 
   val sch = Scheduler(ec)
 

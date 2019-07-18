@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
@@ -17,7 +17,7 @@ trait DaoSupport {
   protected val parallelism: Int
   protected val columnsDefConfig: JournalColumnsDefConfig
 
-  protected val metricsFunctions: MetricsFunctions
+  protected val metricsReporter: MetricsReporter
 
   protected val logLevels: Attributes = Attributes.logLevels(
     onElement = Attributes.LogLevels.Debug,
@@ -57,8 +57,8 @@ trait DaoSupport {
         .single(System.nanoTime()).flatMapConcat { start =>
           Source.single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
             val duration = System.nanoTime() - start
-            metricsFunctions.setMessagesDuration(duration)
-            metricsFunctions.incrementMessagesCounter()
+            metricsReporter.setGetMessagesDuration(duration)
+            metricsReporter.incrementGetMessagesCounter()
             response
           }
         }
@@ -83,8 +83,8 @@ trait DaoSupport {
             .withAttributes(logLevels)
             .map { response =>
               val duration = System.nanoTime() - start
-              metricsFunctions.setMessagesTotalDuration(duration)
-              metricsFunctions.incrementMessagesTotalCounter()
+              metricsReporter.setGetMessagesTotalDuration(duration)
+              metricsReporter.incrementGetMessagesTotalCounter()
               response
             }
         }

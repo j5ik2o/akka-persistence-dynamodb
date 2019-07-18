@@ -22,7 +22,7 @@ import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmx.MetricsFunctions
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -38,7 +38,7 @@ class ReadJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: QueryPluginConfig,
-    override protected val metricsFunctions: MetricsFunctions
+    override protected val metricsReporter: MetricsReporter
 )(implicit ec: ExecutionContext)
     extends ReadJournalDao
     with DaoSupport {
@@ -90,8 +90,8 @@ class ReadJournalDaoImpl(
           .map(PersistenceId)
           .take(max)
           .withAttributes(logLevels).map { response =>
-            metricsFunctions.setAllPersistenceIdsTotalDuration(System.nanoTime() - start)
-            metricsFunctions.incrementAllPersistenceIdsTotalCounter()
+            metricsReporter.setAllPersistenceIdsTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementAllPersistenceIdsTotalCounter()
             response
           }
       }
@@ -108,8 +108,8 @@ class ReadJournalDaoImpl(
             .limit(batchSize)
             .exclusiveStartKeyAsScala(lastKey).build()
         ).map { response =>
-          metricsFunctions.setAllPersistenceIdsDuration(System.nanoTime() - start)
-          metricsFunctions.addAllPersistenceIdsCounter(response.count().toLong)
+          metricsReporter.setAllPersistenceIdsDuration(System.nanoTime() - start)
+          metricsReporter.addAllPersistenceIdsCounter(response.count().toLong)
           response
         }
     }
@@ -134,8 +134,8 @@ class ReadJournalDaoImpl(
         .single(System.nanoTime()).flatMapConcat { requestStart =>
           Source
             .single(request).via(streamClient.scanFlow(parallelism)).map { response =>
-              metricsFunctions.setEventsByTagDuration(System.nanoTime() - requestStart)
-              metricsFunctions.addEventsByTagCounter(response.count().toLong)
+              metricsReporter.setEventsByTagDuration(System.nanoTime() - requestStart)
+              metricsReporter.addEventsByTagCounter(response.count().toLong)
               response
             }
         }
@@ -157,8 +157,8 @@ class ReadJournalDaoImpl(
         }
         .take(max)
         .withAttributes(logLevels).map { response =>
-          metricsFunctions.setEventsByTagTotalDuration(System.nanoTime() - start)
-          metricsFunctions.incrementEventsByTagTotalCounter()
+          metricsReporter.setEventsByTagTotalDuration(System.nanoTime() - start)
+          metricsReporter.incrementEventsByTagTotalCounter()
           response
         }
     }
@@ -183,8 +183,8 @@ class ReadJournalDaoImpl(
           Source
             .single(QueryRequest.builder().tableName(tableName).build())
             .via(streamClient.queryFlow(parallelism)).map { response =>
-              metricsFunctions.setJournalSequenceDuration(System.nanoTime() - requestStart)
-              metricsFunctions.addJournalSequenceCounter(response.count().toLong)
+              metricsReporter.setJournalSequenceDuration(System.nanoTime() - requestStart)
+              metricsReporter.addJournalSequenceCounter(response.count().toLong)
               response
             }
         }
@@ -196,8 +196,8 @@ class ReadJournalDaoImpl(
         .drop(offset)
         .take(limit)
         .withAttributes(logLevels).map { response =>
-          metricsFunctions.setJournalSequenceTotalDuration(System.nanoTime() - start)
-          metricsFunctions.incrementJournalSequenceTotalCounter()
+          metricsReporter.setJournalSequenceTotalDuration(System.nanoTime() - start)
+          metricsReporter.incrementJournalSequenceTotalCounter()
           response
         }
     }

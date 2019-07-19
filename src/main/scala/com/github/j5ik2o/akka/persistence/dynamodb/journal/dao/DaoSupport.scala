@@ -56,8 +56,7 @@ trait DaoSupport {
       Source
         .single(System.nanoTime()).flatMapConcat { start =>
           Source.single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
-            val duration = System.nanoTime() - start
-            metricsReporter.setGetMessagesDuration(duration)
+            metricsReporter.setGetMessagesDuration(System.nanoTime() - start)
             metricsReporter.incrementGetMessagesCounter()
             response
           }
@@ -82,8 +81,7 @@ trait DaoSupport {
             .take(max)
             .withAttributes(logLevels)
             .map { response =>
-              val duration = System.nanoTime() - start
-              metricsReporter.setGetMessagesTotalDuration(duration)
+              metricsReporter.setGetMessagesTotalDuration(System.nanoTime() - start)
               metricsReporter.incrementGetMessagesTotalCounter()
               response
             }

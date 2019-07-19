@@ -3,6 +3,22 @@ package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 import scala.reflect.runtime.universe
 
 trait MetricsReporter {
+  def setPutMessageDuration(value: Long): Unit
+  def addPutMessageCounter(value: Long): Unit
+  def incrementPutMessageCounter(): Unit = addPutMessageCounter(1L)
+
+  def setDeleteMessageDuration(value: Long): Unit
+  def addDeleteMessageCounter(value: Long): Unit
+  def incrementDeleteMessageCounter(): Unit = addDeleteMessageCounter(1L)
+
+  def setGetJournalRowsDuration(value: Long): Unit
+  def addGetJournalRowsCounter(value: Long): Unit
+  def incrementGetJournalRowsCounter(): Unit = addGetJournalRowsCounter(1L)
+
+  def setUpdateMessageDuration(value: Long): Unit
+  def addUpdateMessageCounter(value: Long): Unit
+  def incrementUpdateMessageCounter(): Unit = addUpdateMessageCounter(1L)
+
   def setPutJournalRowsDuration(value: Long): Unit
   def addPutJournalRowsCounter(value: Long): Unit
   def incrementPutJournalRowsCounter(): Unit = addPutJournalRowsCounter(1L)
@@ -71,6 +87,14 @@ object MetricsReporter {
 }
 
 class NullMetricsReporter extends MetricsReporter {
+  override def setPutMessageDuration(value: Long): Unit             = {}
+  override def addPutMessageCounter(value: Long): Unit              = {}
+  override def setDeleteMessageDuration(value: Long): Unit          = {}
+  override def addDeleteMessageCounter(value: Long): Unit           = {}
+  override def setGetJournalRowsDuration(value: Long): Unit         = {}
+  override def addGetJournalRowsCounter(value: Long): Unit          = {}
+  override def setUpdateMessageDuration(value: Long): Unit          = {}
+  override def addUpdateMessageCounter(value: Long): Unit           = {}
   override def setPutJournalRowsDuration(value: Long): Unit         = {}
   override def addPutJournalRowsCounter(value: Long): Unit          = {}
   override def setPutJournalRowsTotalDuration(value: Long): Unit    = {}

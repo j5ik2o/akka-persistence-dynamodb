@@ -159,8 +159,8 @@ class WriteJournalDaoImpl(
             } else
               Source.single(result)
         }.map { response =>
-          metricsReporter.setDeleteMessageDuration(System.nanoTime() - start)
-          metricsReporter.incrementDeleteMessageCounter()
+          metricsReporter.setDeleteMessagesDuration(System.nanoTime() - start)
+          metricsReporter.incrementDeleteMessagesCounter()
           response
         }
     }
@@ -169,8 +169,8 @@ class WriteJournalDaoImpl(
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
     Source.single(System.nanoTime()).flatMapConcat { start =>
       Source.single(messages).via(requestPutJournalRows).map { response =>
-        metricsReporter.setPutMessageDuration(System.nanoTime() - start)
-        metricsReporter.incrementPutMessageCounter()
+        metricsReporter.setPutMessagesDuration(System.nanoTime() - start)
+        metricsReporter.incrementPutMessagesCounter()
         response
       }
     }

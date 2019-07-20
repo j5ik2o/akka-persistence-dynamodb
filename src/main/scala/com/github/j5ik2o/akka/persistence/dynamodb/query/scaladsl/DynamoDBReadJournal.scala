@@ -95,7 +95,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
   private val serialization: Serialization       = SerializationExtension(system)
 
-  protected val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
+  val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
 
   private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsReporter)
 

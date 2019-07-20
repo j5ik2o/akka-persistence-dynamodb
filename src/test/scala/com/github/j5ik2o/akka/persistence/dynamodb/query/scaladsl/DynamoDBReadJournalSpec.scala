@@ -44,6 +44,7 @@ import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCred
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DynamoDBReadJournalSpec
@@ -145,16 +146,18 @@ class DynamoDBReadJournalSpec
     "currentEventsByPersistenceId" in {
       implicit val to = Timeout(10 seconds)
       val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
-      (pActor ? 1).futureValue
-      (pActor ? 2).futureValue
-      (pActor ? 3).futureValue
+      val maxSize     = 500
+      val futures = for (n <- 1 to maxSize) yield {
+        pActor ? n
+      }
+      Future.sequence(futures).futureValue
       val results = readJournal.currentEventsByPersistenceId("my-1", 0, Long.MaxValue).runWith(Sink.seq).futureValue
 //      println(results)
-      results should have size (3)
+      results should have size (maxSize)
       results.map(_.persistenceId).forall(_ == "my-1") shouldBe true
-      results.map(_.sequenceNr) should contain(1)
-      results.map(_.sequenceNr) should contain(2)
-      results.map(_.sequenceNr) should contain(3)
+      for (n <- 1 to maxSize) {
+        results.map(_.sequenceNr) should contain(n)
+      }
     }
     "withPersistenceIds" in withPersistenceIds() { tp =>
       tp.request(Int.MaxValue)

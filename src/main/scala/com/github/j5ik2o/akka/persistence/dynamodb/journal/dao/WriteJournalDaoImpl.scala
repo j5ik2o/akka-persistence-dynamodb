@@ -16,6 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
+import java.io.IOException
+
 import akka.NotUsed
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
@@ -130,8 +132,8 @@ class WriteJournalDaoImpl(
             )
           }.getOrElse(Map.empty)
       ).build()
-    Source
-      .single(System.nanoTime()).flatMapConcat { start =>
+    startTimeSource
+      .flatMapConcat { start =>
         Source
           .single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { _ =>
             ()
@@ -140,34 +142,35 @@ class WriteJournalDaoImpl(
             metricsReporter.incrementUpdateMessageCounter()
             response
           }
-      }
+      }.withAttributes(logLevels)
   }
 
   override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
-    Source.single(System.nanoTime()).flatMapConcat { start =>
-      getJournalRows(persistenceId, toSequenceNr)
-        .flatMapConcat { journalRows =>
-          putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-        }.flatMapConcat {
-          case (result, journalRows) =>
-            if (!softDeleted) {
-              highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
-                getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
-                  deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+    startTimeSource
+      .flatMapConcat { start =>
+        getJournalRows(persistenceId, toSequenceNr)
+          .flatMapConcat { journalRows =>
+            putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
+          }.flatMapConcat {
+            case (result, journalRows) =>
+              if (!softDeleted) {
+                highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
+                  getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
+                    deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+                  }
                 }
-              }
-            } else
-              Source.single(result)
-        }.map { response =>
-          metricsReporter.setDeleteMessagesDuration(System.nanoTime() - start)
-          metricsReporter.incrementDeleteMessagesCounter()
-          response
-        }
-    }
+              } else
+                Source.single(result)
+          }.map { response =>
+            metricsReporter.setDeleteMessagesDuration(System.nanoTime() - start)
+            metricsReporter.incrementDeleteMessagesCounter()
+            response
+          }
+      }.withAttributes(logLevels)
   }
 
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    Source.single(System.nanoTime()).flatMapConcat { start =>
+    startTimeSource.flatMapConcat { start =>
       Source.single(messages).via(requestPutJournalRows).map { response =>
         metricsReporter.setPutMessagesDuration(System.nanoTime() - start)
         metricsReporter.incrementPutMessagesCounter()
@@ -176,23 +179,24 @@ class WriteJournalDaoImpl(
     }
 
   private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
-    Flow[Seq[JournalRow]].mapAsync(parallelism) { messages =>
-      val promise = Promise[Long]()
-      putQueue.offer(promise -> messages).flatMap {
-        case QueueOfferResult.Enqueued =>
-          promise.future
-        case QueueOfferResult.Failure(t) =>
-          Future.failed(new Exception("Failed to write journal row batch", t))
-        case QueueOfferResult.Dropped =>
-          Future.failed(
-            new Exception(
-              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+    Flow[Seq[JournalRow]]
+      .mapAsync(parallelism) { messages =>
+        val promise = Promise[Long]()
+        putQueue.offer(promise -> messages).flatMap {
+          case QueueOfferResult.Enqueued =>
+            promise.future
+          case QueueOfferResult.Failure(t) =>
+            Future.failed(new Exception("Failed to write journal row batch", t))
+          case QueueOfferResult.Dropped =>
+            Future.failed(
+              new Exception(
+                s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+              )
             )
-          )
-        case QueueOfferResult.QueueClosed =>
-          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
-      }
-    }
+          case QueueOfferResult.QueueClosed =>
+            Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
+        }
+      }.withAttributes(logLevels)
 
   private def getJournalRows(
       persistenceId: PersistenceId,
@@ -221,20 +225,29 @@ class WriteJournalDaoImpl(
           )
         )
       ).build()
-    Source
-      .single(System.nanoTime()).flatMapConcat { start =>
+    startTimeSource
+      .flatMapConcat { start =>
         Source
           .single(queryRequest)
           .via(streamClient.queryFlow())
-          .mapConcat(_.itemsAsScala.get.toVector)
-          .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
           .map { response =>
             metricsReporter.setGetJournalRowsDuration(System.nanoTime() - start)
             metricsReporter.incrementGetJournalRowsCounter()
             response
           }
+          .flatMapConcat { response =>
+            if (response.sdkHttpResponse().isSuccessful) {
+              Source.single(response)
+            } else {
+              val statusCode = response.sdkHttpResponse().statusCode()
+              val statusText = response.sdkHttpResponse().statusText()
+              Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            }
+          }
+          .mapConcat(_.itemsAsScala.get.toVector)
+          .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
       }
-      .map(_.result().toVector)
+      .map(_.result().toVector).withAttributes(logLevels)
 
   }
 
@@ -248,23 +261,24 @@ class WriteJournalDaoImpl(
   }
 
   private def requestDeleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
-    Flow[Seq[PersistenceIdWithSeqNr]].mapAsync(parallelism) { messages =>
-      val promise = Promise[Long]()
-      deleteQueue.offer(promise -> messages).flatMap {
-        case QueueOfferResult.Enqueued =>
-          promise.future
-        case QueueOfferResult.Failure(t) =>
-          Future.failed(new Exception("Failed to write journal row batch", t))
-        case QueueOfferResult.Dropped =>
-          Future.failed(
-            new Exception(
-              s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+    Flow[Seq[PersistenceIdWithSeqNr]]
+      .mapAsync(parallelism) { messages =>
+        val promise = Promise[Long]()
+        deleteQueue.offer(promise -> messages).flatMap {
+          case QueueOfferResult.Enqueued =>
+            promise.future
+          case QueueOfferResult.Failure(t) =>
+            Future.failed(new Exception("Failed to write journal row batch", t))
+          case QueueOfferResult.Dropped =>
+            Future.failed(
+              new Exception(
+                s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+              )
             )
-          )
-        case QueueOfferResult.QueueClosed =>
-          Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
-      }
-    }
+          case QueueOfferResult.QueueClosed =>
+            Future.failed(new Exception("Failed to enqueue journal row batch write, the queue was closed"))
+        }
+      }.withAttributes(logLevels)
 
   override def highestSequenceNr(
       persistenceId: PersistenceId,
@@ -300,18 +314,29 @@ class WriteJournalDaoImpl(
           .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
       ).scanIndexForward(false)
       .limit(1).build()
-    Source
-      .single(System.nanoTime()).flatMapConcat { start =>
+    startTimeSource
+      .flatMapConcat { start =>
         Source
-          .single(queryRequest).via(streamClient.queryFlow()).map {
-            _.itemsAsScala.get.map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0L)
-          }.map { response =>
+          .single(queryRequest).via(streamClient.queryFlow())
+          .map { response =>
             metricsReporter
               .setHighestSequenceNrTotalDuration(System.nanoTime() - start)
             metricsReporter.incrementHighestSequenceNrTotalCounter()
             response
           }
-      }
+          .flatMapConcat { response =>
+            if (response.sdkHttpResponse().isSuccessful) {
+              Source.single(
+                response.itemsAsScala.get
+                  .map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0L)
+              )
+            } else {
+              val statusCode = response.sdkHttpResponse().statusCode()
+              val statusText = response.sdkHttpResponse().statusText()
+              Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            }
+          }
+      }.withAttributes(logLevels)
 
   }
 
@@ -327,8 +352,8 @@ class WriteJournalDaoImpl(
           if (requestItems.isEmpty)
             Source.single(0L)
           else {
-            Source
-              .single(System.nanoTime()).flatMapConcat { start =>
+            startTimeSource
+              .flatMapConcat { start =>
                 Source
                   .single(requestItems).map { requests =>
                     BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build()
@@ -338,11 +363,17 @@ class WriteJournalDaoImpl(
                     response
                   }
               }.flatMapConcat { response =>
-                if (response.unprocessedItemsAsScala.get.nonEmpty) {
-                  val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                  Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
-                } else
-                  Source.single(requestItems.size)
+                if (response.sdkHttpResponse().isSuccessful) {
+                  if (response.unprocessedItemsAsScala.get.nonEmpty) {
+                    val n = requestItems.size - response.unprocessedItems.get(tableName).size
+                    Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
+                  } else
+                    Source.single(requestItems.size)
+                } else {
+                  val statusCode = response.sdkHttpResponse().statusCode()
+                  val statusText = response.sdkHttpResponse().statusText()
+                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+                }
               }
           }
         }
@@ -364,14 +395,15 @@ class WriteJournalDaoImpl(
               ).build()
           ).build()
       }
-      Source
-        .single(System.nanoTime()).flatMapConcat { start =>
-          Source.single(requestItems).via(loopFlow).map { response =>
-            metricsReporter.setDeleteJournalRowsTotalDuration(System.nanoTime() - start)
-            metricsReporter.incrementDeleteJournalRowsTotalCounter()
-            response
-          }
-        }
+      startTimeSource
+        .flatMapConcat { start =>
+          Source
+            .single(requestItems).via(loopFlow).map { response =>
+              metricsReporter.setDeleteJournalRowsTotalDuration(System.nanoTime() - start)
+              metricsReporter.incrementDeleteJournalRowsTotalCounter()
+              response
+            }
+        }.withAttributes(logLevels)
     }
 
   private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat {
@@ -385,8 +417,8 @@ class WriteJournalDaoImpl(
           if (requestItems.isEmpty)
             Source.single(0L)
           else {
-            Source
-              .single(System.nanoTime()).flatMapConcat { start =>
+            startTimeSource
+              .flatMapConcat { start =>
                 Source
                   .single(requestItems).map { requests =>
                     BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
@@ -396,11 +428,17 @@ class WriteJournalDaoImpl(
                     response
                   }
               }.flatMapConcat { response =>
-                if (response.unprocessedItemsAsScala.get.nonEmpty) {
-                  val n = requestItems.size - response.unprocessedItems.get(tableName).size
-                  Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
-                } else
-                  Source.single(requestItems.size)
+                if (response.sdkHttpResponse().isSuccessful) {
+                  if (response.unprocessedItemsAsScala.get.nonEmpty) {
+                    val n = requestItems.size - response.unprocessedItems.get(tableName).size
+                    Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
+                  } else
+                    Source.single(requestItems.size)
+                } else {
+                  val statusCode = response.sdkHttpResponse().statusCode()
+                  val statusText = response.sdkHttpResponse().statusText()
+                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+                }
               }
           }
         }
@@ -436,14 +474,15 @@ class WriteJournalDaoImpl(
               ).build()
           ).build()
       }
-      Source
-        .single(System.nanoTime()).flatMapConcat { start =>
-          Source.single(requestItems).via(loopFlow).map { response =>
-            metricsReporter.setPutJournalRowsTotalDuration(System.nanoTime() - start)
-            metricsReporter.incrementPutJournalRowsTotalCounter()
-            response
-          }
-        }
+      startTimeSource
+        .flatMapConcat { start =>
+          Source
+            .single(requestItems).via(loopFlow).map { response =>
+              metricsReporter.setPutJournalRowsTotalDuration(System.nanoTime() - start)
+              metricsReporter.incrementPutJournalRowsTotalCounter()
+              response
+            }
+        }.withAttributes(logLevels)
   }
 
   case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)

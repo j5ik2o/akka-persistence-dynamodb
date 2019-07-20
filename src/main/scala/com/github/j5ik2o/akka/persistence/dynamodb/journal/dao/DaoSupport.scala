@@ -30,10 +30,10 @@ trait DaoSupport {
     onFinish = Attributes.LogLevels.Debug
   )
 
-//  val startTimeSource: Source[Long, NotUsed] = Source
-//    .lazily(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
+  val startTimeSource: Source[Long, NotUsed] = Source
+    .lazily(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
 
-  def startTimeSource: Source[Long, NotUsed] = Source.single(System.nanoTime())
+  // def startTimeSource: Source[Long, NotUsed] = Source.single(System.nanoTime())
 
   def getMessages(
       persistenceId: PersistenceId,
@@ -48,8 +48,8 @@ trait DaoSupport {
         count: Long,
         index: Int
     ): Source[Map[String, AttributeValue], NotUsed] = {
-      val limit = if ((max - count) > Int.MaxValue.toLong) Integer.MAX_VALUE else (max - count).toInt
-      logger.info(s"index = $index, max = $max, count = $count, limit = $limit")
+      val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
+      logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
       val queryRequest = QueryRequest
         .builder()
         .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
@@ -83,21 +83,15 @@ trait DaoSupport {
         }.flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
             val last  = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-            val items = response.itemsAsScala.get.toVector
-            logger.info(
+            val items = response.itemsAsScala.getOrElse(Seq.empty).toVector
+            logger.debug(
               s"index = $index, item.size = ${items.size}, max = $max, count = $count, (max - count) = ${max - count}"
             )
-//            val endpos = if ((max - count) > items.size.toLong) items.size.toLong else max - count
-//            val sliceItems =
-//              items.slice(0, endpos.toInt)
-//            logger.info(
-//              s"sliceItems.size = ${sliceItems.size}, item.size = ${items.size}, max = $max, count = $count, (max - count) = ${max - count}, endpos = $endpos"
-//            )
-            val result = Source.combine(acc, Source(items))(Concat(_))
-            if (last.nonEmpty && (count + items.size) < max) {
-              loop(response.lastEvaluatedKeyAsScala, result, count + items.size, index + 1)
-            } else
-              result
+            val combinedSource = Source.combine(acc, Source(items))(Concat(_))
+            if (last.nonEmpty && (count + items.size) < max)
+              loop(response.lastEvaluatedKeyAsScala, combinedSource, count + items.size, index + 1)
+            else
+              combinedSource
           } else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()

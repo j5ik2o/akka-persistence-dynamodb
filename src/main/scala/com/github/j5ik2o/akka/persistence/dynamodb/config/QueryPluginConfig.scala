@@ -36,6 +36,10 @@ object QueryPluginConfig {
       shardCount = config.asInt("shard-count", 64),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
+      metricsReporterClassName = config.asString(
+        "metrics-reporter-class-name",
+        "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
+      ),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
     )
   }
@@ -53,5 +57,6 @@ case class QueryPluginConfig(
     refreshInterval: FiniteDuration,
     shardCount: Int,
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
+    metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
 )

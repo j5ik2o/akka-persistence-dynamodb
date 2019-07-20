@@ -28,6 +28,7 @@ import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
@@ -94,7 +95,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
   private val serialization: Serialization       = SerializationExtension(system)
 
-  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig)
+  protected val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
+
+  private val readJournalDao = new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsReporter)
 
   private val writePluginId = config.getString("write-plugin")
   private val eventAdapters = Persistence(system).adaptersFor(writePluginId)

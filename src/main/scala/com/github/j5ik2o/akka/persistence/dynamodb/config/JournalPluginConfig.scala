@@ -33,6 +33,10 @@ object JournalPluginConfig {
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       softDeleted = config.asBoolean("soft-delete", true),
       shardCount = config.asInt("shard-count", 64),
+      metricsReporterClassName = config.asString(
+        "metrics-reporter-class-name",
+        "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
+      ),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
     )
   }
@@ -49,5 +53,6 @@ case class JournalPluginConfig(
     refreshInterval: FiniteDuration,
     softDeleted: Boolean,
     shardCount: Int,
+    metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
 )

@@ -18,13 +18,14 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.NotUsed
 import akka.serialization.Serialization
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.stream.{ Materializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.SdkBytes
@@ -36,7 +37,8 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 class WriteJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
-    pluginConfig: JournalPluginConfig
+    pluginConfig: JournalPluginConfig,
+    protected val metricsReporter: MetricsReporter
 )(
     implicit ec: ExecutionContext,
     mat: Materializer
@@ -44,51 +46,50 @@ class WriteJournalDaoImpl(
     with DaoSupport {
 
   import pluginConfig._
-
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  private implicit val scheduler: Scheduler = Scheduler(ec)
-
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
 
+  private implicit val scheduler: Scheduler              = Scheduler(ec)
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
   override val parallelism: Int                          = pluginConfig.parallelism
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+  private val logger                                     = LoggerFactory.getLogger(getClass)
 
-  private val putQueue = Source
-    .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
-    .flatMapConcat {
-      case (promise, rows) =>
-        Source(rows.toVector)
-          .grouped(clientConfig.batchWriteItemLimit).log("grouped")
-          .via(putJournalRowsFlow).log("result")
-          .async
-          .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
-          .map(_.sum).log("sum")
-          .map(result => promise.success(result))
-          .recover { case t => promise.failure(t) }
-    }
-    .toMat(Sink.ignore)(Keep.left)
-    .withAttributes(logLevels)
-    .run()
+  private val putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
+    Source
+      .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.dropNew)
+      .flatMapConcat {
+        case (promise, rows) =>
+          Source(rows.toVector)
+            .grouped(clientConfig.batchWriteItemLimit).log("grouped")
+            .via(putJournalRowsFlow).log("result")
+            .async
+            .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
+            .map(_.sum).log("sum")
+            .map(result => promise.success(result))
+            .recover { case t => promise.failure(t) }
+      }
+      .toMat(Sink.ignore)(Keep.left)
+      .withAttributes(logLevels)
+      .run()
 
-  private val deleteQueue = Source
-    .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, OverflowStrategy.dropNew)
-    .flatMapConcat {
-      case (promise, rows) =>
-        Source(rows.toVector)
-          .grouped(clientConfig.batchWriteItemLimit).log("grouped")
-          .via(deleteJournalRowsFlow).log("result")
-          .async
-          .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
-          .map(_.sum).log("sum")
-          .map(result => promise.success(result))
-          .recover { case t => promise.failure(t) }
-    }
-    .toMat(Sink.ignore)(Keep.left)
-    .withAttributes(logLevels)
-    .run()
+  private val deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
+    Source
+      .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, OverflowStrategy.dropNew)
+      .flatMapConcat {
+        case (promise, rows) =>
+          Source(rows.toVector)
+            .grouped(clientConfig.batchWriteItemLimit).log("grouped")
+            .via(deleteJournalRowsFlow).log("result")
+            .async
+            .fold(ArrayBuffer.empty[Long])(_ :+ _).log("results")
+            .map(_.sum).log("sum")
+            .map(result => promise.success(result))
+            .recover { case t => promise.failure(t) }
+      }
+      .toMat(Sink.ignore)(Keep.left)
+      .withAttributes(logLevels)
+      .run()
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     val updateRequest = UpdateItemRequest
@@ -129,30 +130,50 @@ class WriteJournalDaoImpl(
             )
           }.getOrElse(Map.empty)
       ).build()
-    Source.single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { _ =>
-      ()
-    }
-  }
-
-  override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
-    getJournalRows(persistenceId, toSequenceNr)
-      .flatMapConcat { journalRows =>
-        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-      }.flatMapConcat {
-        case (result, journalRows) =>
-          if (!softDeleted) {
-            highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
-              getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
-                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-              }
-            }
-          } else
-            Source.single(result)
+    Source
+      .single(System.nanoTime()).flatMapConcat { start =>
+        Source
+          .single(updateRequest).via(streamClient.updateItemFlow(parallelism)).map { _ =>
+            ()
+          }.map { response =>
+            metricsReporter.setUpdateMessageDuration(System.nanoTime() - start)
+            metricsReporter.incrementUpdateMessageCounter()
+            response
+          }
       }
   }
 
+  override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
+    Source.single(System.nanoTime()).flatMapConcat { start =>
+      getJournalRows(persistenceId, toSequenceNr)
+        .flatMapConcat { journalRows =>
+          putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
+        }.flatMapConcat {
+          case (result, journalRows) =>
+            if (!softDeleted) {
+              highestSequenceNr(persistenceId, deleted = Some(true)).flatMapConcat { highestMarkedSequenceNr =>
+                getJournalRows(persistenceId, SequenceNumber(highestMarkedSequenceNr - 1)).flatMapConcat { _ =>
+                  deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+                }
+              }
+            } else
+              Source.single(result)
+        }.map { response =>
+          metricsReporter.setDeleteMessagesDuration(System.nanoTime() - start)
+          metricsReporter.incrementDeleteMessagesCounter()
+          response
+        }
+    }
+  }
+
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    Source.single(messages).via(requestPutJournalRows)
+    Source.single(System.nanoTime()).flatMapConcat { start =>
+      Source.single(messages).via(requestPutJournalRows).map { response =>
+        metricsReporter.setPutMessagesDuration(System.nanoTime() - start)
+        metricsReporter.incrementPutMessagesCounter()
+        response
+      }
+    }
 
   private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
     Flow[Seq[JournalRow]].mapAsync(parallelism) { messages =>
@@ -201,11 +222,20 @@ class WriteJournalDaoImpl(
         )
       ).build()
     Source
-      .single(queryRequest)
-      .via(streamClient.queryFlow())
-      .mapConcat(_.itemsAsScala.get.toVector)
-      .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
+      .single(System.nanoTime()).flatMapConcat { start =>
+        Source
+          .single(queryRequest)
+          .via(streamClient.queryFlow())
+          .mapConcat(_.itemsAsScala.get.toVector)
+          .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
+          .map { response =>
+            metricsReporter.setGetJournalRowsDuration(System.nanoTime() - start)
+            metricsReporter.incrementGetJournalRowsCounter()
+            response
+          }
+      }
       .map(_.result().toVector)
+
   }
 
   private def deleteBy(persistenceId: PersistenceId, sequenceNrs: Seq[SequenceNumber]): Source[Long, NotUsed] = {
@@ -236,6 +266,13 @@ class WriteJournalDaoImpl(
       }
     }
 
+  override def highestSequenceNr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber
+  ): Source[Long, NotUsed] = {
+    highestSequenceNr(persistenceId, Some(fromSequenceNr))
+  }
+
   private def highestSequenceNr(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber] = None,
@@ -264,17 +301,18 @@ class WriteJournalDaoImpl(
       ).scanIndexForward(false)
       .limit(1).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow()).map {
-        _.itemsAsScala.get.map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0)
+      .single(System.nanoTime()).flatMapConcat { start =>
+        Source
+          .single(queryRequest).via(streamClient.queryFlow()).map {
+            _.itemsAsScala.get.map(_(columnsDefConfig.sequenceNrColumnName).n.toLong).headOption.getOrElse(0L)
+          }.map { response =>
+            metricsReporter
+              .setHighestSequenceNrTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementHighestSequenceNrTotalCounter()
+            response
+          }
       }
 
-  }
-
-  override def highestSequenceNr(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber
-  ): Source[Long, NotUsed] = {
-    highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
@@ -290,9 +328,16 @@ class WriteJournalDaoImpl(
             Source.single(0L)
           else {
             Source
-              .single(requestItems).map { requests =>
-                BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build()
-              }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
+              .single(System.nanoTime()).flatMapConcat { start =>
+                Source
+                  .single(requestItems).map { requests =>
+                    BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build()
+                  }.via(streamClient.batchWriteItemFlow()).map { response =>
+                    metricsReporter.setDeleteJournalRowsDuration(System.nanoTime() - start)
+                    metricsReporter.addDeleteJournalRowsCounter(requestItems.size - response.unprocessedItems().size)
+                    response
+                  }
+              }.flatMapConcat { response =>
                 if (response.unprocessedItemsAsScala.get.nonEmpty) {
                   val n = requestItems.size - response.unprocessedItems.get(tableName).size
                   Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
@@ -319,7 +364,14 @@ class WriteJournalDaoImpl(
               ).build()
           ).build()
       }
-      Source.single(requestItems).via(loopFlow)
+      Source
+        .single(System.nanoTime()).flatMapConcat { start =>
+          Source.single(requestItems).via(loopFlow).map { response =>
+            metricsReporter.setDeleteJournalRowsTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementDeleteJournalRowsTotalCounter()
+            response
+          }
+        }
     }
 
   private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat {
@@ -334,9 +386,16 @@ class WriteJournalDaoImpl(
             Source.single(0L)
           else {
             Source
-              .single(requestItems).map { requests =>
-                BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
-              }.via(streamClient.batchWriteItemFlow()).flatMapConcat { response =>
+              .single(System.nanoTime()).flatMapConcat { start =>
+                Source
+                  .single(requestItems).map { requests =>
+                    BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
+                  }.via(streamClient.batchWriteItemFlow()).map { response =>
+                    metricsReporter.setPutJournalRowsDuration(System.nanoTime() - start)
+                    metricsReporter.addPutJournalRowsCounter(requestItems.size - response.unprocessedItems().size())
+                    response
+                  }
+              }.flatMapConcat { response =>
                 if (response.unprocessedItemsAsScala.get.nonEmpty) {
                   val n = requestItems.size - response.unprocessedItems.get(tableName).size
                   Source.single(response.unprocessedItemsAsScala.get(tableName)).via(loopFlow).map(_ + n)
@@ -377,7 +436,14 @@ class WriteJournalDaoImpl(
               ).build()
           ).build()
       }
-      Source.single(requestItems).via(loopFlow)
+      Source
+        .single(System.nanoTime()).flatMapConcat { start =>
+          Source.single(requestItems).via(loopFlow).map { response =>
+            metricsReporter.setPutJournalRowsTotalDuration(System.nanoTime() - start)
+            metricsReporter.incrementPutJournalRowsTotalCounter()
+            response
+          }
+        }
   }
 
   case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)

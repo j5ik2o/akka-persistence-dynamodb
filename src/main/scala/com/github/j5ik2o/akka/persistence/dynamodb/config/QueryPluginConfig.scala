@@ -31,7 +31,7 @@ object QueryPluginConfig {
       tagSeparator = config.asString("tag-separator", ","),
       bufferSize = config.asInt("buffer-size", Int.MaxValue),
       batchSize = config.asInt("batch-size", 16),
-      parallelism = config.asInt("parallelism", 32),
+      parallelism = config.asInt("parallelism", 256),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       shardCount = config.asInt("shard-count", 64),
       journalSequenceRetrievalConfig =

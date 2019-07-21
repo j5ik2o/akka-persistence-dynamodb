@@ -24,15 +24,15 @@ object JournalPluginConfig {
 
   def fromConfig(config: Config): JournalPluginConfig = {
     JournalPluginConfig(
-      tableName = config.asString("table-name", "Journal"),
+      tableName = config.asString("table-name", default = "Journal"),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRowsIndex"),
-      tagSeparator = config.asString("tag-separator", ","),
-      bufferSize = config.asInt("buffer-size", Int.MaxValue),
-      parallelism = config.asInt("parallelism", 32),
-      refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
-      softDeleted = config.asBoolean("soft-delete", true),
-      shardCount = config.asInt("shard-count", 64),
+      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", default = "GetJournalRowsIndex"),
+      tagSeparator = config.asString("tag-separator", default = ","),
+      bufferSize = config.asInt("buffer-size", default = Int.MaxValue),
+      parallelism = config.asInt("parallelism", default = 256),
+      refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
+      softDeleted = config.asBoolean("soft-delete", default = true),
+      shardCount = config.asInt("shard-count", default = 64),
       metricsReporterClassName = config.asString(
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"

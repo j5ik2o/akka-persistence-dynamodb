@@ -85,16 +85,20 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    val startTime = System.nanoTime()
+
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
       row          <- serializeTry.right.getOrElse(Seq.empty)
     } yield row
+
     def resultWhenWriteComplete: Seq[Either[Throwable, Unit]] =
       if (serializedTries.forall(_.isRight)) Nil
       else
         serializedTries
           .map(_.right.map(_ => ()))
+
     val future =
       journalDao
         .putMessages(rowsToWrite).runWith(Sink.head).recoverWith {
@@ -109,35 +113,71 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         }
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
-    future.onComplete(_ => self ! WriteFinished(persistenceId, future))
+
+    future.onComplete { result =>
+      self ! WriteFinished(persistenceId, future)
+      metricsReporter.setAsyncWriteMessagesCallDuration(System.nanoTime() - startTime)
+      if (result.isSuccess)
+        metricsReporter.incrementAsyncWriteMessagesCallCounter()
+      else
+        metricsReporter.incrementAsyncWriteMessagesCallErrorCounter()
+    }
     future
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    journalDao
+    val startTime = System.nanoTime()
+    val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr)).runWith(Sink.head).map(_ => ())
+    future.onComplete { result =>
+      metricsReporter.setAsyncDeleteMessagesToCallDuration(System.nanoTime() - startTime)
+      if (result.isSuccess)
+        metricsReporter.incrementAsyncDeleteMessagesToCallCounter()
+      else
+        metricsReporter.incrementAsyncDeleteMessagesToCallErrorCounter()
+    }
+    future
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
-  ): Future[Unit] =
-    journalDao
+  ): Future[Unit] = {
+    val startTime = System.nanoTime()
+    val future = journalDao
       .getMessages(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr), SequenceNumber(toSequenceNr), max)
       .via(serializer.deserializeFlowWithoutTags)
       .runForeach(recoveryCallback)
       .map(_ => ())
+    future.onComplete { result =>
+      metricsReporter.setAsyncReplayMessagesCallDuration(System.nanoTime() - startTime)
+      if (result.isSuccess)
+        metricsReporter.incrementAsyncReplayMessagesCallCounter()
+      else
+        metricsReporter.incrementAsyncReplayMessagesCallErrorCounter()
+    }
+    future
+  }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
+    val startTime = System.nanoTime()
     def fetchHighestSeqNr(): Future[Long] =
       journalDao.highestSequenceNr(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
 
-    writeInProgress.get(persistenceId) match {
+    val future = writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()
       case Some(f) =>
         // we must fetch the highest sequence number after the previous write has completed
         // If the previous write failed then we can ignore this
         f.recover { case _ => () }.flatMap(_ => fetchHighestSeqNr())
     }
+    future.onComplete { result =>
+      metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
+      if (result.isSuccess)
+        metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
+      else
+        metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
+    }
+    future
   }
 
   override def postStop(): Unit = {

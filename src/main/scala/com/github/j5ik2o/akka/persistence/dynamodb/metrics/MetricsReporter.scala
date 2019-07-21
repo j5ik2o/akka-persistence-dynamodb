@@ -1,77 +1,155 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
-import java.util.concurrent.atomic.AtomicLong
-
 import scala.reflect.runtime.universe
 
 trait MetricsReporter {
-  def setPutMessagesDuration(value: Long): Unit
-  def addPutMessagesCounter(value: Long): Unit
-  def incrementPutMessagesCounter(): Unit = addPutMessagesCounter(1L)
+  def setAsyncWriteMessagesCallDuration(value: Long): Unit
+  def addAsyncWriteMessagesCallCounter(value: Long): Unit
+  def incrementAsyncWriteMessagesCallCounter(): Unit = addAsyncWriteMessagesCallCounter(1L)
+  def addAsyncWriteMessagesCallErrorCounter(value: Long): Unit
+  def incrementAsyncWriteMessagesCallErrorCounter(): Unit = addAsyncWriteMessagesCallErrorCounter(1L)
 
-  def setDeleteMessagesDuration(value: Long): Unit
-  def addDeleteMessagesCounter(value: Long): Unit
-  def incrementDeleteMessagesCounter(): Unit = addDeleteMessagesCounter(1L)
+  def setAsyncDeleteMessagesToCallDuration(value: Long): Unit
+  def addAsyncDeleteMessagesToCallCounter(value: Long): Unit
+  def incrementAsyncDeleteMessagesToCallCounter(): Unit = addAsyncDeleteMessagesToCallCounter(1L)
+  def addAsyncDeleteMessagesToCallErrorCounter(value: Long): Unit
+  def incrementAsyncDeleteMessagesToCallErrorCounter(): Unit = addAsyncDeleteMessagesToCallErrorCounter(1L)
 
-  def setGetJournalRowsDuration(value: Long): Unit
-  def addGetJournalRowsCounter(value: Long): Unit
-  def incrementGetJournalRowsCounter(): Unit = addGetJournalRowsCounter(1L)
+  def setAsyncReplayMessagesCallDuration(value: Long): Unit
+  def addAsyncReplayMessagesCallCounter(value: Long): Unit
+  def incrementAsyncReplayMessagesCallCounter(): Unit = addAsyncReplayMessagesCallCounter(1L)
+  def addAsyncReplayMessagesCallErrorCounter(value: Long): Unit
+  def incrementAsyncReplayMessagesCallErrorCounter(): Unit = addAsyncReplayMessagesCallErrorCounter(1L)
 
-  def setUpdateMessageDuration(value: Long): Unit
-  def addUpdateMessageCounter(value: Long): Unit
-  def incrementUpdateMessageCounter(): Unit = addUpdateMessageCounter(1L)
+  def setAsyncReadHighestSequenceNrCallDuration(value: Long): Unit
+  def addAsyncReadHighestSequenceNrCallCounter(value: Long): Unit
+  def incrementAsyncReadHighestSequenceNrCallCounter(): Unit = addAsyncReadHighestSequenceNrCallCounter(1L)
+  def addAsyncReadHighestSequenceNrCallErrorCounter(value: Long): Unit
+  def incrementAsyncReadHighestSequenceNrCallErrorCounter(): Unit = addAsyncReadHighestSequenceNrCallErrorCounter(1L)
 
-  def setPutJournalRowsDuration(value: Long): Unit
-  def addPutJournalRowsCounter(value: Long): Unit
-  def incrementPutJournalRowsCounter(): Unit = addPutJournalRowsCounter(1L)
+  def addPutMessagesEnqueueCounter(value: Long): Unit
+  def incrementPutMessagesEnqueueCounter(): Unit = addPutMessagesEnqueueCounter(1L)
+  def addPutMessagesDequeueCounter(value: Long): Unit
+  def incrementPutMessagesDequeueCounter(): Unit = addPutMessagesDequeueCounter(1L)
 
-  def setPutJournalRowsTotalDuration(value: Long): Unit
-  def addPutJournalRowsTotalCounter(value: Long)
-  def incrementPutJournalRowsTotalCounter(): Unit = addPutJournalRowsTotalCounter(1L)
+  def addDeleteMessagesEnqueueCounter(value: Long): Unit
+  def incrementDeleteMessagesEnqueueCounter(): Unit = addDeleteMessagesEnqueueCounter(1L)
+  def addDeleteMessagesDequeueCounter(value: Long): Unit
+  def incrementDeleteMessagesDequeueCounter(): Unit = addDeleteMessagesDequeueCounter(1L)
 
-  def setDeleteJournalRowsDuration(value: Long): Unit
-  def addDeleteJournalRowsCounter(value: Long): Unit
-  def incrementDeleteJournalRowsCounter(): Unit = addDeleteJournalRowsCounter(1L)
+  def setPutMessagesCallDuration(value: Long): Unit
+  def addPutMessagesCallCounter(value: Long): Unit
+  def incrementPutMessagesCallCounter(): Unit = addPutMessagesCallCounter(1L)
+  def addPutMessagesCallErrorCounter(value: Long): Unit
+  def incrementPutMessagesCallErrorCounter(): Unit = addPutMessagesCallErrorCounter(1L)
 
-  def setDeleteJournalRowsTotalDuration(value: Long): Unit
-  def addDeleteJournalRowsTotalCounter(value: Long): Unit
-  def incrementDeleteJournalRowsTotalCounter(): Unit = addDeleteJournalRowsTotalCounter(1L)
+  def setDeleteMessagesCallDuration(value: Long): Unit
+  def addDeleteMessagesCallCounter(value: Long): Unit
+  def incrementDeleteMessagesCallCounter(): Unit = addDeleteMessagesCallCounter(1L)
+  def addDeleteMessagesCallErrorCounter(value: Long): Unit
+  def incrementDeleteMessagesCallErrorCounter(): Unit = addDeleteMessagesCallErrorCounter(1L)
 
-  def setHighestSequenceNrTotalDuration(value: Long): Unit
-  def addHighestSequenceNrTotalCounter(value: Long): Unit
-  def incrementHighestSequenceNrTotalCounter(): Unit = addHighestSequenceNrTotalCounter(1L)
+  def setGetJournalRowsItemDuration(value: Long): Unit
+  def addGetJournalRowsItemCounter(value: Long): Unit
+  def incrementGetJournalRowsItemCounter(): Unit = addGetJournalRowsItemCounter(1L)
+  def addGetJournalRowsItemCallCounter(value: Long): Unit
+  def incrementGetJournalRowsItemCallCounter(): Unit = addGetJournalRowsItemCallCounter(1L)
+  def addGetJournalRowsItemCallErrorCounter(value: Long): Unit
+  def incrementGetJournalRowsItemCallErrorCounter(): Unit = addGetJournalRowsItemCallErrorCounter(1L)
 
-  def setGetMessagesDuration(value: Long): Unit
-  def addGetMessagesCounter(value: Long): Unit
-  def incrementGetMessagesCounter(): Unit = addGetMessagesCounter(1L)
+  def setUpdateMessageCallDuration(value: Long): Unit
+  def addUpdateMessageCallCounter(value: Long): Unit
+  def incrementUpdateMessageCallCounter(): Unit = addUpdateMessageCallCounter(1L)
+  def addUpdateMessageCallErrorCounter(value: Long): Unit
+  def incrementUpdateMessageCallErrorCounter(): Unit = addUpdateMessageCallErrorCounter(1L)
 
-  def setGetMessagesTotalDuration(value: Long): Unit
-  def addGetMessagesTotalCounter(value: Long): Unit
-  def incrementGetMessagesTotalCounter(): Unit = addGetMessagesTotalCounter(1L)
+  def setPutJournalRowsItemDuration(value: Long): Unit
+  def addPutJournalRowsItemCounter(value: Long): Unit
+  def incrementPutJournalRowsCounter(): Unit = addPutJournalRowsItemCounter(1L)
+  def addPutJournalRowsItemCallCounter(value: Long): Unit
+  def addPutJournalRowsItemCallCounter(): Unit = addPutJournalRowsItemCallCounter(1L)
+  def addPutJournalRowsItemCallErrorCounter(value: Long): Unit
+  def incrementPutJournalRowsItemCallErrorCounter(): Unit = addPutJournalRowsItemCallErrorCounter(1L)
+  def setPutJournalRowsCallDuration(value: Long): Unit
+  def addPutJournalRowsCallCounter(value: Long)
+  def incrementPutJournalRowsCallCounter(): Unit = addPutJournalRowsCallCounter(1L)
+  def addPutJournalRowsCallErrorCounter(value: Long): Unit
+  def incrementPutJournalRowsCallErrorCounter(): Unit = addPutJournalRowsCallErrorCounter(1L)
 
-  def setAllPersistenceIdsDuration(value: Long): Unit
-  def addAllPersistenceIdsCounter(value: Long): Unit
-  def incrementAllPersistenceIdsCounter(): Unit = addAllPersistenceIdsCounter(1L)
+  def setDeleteJournalRowsItemDuration(value: Long): Unit
+  def addDeleteJournalRowsItemCounter(value: Long): Unit
+  def incrementDeleteJournalRowsItemCounter(): Unit = addDeleteJournalRowsItemCounter(1L)
+  def addDeleteJournalRowsItemCallCounter(value: Long): Unit
+  def incrementDeleteJournalRowsItemCallCounter(): Unit = addDeleteJournalRowsItemCallCounter(1L)
+  def addDeleteJournalRowsItemCallErrorCounter(value: Long): Unit
+  def incrementDeleteJournalRowsItemCallErrorCounter(): Unit = addDeleteJournalRowsItemCallErrorCounter(1L)
+  def setDeleteJournalRowsCallDuration(value: Long): Unit
+  def addDeleteJournalRowsCallCounter(value: Long): Unit
+  def incrementDeleteJournalRowsCallCounter(): Unit = addDeleteJournalRowsCallCounter(1L)
+  def addDeleteJournalRowsCallErrorCounter(value: Long): Unit
+  def incrementDeleteJournalRowsCallErrorCounter(): Unit = addDeleteJournalRowsCallErrorCounter(1L)
 
-  def setAllPersistenceIdsTotalDuration(value: Long): Unit
-  def addAllPersistenceIdsTotalCounter(value: Long): Unit
-  def incrementAllPersistenceIdsTotalCounter(): Unit = addAllPersistenceIdsTotalCounter(1L)
+  def setHighestSequenceNrItemDuration(value: Long): Unit
+  def addHighestSequenceNrItemCounter(value: Long): Unit
+  def incrementHighestSequenceNrItemCounter(): Unit = addHighestSequenceNrItemCounter(1L)
+  def addHighestSequenceNrItemCallCounter(value: Long): Unit
+  def incrementHighestSequenceNrItemCallCounter(): Unit = addHighestSequenceNrItemCallCounter(1L)
+  def addHighestSequenceNrItemCallErrorCounter(value: Long): Unit
+  def incrementHighestSequenceNrItemCallErrorCounter(): Unit = addHighestSequenceNrItemCallErrorCounter(1L)
+  def setHighestSequenceNrCallDuration(value: Long): Unit
+  def addHighestSequenceNrCallCounter(value: Long): Unit
+  def incrementHighestSequenceNrCallCounter(): Unit = addHighestSequenceNrCallCounter(1L)
+  def setHighestSequenceNrCallErrorCounter(value: Long)
+  def incrementHighestSequenceNrCallErrorCounter(): Unit = setHighestSequenceNrCallErrorCounter(1L)
 
-  def setEventsByTagDuration(value: Long): Unit
-  def addEventsByTagCounter(value: Long): Unit
-  def incrementEventsByTagCounter(): Unit = addEventsByTagCounter(1L)
+  def setGetMessagesItemDuration(value: Long): Unit
+  def addGetMessagesItemCounter(value: Long): Unit
+  def incrementGetMessagesItemCounter(): Unit = addGetMessagesItemCounter(1L)
+  def addGetMessagesItemCallCounter(value: Long): Unit
+  def incrementGetMessagesItemCallCounter(): Unit = addGetMessagesItemCallCounter(1L)
+  def addGetMessagesItemCallErrorCounter(value: Long): Unit
+  def incrementGetMessagesItemCallErrorCounter(): Unit = addGetMessagesItemCallErrorCounter(1L)
+  def setGetMessagesCallDuration(value: Long): Unit
+  def addGetMessagesCallCounter(value: Long): Unit
+  def incrementGetMessagesCallCounter(): Unit = addGetMessagesCallCounter(1L)
+  def addGetMessagesCallErrorCounter(value: Long): Unit
+  def incrementGetMessagesCallErrorCounter(): Unit = addGetMessagesCallErrorCounter(1L)
 
-  def setEventsByTagTotalDuration(value: Long): Unit
-  def addEventsByTagTotalCounter(value: Long): Unit
-  def incrementEventsByTagTotalCounter(): Unit = addEventsByTagTotalCounter(1L)
+  def setAllPersistenceIdsItemDuration(value: Long): Unit
+  def addAllPersistenceIdsItemCounter(value: Long): Unit
+  def incrementAllPersistenceIdsItemCounter(): Unit = addAllPersistenceIdsItemCounter(1L)
+  def addAllPersistenceIdsItemCallCounter(value: Long): Unit
+  def incrementAllPersistenceIdsItemCallCounter(): Unit = addAllPersistenceIdsItemCallCounter(1L)
+  def addAllPersistenceIdsItemCallErrorCounter(value: Long): Unit
+  def incrementAllPersistenceIdsItemCallErrorCounter(): Unit = addAllPersistenceIdsItemCallErrorCounter(1L)
+  def setAllPersistenceIdsCallDuration(value: Long): Unit
+  def addAllPersistenceIdsCallCounter(value: Long): Unit
+  def incrementAllPersistenceIdsCallCounter(): Unit = addAllPersistenceIdsCallCounter(1L)
+  def addAllPersistenceIdsCallErrorCounter(value: Long): Unit
+  def incrementAllPersistenceIdsCallErrorCounter(): Unit = addAllPersistenceIdsCallErrorCounter(1L)
 
-  def setJournalSequenceDuration(value: Long): Unit
-  def addJournalSequenceCounter(value: Long): Unit
-  def incrementJournalSequenceCounter(): Unit = addJournalSequenceCounter(1L)
+  def setEventsByTagItemDuration(value: Long): Unit
+  def addEventsByTagItemCounter(value: Long): Unit
+  def incrementEventsByTagItemCounter(): Unit = addEventsByTagItemCounter(1L)
+  def addEventsByTagItemCallCounter(value: Long): Unit
+  def incrementEventsByTagItemCallCounter(): Unit = addEventsByTagItemCallCounter(1L)
 
-  def setJournalSequenceTotalDuration(value: Long): Unit
-  def addJournalSequenceTotalCounter(value: Long): Unit
-  def incrementJournalSequenceTotalCounter(): Unit = addJournalSequenceTotalCounter(1L)
+  def addEventsByTagItemErrorCounter(value: Long): Unit
+  def incrementEventsByTagItemCallErrorCounter(): Unit = addEventsByTagItemErrorCounter(1L)
+  def setEventsByTagCallDuration(value: Long): Unit
+  def addEventsByTagCallCounter(value: Long): Unit
+  def incrementEventsByTagCallCounter(): Unit = addEventsByTagCallCounter(1L)
+  def addEventsByTagCallErrorCounter(value: Long): Unit
+  def incrementEventsByTagCallErrorCounter(): Unit = addEventsByTagCallErrorCounter(1L)
+
+  def setJournalSequenceItemDuration(value: Long): Unit
+  def addJournalSequenceItemCounter(value: Long): Unit
+  def incrementJournalSequenceItemCounter(): Unit = addJournalSequenceItemCounter(1L)
+  def setJournalSequenceCallDuration(value: Long): Unit
+  def addJournalSequenceCallCounter(value: Long): Unit
+  def incrementJournalSequenceCallCounter(): Unit = addJournalSequenceCallCounter(1L)
+  def addJournalSequenceCallErrorCounter(value: Long): Unit
+  def incrementJournalSequenceCallErrorCounter(): Unit = addJournalSequenceCallErrorCounter(1L)
 }
 
 object MetricsReporter {
@@ -88,144 +166,156 @@ object MetricsReporter {
 
 }
 
-class DefaultMetricsReporter extends MetricsReporter {
-
-  private val putMessagesDuration   = new AtomicLong()
-  private val addPutMessagesCounter = new AtomicLong()
-
-  override def setPutMessagesDuration(value: Long): Unit = putMessagesDuration.set(value)
-  override def addPutMessagesCounter(value: Long): Unit  = addPutMessagesCounter.addAndGet(value)
-
-  private val deleteMessagesDuration   = new AtomicLong()
-  private val addDeleteMessagesCounter = new AtomicLong()
-
-  override def setDeleteMessagesDuration(value: Long): Unit = deleteMessagesDuration.set(value)
-  override def addDeleteMessagesCounter(value: Long): Unit  = addDeleteMessagesCounter.addAndGet(value)
-
-  private val getJournalRowsDuration = new AtomicLong()
-  private val getJournalRowsCounter  = new AtomicLong()
-
-  override def setGetJournalRowsDuration(value: Long): Unit = getJournalRowsDuration.set(value)
-  override def addGetJournalRowsCounter(value: Long): Unit  = getJournalRowsCounter.addAndGet(value)
-
-  private val updateMessageDuration = new AtomicLong()
-  private val updateMessageCounter  = new AtomicLong()
-
-  override def setUpdateMessageDuration(value: Long): Unit = updateMessageDuration.set(value)
-  override def addUpdateMessageCounter(value: Long): Unit  = updateMessageCounter.addAndGet(value)
-
-  private val putJournalRowsDuration = new AtomicLong()
-  private val putJournalRowsCounter  = new AtomicLong()
-
-  override def setPutJournalRowsDuration(value: Long): Unit = putJournalRowsDuration.set(value)
-  override def addPutJournalRowsCounter(value: Long): Unit  = putJournalRowsCounter.addAndGet(value)
-
-  private val putJournalRowsTotalDuration = new AtomicLong()
-  private val putJournalRowsTotalCounter  = new AtomicLong()
-
-  override def setPutJournalRowsTotalDuration(value: Long): Unit = putJournalRowsTotalDuration.set(value)
-  override def addPutJournalRowsTotalCounter(value: Long): Unit  = putJournalRowsTotalCounter.addAndGet(value)
-
-  private val deleteJournalRowsDuration = new AtomicLong()
-  private val deleteJournalRowsCounter  = new AtomicLong()
-
-  override def setDeleteJournalRowsDuration(value: Long): Unit = deleteJournalRowsDuration.set(value)
-  override def addDeleteJournalRowsCounter(value: Long): Unit  = deleteJournalRowsCounter.addAndGet(value)
-
-  private val deleteJournalRowsTotalDuration = new AtomicLong()
-  private val deleteJournalRowsTotalCounter  = new AtomicLong()
-
-  override def setDeleteJournalRowsTotalDuration(value: Long): Unit = deleteJournalRowsTotalDuration.set(value)
-  override def addDeleteJournalRowsTotalCounter(value: Long): Unit  = deleteJournalRowsTotalCounter.addAndGet(value)
-
-  private val highestSequenceNrTotalDuration = new AtomicLong()
-  private val highestSequenceNrTotalCounter  = new AtomicLong()
-
-  override def setHighestSequenceNrTotalDuration(value: Long): Unit = highestSequenceNrTotalDuration.set(value)
-  override def addHighestSequenceNrTotalCounter(value: Long): Unit  = highestSequenceNrTotalCounter.addAndGet(value)
-
-  private val getMessagesDuration = new AtomicLong()
-  private val getMessagesCounter  = new AtomicLong()
-
-  override def setGetMessagesDuration(value: Long): Unit = getMessagesDuration.set(value)
-  override def addGetMessagesCounter(value: Long): Unit  = getMessagesCounter.addAndGet(value)
-
-  private val getMessagesTotalDuration = new AtomicLong()
-  private val getMessagesTotalCounter  = new AtomicLong()
-
-  override def setGetMessagesTotalDuration(value: Long): Unit = getMessagesTotalDuration.set(value)
-  override def addGetMessagesTotalCounter(value: Long): Unit  = getMessagesTotalCounter.addAndGet(value)
-
-  private val allPersistenceIdsDuration = new AtomicLong()
-  private val allPersistenceIdsCounter  = new AtomicLong()
-
-  override def setAllPersistenceIdsDuration(value: Long): Unit = allPersistenceIdsDuration.set(value)
-  override def addAllPersistenceIdsCounter(value: Long): Unit  = allPersistenceIdsCounter.addAndGet(value)
-
-  private val allPersistenceIdsTotalDuration = new AtomicLong()
-  private val allPersistenceIdsTotalCounter  = new AtomicLong()
-
-  override def setAllPersistenceIdsTotalDuration(value: Long): Unit = allPersistenceIdsTotalDuration.set(value)
-  override def addAllPersistenceIdsTotalCounter(value: Long): Unit  = allPersistenceIdsTotalCounter.addAndGet(value)
-
-  private val eventsByTagDuration = new AtomicLong()
-  private val eventsByTagCounter  = new AtomicLong()
-
-  override def setEventsByTagDuration(value: Long): Unit = eventsByTagDuration.set(value)
-  override def addEventsByTagCounter(value: Long): Unit  = eventsByTagCounter.addAndGet(value)
-
-  private val eventsByTagTotalDuration = new AtomicLong()
-  private val eventsByTagTotalCounter  = new AtomicLong()
-
-  override def setEventsByTagTotalDuration(value: Long): Unit = eventsByTagTotalDuration.set(value)
-  override def addEventsByTagTotalCounter(value: Long): Unit  = eventsByTagTotalCounter.addAndGet(value)
-
-  private val journalSequenceDuration = new AtomicLong()
-  private val journalSequenceCounter  = new AtomicLong()
-
-  override def setJournalSequenceDuration(value: Long): Unit = journalSequenceDuration.set(value)
-  override def addJournalSequenceCounter(value: Long): Unit  = journalSequenceCounter.addAndGet(value)
-
-  private val journalSequenceTotalDuration = new AtomicLong()
-  private val journalSequenceTotalCounter  = new AtomicLong()
-
-  override def setJournalSequenceTotalDuration(value: Long): Unit = journalSequenceTotalDuration.set(value)
-  override def addJournalSequenceTotalCounter(value: Long): Unit  = journalSequenceTotalCounter.addAndGet(value)
-}
-
 class NullMetricsReporter extends MetricsReporter {
-  override def setPutMessagesDuration(value: Long): Unit            = {}
-  override def addPutMessagesCounter(value: Long): Unit             = {}
-  override def setDeleteMessagesDuration(value: Long): Unit         = {}
-  override def addDeleteMessagesCounter(value: Long): Unit          = {}
-  override def setGetJournalRowsDuration(value: Long): Unit         = {}
-  override def addGetJournalRowsCounter(value: Long): Unit          = {}
-  override def setUpdateMessageDuration(value: Long): Unit          = {}
-  override def addUpdateMessageCounter(value: Long): Unit           = {}
-  override def setPutJournalRowsDuration(value: Long): Unit         = {}
-  override def addPutJournalRowsCounter(value: Long): Unit          = {}
-  override def setPutJournalRowsTotalDuration(value: Long): Unit    = {}
-  override def addPutJournalRowsTotalCounter(value: Long): Unit     = {}
-  override def setDeleteJournalRowsDuration(value: Long): Unit      = {}
-  override def addDeleteJournalRowsCounter(value: Long): Unit       = {}
-  override def setDeleteJournalRowsTotalDuration(value: Long): Unit = {}
-  override def addDeleteJournalRowsTotalCounter(value: Long): Unit  = {}
-  override def setHighestSequenceNrTotalDuration(value: Long): Unit = {}
-  override def addHighestSequenceNrTotalCounter(value: Long): Unit  = {}
-  override def setGetMessagesDuration(value: Long): Unit            = {}
-  override def addGetMessagesCounter(value: Long): Unit             = {}
-  override def setGetMessagesTotalDuration(value: Long): Unit       = {}
-  override def addGetMessagesTotalCounter(value: Long): Unit        = {}
-  override def setAllPersistenceIdsDuration(value: Long): Unit      = {}
-  override def addAllPersistenceIdsCounter(value: Long): Unit       = {}
-  override def setAllPersistenceIdsTotalDuration(value: Long): Unit = {}
-  override def addAllPersistenceIdsTotalCounter(value: Long): Unit  = {}
-  override def setEventsByTagDuration(value: Long): Unit            = {}
-  override def addEventsByTagCounter(value: Long): Unit             = {}
-  override def setEventsByTagTotalDuration(value: Long): Unit       = {}
-  override def addEventsByTagTotalCounter(value: Long): Unit        = {}
-  override def setJournalSequenceDuration(value: Long): Unit        = {}
-  override def addJournalSequenceCounter(value: Long): Unit         = {}
-  override def setJournalSequenceTotalDuration(value: Long): Unit   = {}
-  override def addJournalSequenceTotalCounter(value: Long): Unit    = {}
+  override def setAsyncWriteMessagesCallDuration(value: Long): Unit = {}
+
+  override def addAsyncWriteMessagesCallCounter(value: Long): Unit = {}
+
+  override def addAsyncWriteMessagesCallErrorCounter(value: Long): Unit = {}
+
+  override def setAsyncDeleteMessagesToCallDuration(value: Long): Unit = {}
+
+  override def addAsyncDeleteMessagesToCallCounter(value: Long): Unit = {}
+
+  override def addAsyncDeleteMessagesToCallErrorCounter(value: Long): Unit = {}
+
+  override def setAsyncReplayMessagesCallDuration(value: Long): Unit = {}
+
+  override def addAsyncReplayMessagesCallCounter(value: Long): Unit = {}
+
+  override def addAsyncReplayMessagesCallErrorCounter(value: Long): Unit = {}
+
+  override def setAsyncReadHighestSequenceNrCallDuration(value: Long): Unit = {}
+
+  override def addAsyncReadHighestSequenceNrCallCounter(value: Long): Unit = {}
+
+  override def addAsyncReadHighestSequenceNrCallErrorCounter(value: Long): Unit = {}
+
+  override def addPutMessagesEnqueueCounter(value: Long): Unit = {}
+
+  override def addPutMessagesDequeueCounter(value: Long): Unit = {}
+
+  override def addDeleteMessagesEnqueueCounter(value: Long): Unit = {}
+
+  override def addDeleteMessagesDequeueCounter(value: Long): Unit = {}
+
+  override def setPutMessagesCallDuration(value: Long): Unit = {}
+
+  override def addPutMessagesCallCounter(value: Long): Unit = {}
+
+  override def addPutMessagesCallErrorCounter(value: Long): Unit = {}
+
+  override def setDeleteMessagesCallDuration(value: Long): Unit = {}
+
+  override def addDeleteMessagesCallCounter(value: Long): Unit = {}
+
+  override def addDeleteMessagesCallErrorCounter(value: Long): Unit = {}
+
+  override def setGetJournalRowsItemDuration(value: Long): Unit = {}
+
+  override def addGetJournalRowsItemCounter(value: Long): Unit = {}
+
+  override def addGetJournalRowsItemCallCounter(value: Long): Unit = {}
+
+  override def addGetJournalRowsItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setUpdateMessageCallDuration(value: Long): Unit = {}
+
+  override def addUpdateMessageCallCounter(value: Long): Unit = {}
+
+  override def addUpdateMessageCallErrorCounter(value: Long): Unit = {}
+
+  override def setPutJournalRowsItemDuration(value: Long): Unit = {}
+
+  override def addPutJournalRowsItemCounter(value: Long): Unit = {}
+
+  override def addPutJournalRowsItemCallCounter(value: Long): Unit = {}
+
+  override def addPutJournalRowsItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setPutJournalRowsCallDuration(value: Long): Unit = {}
+
+  override def addPutJournalRowsCallCounter(value: Long): Unit = {}
+
+  override def addPutJournalRowsCallErrorCounter(value: Long): Unit = {}
+
+  override def setDeleteJournalRowsItemDuration(value: Long): Unit = {}
+
+  override def addDeleteJournalRowsItemCounter(value: Long): Unit = {}
+
+  override def addDeleteJournalRowsItemCallCounter(value: Long): Unit = {}
+
+  override def addDeleteJournalRowsItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setDeleteJournalRowsCallDuration(value: Long): Unit = {}
+
+  override def addDeleteJournalRowsCallCounter(value: Long): Unit = {}
+
+  override def addDeleteJournalRowsCallErrorCounter(value: Long): Unit = {}
+
+  override def setHighestSequenceNrItemDuration(value: Long): Unit = {}
+
+  override def addHighestSequenceNrItemCounter(value: Long): Unit = {}
+
+  override def addHighestSequenceNrItemCallCounter(value: Long): Unit = {}
+
+  override def addHighestSequenceNrItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setHighestSequenceNrCallDuration(value: Long): Unit = {}
+
+  override def addHighestSequenceNrCallCounter(value: Long): Unit = {}
+
+  override def setHighestSequenceNrCallErrorCounter(value: Long): Unit = {}
+
+  override def setGetMessagesItemDuration(value: Long): Unit = {}
+
+  override def addGetMessagesItemCounter(value: Long): Unit = {}
+
+  override def addGetMessagesItemCallCounter(value: Long): Unit = {}
+
+  override def addGetMessagesItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setGetMessagesCallDuration(value: Long): Unit = {}
+
+  override def addGetMessagesCallCounter(value: Long): Unit = {}
+
+  override def addGetMessagesCallErrorCounter(value: Long): Unit = {}
+
+  override def setAllPersistenceIdsItemDuration(value: Long): Unit = {}
+
+  override def addAllPersistenceIdsItemCounter(value: Long): Unit = {}
+
+  override def addAllPersistenceIdsItemCallCounter(value: Long): Unit = {}
+
+  override def addAllPersistenceIdsItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setAllPersistenceIdsCallDuration(value: Long): Unit = {}
+
+  override def addAllPersistenceIdsCallCounter(value: Long): Unit = {}
+
+  override def addAllPersistenceIdsCallErrorCounter(value: Long): Unit = {}
+
+  override def setEventsByTagItemDuration(value: Long): Unit = {}
+
+  override def addEventsByTagItemCounter(value: Long): Unit = {}
+
+  override def addEventsByTagItemCallCounter(value: Long): Unit = {}
+
+  override def addEventsByTagItemErrorCounter(value: Long): Unit = {}
+
+  override def setEventsByTagCallDuration(value: Long): Unit = {}
+
+  override def addEventsByTagCallCounter(value: Long): Unit = {}
+
+  override def addEventsByTagCallErrorCounter(value: Long): Unit = {}
+
+  override def setJournalSequenceItemDuration(value: Long): Unit = {}
+
+  override def addJournalSequenceItemCounter(value: Long): Unit = {}
+
+  override def setJournalSequenceCallDuration(value: Long): Unit = {}
+
+  override def addJournalSequenceCallCounter(value: Long): Unit = {}
+
+  override def addJournalSequenceCallErrorCounter(value: Long): Unit = {}
 }

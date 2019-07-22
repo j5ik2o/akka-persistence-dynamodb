@@ -83,12 +83,6 @@ class WriteJournalDaoImpl(
       .withAttributes(logLevels)
       .run()
 
-//  private val putQueues: Seq[SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])]] = for (_ <- 1 to parallelism)
-//    yield putQueue
-//
-//  private def selectPutQueue(persistenceId: PersistenceId): SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
-//    putQueues(Math.abs(persistenceId.value.##) % parallelism)
-
   private val deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
     Source
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, OverflowStrategy.dropNew)
@@ -232,7 +226,6 @@ class WriteJournalDaoImpl(
     Flow[Seq[JournalRow]]
       .mapAsync(1) { messages =>
         val promise = Promise[Long]()
-        //selectPutQueue(messages.head.persistenceId)
         putQueue.offer(promise -> messages).flatMap {
           case QueueOfferResult.Enqueued =>
             metricsReporter.addPutMessagesEnqueueCounter(messages.size.toLong)
@@ -356,6 +349,29 @@ class WriteJournalDaoImpl(
     highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
+//  val queryRequest = QueryRequest
+//    .builder()
+//    .tableName(tableName)
+//    .indexName(getJournalRowsIndexName)
+//    .keyConditionExpressionAsScala(
+//      fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+//    )
+//    .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+//    .expressionAttributeNamesAsScala(
+//      Map(
+//        "#pid" -> columnsDefConfig.persistenceIdColumnName
+//      ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+//        fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+//    )
+//    .expressionAttributeValuesAsScala(
+//      Map(
+//        ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
+//      ) ++ deleted
+//        .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+//        .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+//    ).scanIndexForward(false)
+//    .limit(1).build()
+
   private def highestSequenceNr(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber] = None,
@@ -417,7 +433,7 @@ class WriteJournalDaoImpl(
           metricsReporter.incrementHighestSequenceNrCallCounter()
           response
         }.recoverWithRetries(
-          1, {
+          attempts = 1, {
             case t: Throwable =>
               metricsReporter.setHighestSequenceNrCallDuration(System.nanoTime() - callStat)
               metricsReporter.incrementHighestSequenceNrCallErrorCounter()
@@ -510,7 +526,7 @@ class WriteJournalDaoImpl(
   private def putJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat {
     journalRows =>
       startTimeSource
-        .flatMapConcat { start =>
+        .flatMapConcat { callStart =>
           logger.debug(s"putJournalRows.size: ${journalRows.size}")
           logger.debug(s"putJournalRows: $journalRows")
           journalRows.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
@@ -518,14 +534,14 @@ class WriteJournalDaoImpl(
           def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
             Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
               startTimeSource
-                .flatMapConcat { start =>
+                .flatMapConcat { itemStart =>
                   Source
                     .single(requestItems).map { requests =>
                       BatchWriteItemRequest.builder().requestItemsAsScala(Map(tableName -> requests)).build
-                    }.via(streamClient.batchWriteItemFlow()).map((_, start))
+                    }.via(streamClient.batchWriteItemFlow()).map((_, itemStart))
                 }.flatMapConcat {
-                  case (response, start) =>
-                    metricsReporter.setPutJournalRowsItemDuration(System.nanoTime() - start)
+                  case (response, itemStart) =>
+                    metricsReporter.setPutJournalRowsItemDuration(System.nanoTime() - itemStart)
                     if (response.sdkHttpResponse().isSuccessful) {
                       metricsReporter.addPutJournalRowsItemCallCounter()
                       if (response.unprocessedItemsAsScala.get.nonEmpty) {
@@ -585,14 +601,14 @@ class WriteJournalDaoImpl(
                 Source.single(requestItems)
               }
               .via(loopFlow).map { response =>
-                metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - start)
+                metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementPutJournalRowsCallCounter()
                 response
               }
               .recoverWithRetries(
                 attempts = 1, {
                   case t: Throwable =>
-                    metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - start)
+                    metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - callStart)
                     metricsReporter.incrementPutJournalRowsCallErrorCounter()
                     Source.failed(t)
                 }

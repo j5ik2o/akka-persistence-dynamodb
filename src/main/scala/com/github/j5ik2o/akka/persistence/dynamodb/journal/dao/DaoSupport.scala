@@ -35,6 +35,43 @@ trait DaoSupport {
 
   // def startTimeSource: Source[Long, NotUsed] = Source.single(System.nanoTime())
 
+  def newQueryRequest(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      deleted: Option[Boolean] = Some(false),
+      max: Long = Long.MaxValue,
+      count: Long = 0,
+      lastKey: Option[Map[String, AttributeValue]] = None,
+      index: Int = 1
+  ): QueryRequest = {
+    val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
+    logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
+    val queryRequest = QueryRequest
+      .builder()
+      .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
+        "#pid = :pid and #snr between :min and :max"
+      )
+      .filterExpressionAsScala(deleted.map { _ =>
+        s"#flg = :flg"
+      })
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> columnsDefConfig.sequenceNrColumnName
+        ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
+      ).expressionAttributeValuesAsScala(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
+          ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
+        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
+      )
+      .limit(limit)
+      .exclusiveStartKeyAsScala(lastKey).build()
+    queryRequest
+  }
+
   def getMessages(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber,
@@ -42,56 +79,51 @@ trait DaoSupport {
       max: Long,
       deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed] = {
-    startTimeSource.flatMapConcat { callStart =>
-      def loop(
-          lastKey: Option[Map[String, AttributeValue]],
-          acc: Source[Map[String, AttributeValue], NotUsed],
-          count: Long,
-          index: Int
-      ): Source[Map[String, AttributeValue], NotUsed] = {
-        startTimeSource
-          .flatMapConcat { itemStart =>
-            val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
-            logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
-            val queryRequest = QueryRequest
-              .builder()
-              .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
-                "#pid = :pid and #snr between :min and :max"
-              )
-              .filterExpressionAsScala(deleted.map { _ =>
-                s"#flg = :flg"
-              })
-              .expressionAttributeNamesAsScala(
-                Map(
-                  "#pid" -> columnsDefConfig.persistenceIdColumnName,
-                  "#snr" -> columnsDefConfig.sequenceNrColumnName
-                ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-              ).expressionAttributeValuesAsScala(
-                Map(
-                  ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-                  ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-                  ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-                ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-              )
-              .limit(limit)
-              .exclusiveStartKeyAsScala(lastKey).build()
-            Source.single(queryRequest).via(streamClient.queryFlow(1)).map((_, itemStart))
-          }.flatMapConcat {
-            case (response, itemStart) =>
+    def loop(
+        lastKey: Option[Map[String, AttributeValue]],
+        acc: Source[Map[String, AttributeValue], NotUsed],
+        count: Long,
+        index: Int
+    ): Source[Map[String, AttributeValue], NotUsed] = {
+      startTimeSource
+        .flatMapConcat { itemStart =>
+          val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
+          logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
+          val queryRequest = QueryRequest
+            .builder()
+            .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
+              "#pid = :pid and #snr between :min and :max"
+            )
+            .filterExpressionAsScala(deleted.map { _ =>
+              s"#flg = :flg"
+            })
+            .expressionAttributeNamesAsScala(
+              Map(
+                "#pid" -> columnsDefConfig.persistenceIdColumnName,
+                "#snr" -> columnsDefConfig.sequenceNrColumnName
+              ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
+            ).expressionAttributeValuesAsScala(
+              Map(
+                ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+                ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
+                ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
+              ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
+            )
+            .limit(limit)
+            .exclusiveStartKeyAsScala(lastKey).build()
+          Source
+            .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
               metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)
               if (response.sdkHttpResponse().isSuccessful) {
                 metricsReporter.incrementGetMessagesItemCallCounter()
                 if (response.count() > 0)
                   metricsReporter.addGetMessagesItemCounter(response.count().toLong)
-                val last  = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                val items = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                logger.debug(
-                  s"index = $index, item.size = ${items.size}, max = $max, count = $count, (max - count) = ${max - count}"
-                )
-                val combinedSource = Source.combine(acc, Source(items))(Concat(_))
-                if (response.count() > 0 && last.nonEmpty && (count + response.count()) < max) {
+                val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
+                val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+                val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+                if (response.count() > 0 && lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
                   logger.debug(s"index = $index, next loop")
-                  loop(response.lastEvaluatedKeyAsScala, combinedSource, count + response.count(), index + 1)
+                  loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource
               } else {
@@ -100,11 +132,13 @@ trait DaoSupport {
                 val statusText = response.sdkHttpResponse().statusText()
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
-          }
-      }
+            }
+        }
+    }
+    startTimeSource.flatMapConcat { callStart =>
       if (max == 0L || fromSequenceNr > toSequenceNr)
         Source.empty
-      else
+      else {
         loop(None, Source.empty, 0L, 1)
           .map(convertToJournalRow)
           .withAttributes(logLevels)
@@ -113,13 +147,14 @@ trait DaoSupport {
             metricsReporter.incrementGetMessagesCallCounter()
             response
           }.recoverWithRetries(
-            1, {
+            attempts = 1, {
               case t: Throwable =>
                 metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementGetMessagesCallErrorCounter()
                 Source.failed(t)
             }
           )
+      }
     }
   }
 

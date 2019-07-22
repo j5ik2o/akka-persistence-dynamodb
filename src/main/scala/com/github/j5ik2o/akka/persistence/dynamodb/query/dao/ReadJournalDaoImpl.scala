@@ -196,18 +196,6 @@ class ReadJournalDaoImpl(
     }
   }
 
-  //  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-  //    import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
-  //    JournalRow(
-  //      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).string.get),
-  //      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).number.get.toLong),
-  //      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-  //      message = map.get(columnsDefConfig.messageColumnName).flatMap(_.binary).get,
-  //      ordering = map(columnsDefConfig.orderingColumnName).number.get.toLong,
-  //      tags = map.get(columnsDefConfig.tagsColumnName).flatMap(_.string)
-  //    )
-  //  }
-
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
     startTimeSource.flatMapConcat { start =>
       Source

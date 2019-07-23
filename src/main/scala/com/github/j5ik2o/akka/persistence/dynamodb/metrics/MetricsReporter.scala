@@ -65,7 +65,7 @@ trait MetricsReporter {
 
   def setPutJournalRowsItemDuration(value: Long): Unit
   def addPutJournalRowsItemCounter(value: Long): Unit
-  def incrementPutJournalRowsCounter(): Unit = addPutJournalRowsItemCounter(1L)
+  def incrementPutJournalRowsItemCounter(): Unit = addPutJournalRowsItemCounter(1L)
   def addPutJournalRowsItemCallCounter(value: Long): Unit
   def addPutJournalRowsItemCallCounter(): Unit = addPutJournalRowsItemCallCounter(1L)
   def addPutJournalRowsItemCallErrorCounter(value: Long): Unit

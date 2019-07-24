@@ -1,7 +1,7 @@
 val scala211Version     = "2.11.12"
 val scala212Version     = "2.12.8"
-val akkaVersion         = "2.5.20"
-val reactiveAwsDynamoDB = "1.1.0"
+val akkaVersion         = "2.5.23"
+val reactiveAwsDynamoDB = "1.1.4"
 
 sonatypeProfileName := "com.github.j5ik2o"
 

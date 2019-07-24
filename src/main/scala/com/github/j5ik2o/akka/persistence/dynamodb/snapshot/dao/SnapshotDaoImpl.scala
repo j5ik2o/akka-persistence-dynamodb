@@ -53,12 +53,12 @@ class SnapshotDaoImpl(
           columnsDefConfig.sequenceNrColumnName    -> AttributeValue.builder().n(sequenceNr.asString).build()
         )
       ).build()
-    Source.single(req).via(streamClient.deleteItemFlow(parallelism)).map(_ => ())
+    Source.single(req).via(streamClient.deleteItemFlow(1)).map(_ => ())
   }
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
     Source
-      .single(queryRequest).via(streamClient.queryFlow(parallelism)).map {
+      .single(queryRequest).via(streamClient.queryFlow(1)).map {
         _.itemsAsScala.getOrElse(Seq.empty)
       }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
         rows.map { row =>
@@ -92,7 +92,7 @@ class SnapshotDaoImpl(
               }
             )
           ).build()
-      }.via(streamClient.batchWriteItemFlow(parallelism)).map(_ => ())
+      }.via(streamClient.batchWriteItemFlow(1)).map(_ => ())
   }
 
   override def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed] = {
@@ -199,7 +199,7 @@ class SnapshotDaoImpl(
       .scanIndexForward(false)
       .limit(1).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
         response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
@@ -240,7 +240,7 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
         response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
@@ -275,7 +275,7 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
         response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
@@ -317,7 +317,7 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(parallelism)).map { response =>
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
         response.itemsAsScala.get.headOption
       }.map { rows =>
         rows.map { row =>
@@ -354,7 +354,7 @@ class SnapshotDaoImpl(
               columnsDefConfig.createdColumnName -> AttributeValue.builder().n(snapshotRow.created.toString).build()
             )
           ).build()
-        Source.single(req).via(streamClient.putItemFlow(parallelism)).map(_ => ())
+        Source.single(req).via(streamClient.putItemFlow(1)).map(_ => ())
       case Left(ex) =>
         Source.failed(ex)
     }

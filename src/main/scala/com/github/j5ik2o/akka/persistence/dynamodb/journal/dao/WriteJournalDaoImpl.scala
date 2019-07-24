@@ -55,14 +55,15 @@ class WriteJournalDaoImpl(
   private implicit val scheduler: Scheduler              = Scheduler(ec)
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
-  override val parallelism: Int                          = pluginConfig.parallelism
+  private val queueParallelism: Int                      = pluginConfig.queueParallelism
+  private val writeParallelism: Int                      = pluginConfig.writeParallelism
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
   private val logger                                     = LoggerFactory.getLogger(getClass)
 
   private def putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
     Source
       .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.backpressure)
-      .mapAsync(parallelism) {
+      .mapAsync(writeParallelism) {
         case (promise, rows) =>
           if (rows.size == 1)
             Source
@@ -90,15 +91,24 @@ class WriteJournalDaoImpl(
       .withAttributes(logLevels)
       .run()
 
-  private val putQueues = for (_ <- 1 to parallelism) yield putQueue
+  private val putQueues = for (_ <- 1 to queueParallelism) yield putQueue
 
-  private def selectPutQueue(persistenceId: PersistenceId) = putQueues(Math.abs(persistenceId.value.##) % parallelism)
+  private def queueIdFrom(persistenceId: PersistenceId): Int = Math.abs(persistenceId.value.##) % queueParallelism
 
-  private val deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
+  private def selectPutQueue(persistenceId: PersistenceId): SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
+    putQueues(queueIdFrom(persistenceId))
+
+  private def deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
     Source
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, OverflowStrategy.dropNew)
-      .mapAsync(parallelism) {
+      .mapAsync(writeParallelism) {
         case (promise, rows) =>
+          if (rows.size == 1)
+            Source
+              .single(rows.head).via(singleDeleteJournalRowFlow).log("delete")
+              .map(result => promise.success(result))
+              .recover { case t => promise.failure(t) }
+              .runWith(Sink.ignore)
           if (rows.size > clientConfig.batchWriteItemLimit)
             Source(rows.toVector)
               .batch(clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).log("grouped")
@@ -118,6 +128,12 @@ class WriteJournalDaoImpl(
       .toMat(Sink.ignore)(Keep.left)
       .withAttributes(logLevels)
       .run()
+
+  private val deleteQueues = for (_ <- 1 to queueParallelism) yield deleteQueue
+
+  private def selectDeleteQueue(
+      persistenceId: PersistenceId
+  ): SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] = deleteQueues(queueIdFrom(persistenceId))
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     startTimeSource
@@ -328,9 +344,9 @@ class WriteJournalDaoImpl(
 
   private def requestDeleteJournalRows: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]]
-      .mapAsync(parallelism) { messages =>
+      .mapAsync(writeParallelism) { messages =>
         val promise = Promise[Long]()
-        deleteQueue.offer(promise -> messages).flatMap {
+        selectDeleteQueue(messages.head.persistenceId).offer(promise -> messages).flatMap {
           case QueueOfferResult.Enqueued =>
             metricsReporter.addDeleteMessagesEnqueueCounter(messages.size.toLong)
             val future = promise.future
@@ -359,29 +375,6 @@ class WriteJournalDaoImpl(
   ): Source[Long, NotUsed] = {
     highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
-
-  //  val queryRequest = QueryRequest
-  //    .builder()
-  //    .tableName(tableName)
-  //    .indexName(getJournalRowsIndexName)
-  //    .keyConditionExpressionAsScala(
-  //      fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
-  //    )
-  //    .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-  //    .expressionAttributeNamesAsScala(
-  //      Map(
-  //        "#pid" -> columnsDefConfig.persistenceIdColumnName
-  //      ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-  //        fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-  //    )
-  //    .expressionAttributeValuesAsScala(
-  //      Map(
-  //        ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
-  //      ) ++ deleted
-  //        .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-  //        .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
-  //    ).scanIndexForward(false)
-  //    .limit(1).build()
 
   private def highestSequenceNr(
       persistenceId: PersistenceId,
@@ -451,6 +444,51 @@ class WriteJournalDaoImpl(
         .withAttributes(logLevels)
     }
   }
+
+  private def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] =
+    Flow[PersistenceIdWithSeqNr].flatMapConcat { persistenceIdWithSeqNr =>
+      startTimeSource
+        .flatMapConcat { callStart =>
+          startTimeSource
+            .flatMapConcat { start =>
+              val request = DeleteItemRequest
+                .builder().keyAsScala(
+                  Map(
+                    columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                      .builder()
+                      .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
+                    columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                      .builder().n(
+                        persistenceIdWithSeqNr.sequenceNumber.asString
+                      ).build()
+                  )
+                ).build()
+              Source.single(request).via(streamClient.deleteItemFlow(1)).flatMapConcat { response =>
+                metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
+                if (response.sdkHttpResponse().isSuccessful) {
+                  metricsReporter.incrementDeleteJournalRowsItemCallCounter()
+                  Source.single(1L)
+                } else {
+                  metricsReporter.incrementDeleteJournalRowsItemCallErrorCounter()
+                  val statusCode = response.sdkHttpResponse().statusCode()
+                  val statusText = response.sdkHttpResponse().statusText()
+                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+                }
+              }
+            }.map { response =>
+              metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
+              metricsReporter.incrementDeleteJournalRowsCallCounter()
+              response
+            }.recoverWithRetries(
+              attempts = 1, {
+                case t: Throwable =>
+                  metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
+                  metricsReporter.incrementDeleteJournalRowsCallErrorCounter()
+                  Source.failed(t)
+              }
+            )
+        }
+    }
 
   private def deleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
     Flow[Seq[PersistenceIdWithSeqNr]]

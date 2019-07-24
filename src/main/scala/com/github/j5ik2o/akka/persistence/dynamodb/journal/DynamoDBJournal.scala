@@ -166,9 +166,20 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
     log.debug(s"asyncReadHighestSequenceNr($persistenceId, $fromSequenceNr): start")
-    val startTime = System.nanoTime()
-    def fetchHighestSeqNr(): Future[Long] =
-      journalDao.highestSequenceNr(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
+    def fetchHighestSeqNr(): Future[Long] = {
+      val startTime = System.nanoTime()
+      val result =
+        journalDao.highestSequenceNr(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
+      result.onComplete { result =>
+        metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
+        if (result.isSuccess)
+          metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
+        else
+          metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
+        log.debug(s"asyncReadHighestSequenceNr($persistenceId, $fromSequenceNr): finished")
+      }
+      result
+    }
 
     val future = writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()
@@ -177,14 +188,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         // If the previous write failed then we can ignore this
         f.recover { case _ => () }.flatMap(_ => fetchHighestSeqNr())
     }
-    future.onComplete { result =>
-      metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
-      else
-        metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
-      log.debug(s"asyncReadHighestSequenceNr($persistenceId, $fromSequenceNr): finished")
-    }
+
     future
   }
 

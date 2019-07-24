@@ -52,7 +52,6 @@ class ReadJournalDaoImpl(
 
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
-  override val parallelism: Int                          = pluginConfig.parallelism
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
   override def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed] = {

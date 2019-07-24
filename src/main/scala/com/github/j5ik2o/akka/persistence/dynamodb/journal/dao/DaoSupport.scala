@@ -17,7 +17,6 @@ trait DaoSupport {
   protected val streamClient: DynamoDbAkkaClient
   protected val tableName: String
   protected val getJournalRowsIndexName: String
-  protected val parallelism: Int
   protected val columnsDefConfig: JournalColumnsDefConfig
 
   protected val metricsReporter: MetricsReporter
@@ -30,47 +29,8 @@ trait DaoSupport {
     onFinish = Attributes.LogLevels.Debug
   )
 
-  val startTimeSource: Source[Long, NotUsed] = Source
+  protected val startTimeSource: Source[Long, NotUsed] = Source
     .lazily(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
-
-  // def startTimeSource: Source[Long, NotUsed] = Source.single(System.nanoTime())
-
-  def newQueryRequest(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      deleted: Option[Boolean] = Some(false),
-      max: Long = Long.MaxValue,
-      count: Long = 0,
-      lastKey: Option[Map[String, AttributeValue]] = None,
-      index: Int = 1
-  ): QueryRequest = {
-    val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
-    logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
-    val queryRequest = QueryRequest
-      .builder()
-      .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
-        "#pid = :pid and #snr between :min and :max"
-      )
-      .filterExpressionAsScala(deleted.map { _ =>
-        s"#flg = :flg"
-      })
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> columnsDefConfig.sequenceNrColumnName
-        ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-      ).expressionAttributeValuesAsScala(
-        Map(
-          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-          ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-          ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-      )
-      .limit(limit)
-      .exclusiveStartKeyAsScala(lastKey).build()
-    queryRequest
-  }
 
   def getMessages(
       persistenceId: PersistenceId,

@@ -107,7 +107,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
             log.error(ex, "occurred error")
             Future.failed(ex)
         }.map { _ =>
-          resultWhenWriteComplete.map(_.toTry).toVector
+          resultWhenWriteComplete.map {
+            case Right(value) => Success(value)
+            case Left(ex)     => Failure(ex)
+          }.toVector
         }
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)

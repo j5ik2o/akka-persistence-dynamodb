@@ -54,8 +54,10 @@ libraryDependencies ++= Seq(
 )
 
 dependencyOverrides ++= Seq(
-  "io.netty" % "netty-codec-http" % "4.1.32.Final",
-  "io.netty" % "netty-handler" % "4.1.32.Final",
+  "io.netty" % "netty-codec-http" % "4.1.33.Final",
+  "io.netty" % "netty-transport" % "4.1.33.Final",
+  "io.netty" % "netty-handler" % "4.1.33.Final",
+  "org.reactivestreams" % "reactive-streams" % "1.0.2",
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
 )
 

@@ -56,8 +56,7 @@ class ReadJournalDaoImpl(
 
   override def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
-      logger.debug("allPersistenceIdsSource: max = {}", max)
-
+      logger.debug(s"allPersistenceIdsSource(max = $max): start")
       def loop(
           lastKey: Option[Map[String, AttributeValue]],
           acc: Source[Map[String, AttributeValue], NotUsed],
@@ -84,6 +83,7 @@ class ReadJournalDaoImpl(
           } else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
+            logger.debug(s"allPersistenceIdsSource(max = $max): finished")
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
           }
         }
@@ -98,12 +98,14 @@ class ReadJournalDaoImpl(
         .map { response =>
           metricsReporter.setAllPersistenceIdsCallDuration(System.nanoTime() - callStart)
           metricsReporter.incrementAllPersistenceIdsCallCounter()
+          logger.debug(s"allPersistenceIdsSource(max = $max): finished")
           response
         }.recoverWithRetries(
           attempts = 1, {
             case t: Throwable =>
               metricsReporter.setAllPersistenceIdsCallDuration(System.nanoTime() - callStart)
               metricsReporter.incrementAllPersistenceIdsCallErrorCounter()
+              logger.debug(s"allPersistenceIdsSource(max = $max): finished")
               Source.failed(t)
           }
         ).withAttributes(logLevels)
@@ -112,6 +114,7 @@ class ReadJournalDaoImpl(
 
   override def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
+      logger.debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): start")
       startTimeSource
         .flatMapConcat { itemStart =>
           def loop(
@@ -120,8 +123,6 @@ class ReadJournalDaoImpl(
               count: Long,
               index: Int
           ): Source[Map[String, AttributeValue], NotUsed] = {
-            val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
-            logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
             val request = ScanRequest
               .builder()
               .tableName(tableName)
@@ -135,7 +136,8 @@ class ReadJournalDaoImpl(
                   ":tag" -> AttributeValue.builder().s(tag).build()
                 )
               )
-              .limit(limit)
+              .limit(batchSize)
+              .exclusiveStartKeyAsScala(lastKey)
               .build()
             Source
               .single(request).via(streamClient.scanFlow(1)).flatMapConcat { response =>
@@ -156,6 +158,9 @@ class ReadJournalDaoImpl(
                   metricsReporter.incrementEventsByTagItemCallErrorCounter()
                   val statusCode = response.sdkHttpResponse().statusCode()
                   val statusText = response.sdkHttpResponse().statusText()
+                  logger.debug(
+                    s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
+                  )
                   Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
                 }
               }
@@ -163,7 +168,7 @@ class ReadJournalDaoImpl(
 
           loop(None, Source.empty, 0L, 1)
             .map(convertToJournalRow)
-            .fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r append e; r }
+            .fold(ArrayBuffer.empty[JournalRow])(_ += _)
             .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
             .mapConcat(_.toVector)
             .statefulMapConcat { () =>
@@ -177,12 +182,15 @@ class ReadJournalDaoImpl(
             .map { response =>
               metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
               metricsReporter.incrementEventsByTagCallCounter()
+              logger.debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished")
               response
             }.recoverWithRetries(
               attempts = 1, {
                 case t: Throwable =>
                   metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
                   metricsReporter.incrementEventsByTagCallErrorCounter()
+                  logger
+                    .debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished")
                   Source.failed(t)
               }
             ).withAttributes(logLevels)
@@ -192,6 +200,7 @@ class ReadJournalDaoImpl(
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
     startTimeSource.flatMapConcat { start =>
+      logger.debug(s"journalSequence(offset = $offset, limit = $limit): start")
       startTimeSource.flatMapConcat { requestStart =>
         def loop(
             lastKey: Option[Map[String, AttributeValue]],
@@ -199,7 +208,10 @@ class ReadJournalDaoImpl(
             count: Long,
             index: Int
         ): Source[Map[String, AttributeValue], NotUsed] = {
-          val queryRequest = QueryRequest.builder().tableName(tableName).build()
+          val queryRequest = QueryRequest
+            .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
+              columnsDefConfig.orderingColumnName
+            ).limit(batchSize).exclusiveStartKeyAsScala(lastKey).build()
           Source
             .single(queryRequest)
             .via(streamClient.queryFlow(1)).flatMapConcat { response =>
@@ -218,11 +230,11 @@ class ReadJournalDaoImpl(
                 metricsReporter.incrementEventsByTagItemCallErrorCounter()
                 val statusCode = response.sdkHttpResponse().statusCode()
                 val statusText = response.sdkHttpResponse().statusText()
+                logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
             }
         }
-
         loop(None, Source.empty, 0L, 1)
           .map { result =>
             result(columnsDefConfig.orderingColumnName).n.toLong
@@ -232,12 +244,14 @@ class ReadJournalDaoImpl(
           .withAttributes(logLevels).map { response =>
             metricsReporter.setJournalSequenceCallDuration(System.nanoTime() - start)
             metricsReporter.incrementJournalSequenceCallCounter()
+            logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
             response
           }.recoverWithRetries(
             1, {
               case t: Throwable =>
                 metricsReporter.setJournalSequenceCallDuration(System.nanoTime() - start)
                 metricsReporter.incrementJournalSequenceCallErrorCounter()
+                logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
                 Source.failed(t)
             }
           )

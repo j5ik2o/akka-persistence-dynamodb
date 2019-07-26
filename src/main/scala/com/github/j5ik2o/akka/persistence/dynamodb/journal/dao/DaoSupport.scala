@@ -90,12 +90,14 @@ trait DaoSupport {
                 metricsReporter.incrementGetMessagesItemCallErrorCounter()
                 val statusCode = response.sdkHttpResponse().statusCode()
                 val statusText = response.sdkHttpResponse().statusText()
+                logger.debug(s"getMessages(max = $max): finished")
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
             }
         }
     }
     startTimeSource.flatMapConcat { callStart =>
+      logger.debug(s"getMessages(max = $max): start")
       if (max == 0L || fromSequenceNr > toSequenceNr)
         Source.empty
       else {
@@ -105,12 +107,14 @@ trait DaoSupport {
           .map { response =>
             metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementGetMessagesCallCounter()
+            logger.debug(s"getMessages(max = $max): finished")
             response
           }.recoverWithRetries(
             attempts = 1, {
               case t: Throwable =>
                 metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementGetMessagesCallErrorCounter()
+                logger.debug(s"getMessages(max = $max): finished")
                 Source.failed(t)
             }
           )

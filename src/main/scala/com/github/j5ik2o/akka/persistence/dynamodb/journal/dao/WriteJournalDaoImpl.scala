@@ -137,7 +137,8 @@ class WriteJournalDaoImpl(
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     startTimeSource
-      .flatMapConcat { start =>
+      .flatMapConcat { callStart =>
+        logger.debug(s"updateMessage(journalRow = $journalRow): start")
         Source
           .lazily { () =>
             val updateRequest = UpdateItemRequest
@@ -180,17 +181,26 @@ class WriteJournalDaoImpl(
               ).build()
             Source
               .single(updateRequest)
-          }.via(streamClient.updateItemFlow(1)).map { _ =>
-            ()
+          }.via(streamClient.updateItemFlow(1)).flatMapConcat { response =>
+            if (response.sdkHttpResponse().isSuccessful) {
+              Source.single(())
+            } else {
+              val statusCode = response.sdkHttpResponse().statusCode()
+              val statusText = response.sdkHttpResponse().statusText()
+              logger.debug(s"updateMessage(journalRow = $journalRow): finished")
+              Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            }
           }.map { response =>
-            metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - start)
+            metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementUpdateMessageCallCounter()
+            logger.debug(s"updateMessage(journalRow = $journalRow): finished")
             response
           }.recoverWithRetries(
             attempts = 1, {
               case t: Throwable =>
-                metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - start)
+                metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementUpdateMessageCallErrorCounter()
+                logger.debug(s"updateMessage(journalRow = $journalRow): finished")
                 Source.failed(t)
             }
           )
@@ -199,7 +209,8 @@ class WriteJournalDaoImpl(
 
   override def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed] = {
     startTimeSource
-      .flatMapConcat { start =>
+      .flatMapConcat { callStart =>
+        logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): start")
         getJournalRows(persistenceId, toSequenceNr)
           .flatMapConcat { journalRows =>
             putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
@@ -215,14 +226,16 @@ class WriteJournalDaoImpl(
               } else
                 Source.single(result)
           }.map { response =>
-            metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - start)
+            metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementDeleteMessagesCallCounter()
+            logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): finished")
             response
           }.recoverWithRetries(
             attempts = 1, {
               case t: Throwable =>
-                metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - start)
+                metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementDeleteMessagesCallErrorCounter()
+                logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): finished")
                 Source.failed(t)
             }
           )
@@ -230,20 +243,23 @@ class WriteJournalDaoImpl(
   }
 
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    startTimeSource.flatMapConcat { start =>
+    startTimeSource.flatMapConcat { callStart =>
+      logger.debug(s"putMessages(messages = $messages): start")
       if (messages.isEmpty)
         Source.single(0L)
       else
         Source
           .single(messages).via(requestPutJournalRows).map { response =>
-            metricsReporter.setPutMessagesCallDuration(System.nanoTime() - start)
+            metricsReporter.setPutMessagesCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementPutMessagesCallCounter()
+            logger.debug(s"putMessages(messages = $messages): finished")
             response
           }.recoverWithRetries(
             attempts = 1, {
               case t: Throwable =>
-                metricsReporter.setPutMessagesCallDuration(System.nanoTime() - start)
+                metricsReporter.setPutMessagesCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementPutMessagesCallErrorCounter()
+                logger.debug(s"putMessages(messages = $messages): finished")
                 Source.failed(t)
             }
           )
@@ -283,6 +299,9 @@ class WriteJournalDaoImpl(
   ): Source[Seq[JournalRow], NotUsed] = {
     startTimeSource
       .flatMapConcat { start =>
+        logger.debug(
+          s"getJournalRows(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr, deleted = $deleted): start"
+        )
         Source
           .lazily { () =>
             val queryRequest = QueryRequest
@@ -324,12 +343,22 @@ class WriteJournalDaoImpl(
             metricsReporter.incrementGetJournalRowsItemCallErrorCounter()
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
+            logger.debug(
+              s"getJournalRows(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr, deleted = $deleted): finished"
+            )
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
           }
       }
       .mapConcat(_.itemsAsScala.get.toVector)
       .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
-      .map(_.result().toVector).withAttributes(logLevels)
+      .map(_.result().toVector)
+      .map { response =>
+        logger.debug(
+          s"getJournalRows(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr, deleted = $deleted): finished"
+        )
+        response
+      }
+      .withAttributes(logLevels)
 
   }
 
@@ -382,6 +411,9 @@ class WriteJournalDaoImpl(
       deleted: Option[Boolean] = None
   ): Source[Long, NotUsed] = {
     startTimeSource.flatMapConcat { callStat =>
+      logger.debug(
+        s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): start"
+      )
       startTimeSource
         .flatMapConcat { itemStart =>
           val queryRequest = QueryRequest
@@ -427,17 +459,26 @@ class WriteJournalDaoImpl(
               metricsReporter.incrementHighestSequenceNrItemCallErrorCounter()
               val statusCode = response.sdkHttpResponse().statusCode()
               val statusText = response.sdkHttpResponse().statusText()
+              logger.debug(
+                s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): finished"
+              )
               Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
             }
         }.map { response =>
           metricsReporter.setHighestSequenceNrCallDuration(System.nanoTime() - callStat)
           metricsReporter.incrementHighestSequenceNrCallCounter()
+          logger.debug(
+            s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): finished"
+          )
           response
         }.recoverWithRetries(
           attempts = 1, {
             case t: Throwable =>
               metricsReporter.setHighestSequenceNrCallDuration(System.nanoTime() - callStat)
               metricsReporter.incrementHighestSequenceNrCallErrorCounter()
+              logger.debug(
+                s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): finished"
+              )
               Source.failed(t)
           }
         )

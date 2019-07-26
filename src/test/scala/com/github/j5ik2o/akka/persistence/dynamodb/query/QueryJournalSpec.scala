@@ -112,7 +112,7 @@ abstract class QueryJournalSpec(config: String)
     Future.sequence(actors.map(_.ask(msg))).map(_ => ())
   }
 
-  def withTags(msg: Any, tags: String*) = Tagged(msg, Set(tags: _*))
+  def withTags(msg: Any, tags: String*): Tagged = Tagged(msg, Set(tags: _*))
 
   def sendMessage(tagged: Tagged, actors: ActorRef*): Future[Unit] = {
     import akka.pattern.ask

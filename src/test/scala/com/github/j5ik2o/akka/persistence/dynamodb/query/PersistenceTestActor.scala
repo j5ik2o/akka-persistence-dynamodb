@@ -28,10 +28,14 @@ object PersistenceTestActor {
 
 class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
   import PersistenceTestActor._
-  val pluginName                     = context.system.settings.config.getString("akka.persistence.journal.plugin")
+  val pluginName = context.system.settings.config.getString("akka.persistence.journal.plugin")
+
   override def persistenceId: String = "my-" + id
-  val label                          = s"$persistenceId - $pluginName"
+
+  private val label = s"$persistenceId - $pluginName"
+
   log.debug("==> Created test actor: " + persistenceId)
+
   var state: Int = 1
 
   def debug(msg: String): Unit = log.debug(s"$msg in state $label")
@@ -69,7 +73,7 @@ class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
   def increment(): Unit = state += 1
 
   override def receiveRecover: Receive = LoggingReceive.withLabel(label) {
-    case event: String     => increment()
+    case _: String         => increment()
     case RecoveryCompleted =>
   }
 

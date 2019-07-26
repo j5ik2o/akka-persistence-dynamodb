@@ -4,6 +4,7 @@ jobs:
     environment:
       - JAVA_OPTS: "-XX:ReservedCodeCacheSize=256M -Xms1g -Xmx3g -Xss2m"
       - AWS_REGION: "ap-northeast-1"
+      - SBT_TEST_TIME_FACTOR: "2"
     branches:
       only:
         - /feature\/.*/

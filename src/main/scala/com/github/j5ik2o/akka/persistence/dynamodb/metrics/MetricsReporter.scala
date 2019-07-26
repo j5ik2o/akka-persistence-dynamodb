@@ -71,7 +71,7 @@ trait MetricsReporter {
   def addPutJournalRowsItemCallErrorCounter(value: Long): Unit
   def incrementPutJournalRowsItemCallErrorCounter(): Unit = addPutJournalRowsItemCallErrorCounter(1L)
   def setPutJournalRowsCallDuration(value: Long): Unit
-  def addPutJournalRowsCallCounter(value: Long)
+  def addPutJournalRowsCallCounter(value: Long): Unit
   def incrementPutJournalRowsCallCounter(): Unit = addPutJournalRowsCallCounter(1L)
   def addPutJournalRowsCallErrorCounter(value: Long): Unit
   def incrementPutJournalRowsCallErrorCounter(): Unit = addPutJournalRowsCallErrorCounter(1L)
@@ -99,7 +99,7 @@ trait MetricsReporter {
   def setHighestSequenceNrCallDuration(value: Long): Unit
   def addHighestSequenceNrCallCounter(value: Long): Unit
   def incrementHighestSequenceNrCallCounter(): Unit = addHighestSequenceNrCallCounter(1L)
-  def setHighestSequenceNrCallErrorCounter(value: Long)
+  def setHighestSequenceNrCallErrorCounter(value: Long): Unit
   def incrementHighestSequenceNrCallErrorCounter(): Unit = setHighestSequenceNrCallErrorCounter(1L)
 
   def setGetMessagesItemDuration(value: Long): Unit

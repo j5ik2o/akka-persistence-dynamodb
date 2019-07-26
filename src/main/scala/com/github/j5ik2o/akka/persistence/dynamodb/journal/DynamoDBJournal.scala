@@ -100,17 +100,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         serializedTries
           .map(_.right.map(_ => ()))
 
-    val future =
+    val future: Future[immutable.Seq[Try[Unit]]] =
       journalDao
         .putMessages(rowsToWrite).runWith(Sink.head).recoverWith {
           case ex =>
             log.error(ex, "occurred error")
             Future.failed(ex)
         }.map { _ =>
-          resultWhenWriteComplete.map {
-            case Right(value) => Success(value)
-            case Left(ex)     => Failure(ex)
-          }.to
+          resultWhenWriteComplete.map(_.toTry).toVector
         }
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
@@ -194,6 +191,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   override def postStop(): Unit = {
     javaClient.close()
+    writeInProgress.clear()
     super.postStop()
   }
 

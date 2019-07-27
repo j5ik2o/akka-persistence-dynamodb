@@ -15,6 +15,7 @@ import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryReq
 
 trait DaoSupport {
   protected val streamClient: DynamoDbAkkaClient
+  protected val shardCount: Int
   protected val tableName: String
   protected val getJournalRowsIndexName: String
   protected val columnsDefConfig: JournalColumnsDefConfig
@@ -37,8 +38,64 @@ trait DaoSupport {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false)
+      deleted: Option[Boolean] = Some(false),
+      consistentRead: Boolean = false
   ): Source[JournalRow, NotUsed] = {
+    def createNonGSIRequest(lastKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
+      QueryRequest
+        .builder()
+        .tableName(tableName)
+        .keyConditionExpression(
+          "#pid = :pid and #snr between :min and :max"
+        )
+        .filterExpressionAsScala(deleted.map { _ =>
+          s"#flg = :flg"
+        })
+        .expressionAttributeNamesAsScala(
+          Map(
+            "#pid" -> columnsDefConfig.partitionKeyColumnName,
+            "#snr" -> columnsDefConfig.sequenceNrColumnName
+          ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
+        ).expressionAttributeValuesAsScala(
+          Map(
+            ":pid" -> AttributeValue.builder().s(persistenceId.asString + "-0").build(),
+            ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
+            ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
+          ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
+        )
+        .limit(limit)
+        .exclusiveStartKeyAsScala(lastKey)
+        .build()
+
+    }
+    def createGSIRequest(lastKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
+      QueryRequest
+        .builder()
+        .tableName(tableName)
+        .indexName(getJournalRowsIndexName)
+        .keyConditionExpression(
+          "#pid = :pid and #snr between :min and :max"
+        )
+        .filterExpressionAsScala(deleted.map { _ =>
+          s"#flg = :flg"
+        })
+        .expressionAttributeNamesAsScala(
+          Map(
+            "#pid" -> columnsDefConfig.persistenceIdColumnName,
+            "#snr" -> columnsDefConfig.sequenceNrColumnName
+          ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
+        ).expressionAttributeValuesAsScala(
+          Map(
+            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+            ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
+            ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
+          ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
+        )
+        .limit(limit)
+        .exclusiveStartKeyAsScala(lastKey)
+        .build()
+
+    }
     def loop(
         lastKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],
@@ -49,28 +106,8 @@ trait DaoSupport {
         .flatMapConcat { itemStart =>
           val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
           logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
-          val queryRequest = QueryRequest
-            .builder()
-            .tableName(tableName).indexName(getJournalRowsIndexName).keyConditionExpression(
-              "#pid = :pid and #snr between :min and :max"
-            )
-            .filterExpressionAsScala(deleted.map { _ =>
-              s"#flg = :flg"
-            })
-            .expressionAttributeNamesAsScala(
-              Map(
-                "#pid" -> columnsDefConfig.persistenceIdColumnName,
-                "#snr" -> columnsDefConfig.sequenceNrColumnName
-              ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-            ).expressionAttributeValuesAsScala(
-              Map(
-                ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-                ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-                ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-              ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-            )
-            .limit(limit)
-            .exclusiveStartKeyAsScala(lastKey).build()
+          val queryRequest =
+            if (shardCount == 1) createNonGSIRequest(lastKey, limit) else createGSIRequest(lastKey, limit)
           Source
             .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
               metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)

@@ -25,7 +25,7 @@ trait ReadJournalDao {
   /**
     * Returns distinct stream of persistenceIds
     */
-  def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed]
+  def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed]
 
   /**
     * Returns a Source of deserialized data for certain tag from an offset. The result is sorted by
@@ -42,7 +42,8 @@ trait ReadJournalDao {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false)
+      deleted: Option[Boolean] = Some(false),
+      consistentRead: Boolean = false
   ): Source[JournalRow, NotUsed]
 
   /**

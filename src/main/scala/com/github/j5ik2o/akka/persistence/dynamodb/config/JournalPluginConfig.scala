@@ -33,7 +33,8 @@ object JournalPluginConfig {
       writeParallelism = config.asInt("write-parallelism", default = 256),
       refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
       softDeleted = config.asBoolean("soft-delete", default = true),
-      shardCount = config.asInt("shard-count", default = 64),
+      shardCount = config.asInt("shard-count", default = 1),
+      consistentRead = config.asBoolean("consistent-read", false),
       metricsReporterClassName = config.asString(
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
@@ -55,6 +56,7 @@ case class JournalPluginConfig(
     refreshInterval: FiniteDuration,
     softDeleted: Boolean,
     shardCount: Int,
+    consistentRead: Boolean,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
 )

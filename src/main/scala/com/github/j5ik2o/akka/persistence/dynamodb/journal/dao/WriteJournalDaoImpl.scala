@@ -51,8 +51,9 @@ class WriteJournalDaoImpl(
   import pluginConfig._
 
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
+  private implicit val scheduler: Scheduler               = Scheduler(ec)
 
-  private implicit val scheduler: Scheduler              = Scheduler(ec)
+  protected val shardCount: Int                          = pluginConfig.shardCount
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
   private val queueParallelism: Int                      = pluginConfig.queueParallelism

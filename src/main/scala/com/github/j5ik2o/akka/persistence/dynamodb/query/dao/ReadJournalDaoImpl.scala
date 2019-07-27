@@ -49,12 +49,12 @@ class ReadJournalDaoImpl(
   private val logger = LoggerFactory.getLogger(getClass)
 
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
+  protected val shardCount: Int                           = pluginConfig.shardCount
+  override val tableName: String                          = pluginConfig.tableName
+  override val getJournalRowsIndexName: String            = pluginConfig.getJournalRowsIndexName
+  override val columnsDefConfig: JournalColumnsDefConfig  = pluginConfig.columnsDefConfig
 
-  override val tableName: String                         = pluginConfig.tableName
-  override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
-  override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-
-  override def allPersistenceIdsSource(max: Long): Source[PersistenceId, NotUsed] = {
+  override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
       logger.debug(s"allPersistenceIdsSource(max = $max): start")
       def loop(

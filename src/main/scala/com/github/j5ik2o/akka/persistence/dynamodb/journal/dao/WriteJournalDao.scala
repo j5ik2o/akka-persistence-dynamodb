@@ -17,7 +17,8 @@ trait WriteJournalDao {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false)
+      deleted: Option[Boolean] = Some(false),
+      consistentRead: Boolean = false
   ): Source[JournalRow, NotUsed]
 
   def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed]

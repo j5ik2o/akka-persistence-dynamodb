@@ -149,8 +149,15 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     log.debug(s"asyncReplayMessages($persistenceId, $fromSequenceNr, $toSequenceNr, $max): start")
     val startTime = System.nanoTime()
     val future = journalDao
-      .getMessages(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr), SequenceNumber(toSequenceNr), max)
+      .getMessages(
+        PersistenceId(persistenceId),
+        SequenceNumber(fromSequenceNr),
+        SequenceNumber(toSequenceNr),
+        max,
+        consistentRead = pluginConfig.consistentRead
+      )
       .via(serializer.deserializeFlowWithoutTags)
+      .async
       .runForeach(recoveryCallback)
       .map(_ => ())
     future.onComplete { result =>

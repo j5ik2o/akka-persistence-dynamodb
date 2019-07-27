@@ -19,6 +19,7 @@ trait DaoSupport {
   protected val tableName: String
   protected val getJournalRowsIndexName: String
   protected val columnsDefConfig: JournalColumnsDefConfig
+  protected val queryBatchSize: Int
 
   protected val metricsReporter: MetricsReporter
 
@@ -104,10 +105,11 @@ trait DaoSupport {
     ): Source[Map[String, AttributeValue], NotUsed] = {
       startTimeSource
         .flatMapConcat { itemStart =>
-          val limit = if ((max - count) > Int.MaxValue.toLong) Int.MaxValue else (max - count).toInt
-          logger.debug(s"index = $index, max = $max, count = $count, limit = $limit")
+          logger.debug(s"index = $index, count = $count")
+          logger.debug(s"query-batch-size = $queryBatchSize")
           val queryRequest =
-            if (shardCount == 1) createNonGSIRequest(lastKey, limit) else createGSIRequest(lastKey, limit)
+            if (shardCount == 1) createNonGSIRequest(lastKey, queryBatchSize)
+            else createGSIRequest(lastKey, queryBatchSize)
           Source
             .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
               metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)
@@ -118,7 +120,7 @@ trait DaoSupport {
                 val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (response.count() > 0 && lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
+                if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
                   logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
@@ -140,6 +142,7 @@ trait DaoSupport {
       else {
         loop(None, Source.empty, 0L, 1)
           .map(convertToJournalRow)
+          .take(max)
           .withAttributes(logLevels)
           .map { response =>
             metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)

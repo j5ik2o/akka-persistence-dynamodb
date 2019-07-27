@@ -190,7 +190,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
             delaySource
               .flatMapConcat { _ =>
                 currentJournalEventsByPersistenceId(persistenceId, from, toSequenceNr)
-                  .take(bufferSize)
+                  .take(queryBatchSize)
               }
               .mapConcat(adaptEvents)
               .map(repr => EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload))
@@ -232,10 +232,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
           def retrieveNextBatch() = {
             for {
               queryUntil <- journalSequenceActor.ask(GetMaxOrderingId).mapTo[MaxOrderingId]
-              xs         <- currentJournalEventsByTag(tag, from, batchSize, queryUntil).runWith(Sink.seq)
+              xs         <- currentJournalEventsByTag(tag, from, queryBatchSize, queryUntil).runWith(Sink.seq)
             } yield {
 
-              val hasMoreEvents = xs.size == batchSize
+              val hasMoreEvents = xs.size == queryBatchSize
               val control =
                 terminateAfterOffset match {
                   // we may stop if target is behind queryUntil and we don't have more events to fetch

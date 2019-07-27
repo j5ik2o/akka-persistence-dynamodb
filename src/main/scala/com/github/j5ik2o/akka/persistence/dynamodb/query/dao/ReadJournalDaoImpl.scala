@@ -44,8 +44,6 @@ class ReadJournalDaoImpl(
     extends ReadJournalDao
     with DaoSupport {
 
-  import pluginConfig._
-
   private val logger = LoggerFactory.getLogger(getClass)
 
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
@@ -53,6 +51,7 @@ class ReadJournalDaoImpl(
   override val tableName: String                          = pluginConfig.tableName
   override val getJournalRowsIndexName: String            = pluginConfig.getJournalRowsIndexName
   override val columnsDefConfig: JournalColumnsDefConfig  = pluginConfig.columnsDefConfig
+  override protected val queryBatchSize: Int              = pluginConfig.queryBatchSize
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
@@ -63,19 +62,21 @@ class ReadJournalDaoImpl(
           count: Long,
           index: Int
       ): Source[Map[String, AttributeValue], NotUsed] = {
+        logger.debug(s"index = $index, count = $count")
         val scanRequest = ScanRequest
           .builder()
           .tableName(tableName)
           .select(Select.SPECIFIC_ATTRIBUTES)
           .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
-          .limit(batchSize)
-          .exclusiveStartKeyAsScala(lastKey).build()
+          .limit(queryBatchSize)
+          .exclusiveStartKeyAsScala(lastKey)
+          .build()
         Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
             val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
             val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (response.count() > 0 && lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
+            if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
               logger.debug(s"index = $index, next loop")
               loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
             } else
@@ -95,6 +96,7 @@ class ReadJournalDaoImpl(
         .fold(Set.empty[String])(_ + _)
         .mapConcat(_.toVector)
         .map(PersistenceId)
+        .take(max)
         .map { response =>
           metricsReporter.setAllPersistenceIdsCallDuration(System.nanoTime() - callStart)
           metricsReporter.incrementAllPersistenceIdsCallCounter()
@@ -123,6 +125,7 @@ class ReadJournalDaoImpl(
               count: Long,
               index: Int
           ): Source[Map[String, AttributeValue], NotUsed] = {
+            logger.debug(s"index = $index, count = $count")
             val request = ScanRequest
               .builder()
               .tableName(tableName)
@@ -136,7 +139,7 @@ class ReadJournalDaoImpl(
                   ":tag" -> AttributeValue.builder().s(tag).build()
                 )
               )
-              .limit(batchSize)
+              .limit(queryBatchSize)
               .exclusiveStartKeyAsScala(lastKey)
               .build()
             Source
@@ -149,7 +152,7 @@ class ReadJournalDaoImpl(
                   val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
                   val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                   val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                  if (response.count() > 0 && lastEvaluatedKey.nonEmpty) {
+                  if (lastEvaluatedKey.nonEmpty) {
                     logger.debug(s"index = $index, next loop")
                     loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                   } else
@@ -208,10 +211,11 @@ class ReadJournalDaoImpl(
             count: Long,
             index: Int
         ): Source[Map[String, AttributeValue], NotUsed] = {
+          logger.debug(s"index = $index, count = $count")
           val queryRequest = QueryRequest
             .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
               columnsDefConfig.orderingColumnName
-            ).limit(batchSize).exclusiveStartKeyAsScala(lastKey).build()
+            ).limit(queryBatchSize).exclusiveStartKeyAsScala(lastKey).build()
           Source
             .single(queryRequest)
             .via(streamClient.queryFlow(1)).flatMapConcat { response =>
@@ -221,7 +225,7 @@ class ReadJournalDaoImpl(
                 val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (response.count() > 0 && lastEvaluatedKey.nonEmpty) {
+                if (lastEvaluatedKey.nonEmpty) {
                   logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else

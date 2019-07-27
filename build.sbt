@@ -61,6 +61,8 @@ dependencyOverrides ++= Seq(
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
 )
 
+parallelExecution in Test := false
+
 publishMavenStyle := true
 
 publishArtifact in Test := false

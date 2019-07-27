@@ -56,9 +56,11 @@ class WriteJournalDaoImpl(
   protected val shardCount: Int                          = pluginConfig.shardCount
   override val tableName: String                         = pluginConfig.tableName
   override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
+  private val queueBufferSize                            = pluginConfig.queueBufferSize
   private val queueParallelism: Int                      = pluginConfig.queueParallelism
   private val writeParallelism: Int                      = pluginConfig.writeParallelism
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+  override protected val queryBatchSize: Int             = pluginConfig.queryBatchSize
   private val logger                                     = LoggerFactory.getLogger(getClass)
 
   private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy.toLowerCase() match {
@@ -73,7 +75,7 @@ class WriteJournalDaoImpl(
 
   private def putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
     Source
-      .queue[(Promise[Long], Seq[JournalRow])](bufferSize, queueOverflowStrategy)
+      .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           if (rows.size == 1)
@@ -111,7 +113,7 @@ class WriteJournalDaoImpl(
 
   private def deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
     Source
-      .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, queueOverflowStrategy)
+      .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           if (rows.size == 1)
@@ -295,7 +297,7 @@ class WriteJournalDaoImpl(
           case QueueOfferResult.Dropped =>
             Future.failed(
               new Exception(
-                s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+                s"Failed to enqueue journal row batch write, the queue buffer was full ($queueBufferSize elements) please check the jdbc-journal.bufferSize setting"
               )
             )
           case QueueOfferResult.QueueClosed =>
@@ -361,7 +363,7 @@ class WriteJournalDaoImpl(
           }
       }
       .mapConcat(_.itemsAsScala.get.toVector)
-      .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow]) { case (r, e) => r.append(e); r }
+      .map(convertToJournalRow).fold(ArrayBuffer.empty[JournalRow])(_ += _)
       .map(_.result().toVector)
       .map { response =>
         logger.debug(
@@ -401,7 +403,7 @@ class WriteJournalDaoImpl(
           case QueueOfferResult.Dropped =>
             Future.failed(
               new Exception(
-                s"Failed to enqueue journal row batch write, the queue buffer was full ($bufferSize elements) please check the jdbc-journal.bufferSize setting"
+                s"Failed to enqueue journal row batch write, the queue buffer was full ($queueBufferSize elements) please check the jdbc-journal.bufferSize setting"
               )
             )
           case QueueOfferResult.QueueClosed =>
@@ -421,34 +423,60 @@ class WriteJournalDaoImpl(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): Source[Long, NotUsed] = {
+    def createNonGSIRequest: QueryRequest = {
+      QueryRequest
+        .builder()
+        .tableName(tableName)
+        .keyConditionExpressionAsScala(
+          fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+        )
+        .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+        .expressionAttributeNamesAsScala(
+          Map(
+            "#pid" -> columnsDefConfig.partitionKeyColumnName
+          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+        )
+        .expressionAttributeValuesAsScala(
+          Map(
+            ":id" -> AttributeValue.builder().s(persistenceId.asString + "-0").build()
+          ) ++ deleted
+            .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+            .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+        ).scanIndexForward(false)
+        .limit(1).build()
+    }
+    def createGSIRequest: QueryRequest = {
+      QueryRequest
+        .builder()
+        .tableName(tableName)
+        .indexName(getJournalRowsIndexName)
+        .keyConditionExpressionAsScala(
+          fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+        )
+        .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+        .expressionAttributeNamesAsScala(
+          Map(
+            "#pid" -> columnsDefConfig.persistenceIdColumnName
+          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+        )
+        .expressionAttributeValuesAsScala(
+          Map(
+            ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
+          ) ++ deleted
+            .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+            .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+        ).scanIndexForward(false)
+        .limit(1).build()
+    }
     startTimeSource.flatMapConcat { callStat =>
       logger.debug(
         s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): start"
       )
       startTimeSource
         .flatMapConcat { itemStart =>
-          val queryRequest = QueryRequest
-            .builder()
-            .tableName(tableName)
-            .indexName(getJournalRowsIndexName)
-            .keyConditionExpressionAsScala(
-              fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
-            )
-            .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-            .expressionAttributeNamesAsScala(
-              Map(
-                "#pid" -> columnsDefConfig.persistenceIdColumnName
-              ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-              fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-            )
-            .expressionAttributeValuesAsScala(
-              Map(
-                ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
-              ) ++ deleted
-                .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-                .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
-            ).scanIndexForward(false)
-            .limit(1).build()
+          val queryRequest = if (shardCount == 1) createNonGSIRequest else createGSIRequest
           Source
             .single(queryRequest)
             .via(streamClient.queryFlow())

@@ -73,17 +73,23 @@ class DynamoDBCurrentPersistenceIds2Test
       ConfigFactory
         .parseString(
           s"""
-             |dynamo-db-journal.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
-             |}
-             |
+           |dynamo-db-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
+           |  }
+           |}
+           |
            |dynamo-db-snapshot.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
-             |}
-             |
-           |dynamo-db-read-journal.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
-             |}
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
+           |}
+           |
+           |dynamo-db-read-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentPersistenceIds2Test.dynamoDBPort}/"
+           |  }
+           |}
            """.stripMargin
         ).withFallback(ConfigFactory.load())
     )

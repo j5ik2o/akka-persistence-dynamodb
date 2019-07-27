@@ -82,16 +82,22 @@ class DynamoDBCurrentEventsByTagTest3
       ConfigFactory
         .parseString(
           s"""
-           |dynamo-db-journal.dynamodb-client {
+           |dynamo-db-journal{
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest3.dynamoDBPort}/"
+           |  }
+           |}
+           |
+           |dynamo-db-snapshot.dynamodb-client {
            |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest3.dynamoDBPort}/"
            |}
            |
-             |dynamo-db-snapshot.dynamodb-client {
-           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest3.dynamoDBPort}/"
-           |}
-           |
-             |dynamo-db-read-journal.dynamodb-client {
-           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest3.dynamoDBPort}/"
+           |dynamo-db-read-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest3.dynamoDBPort}/"
+           |  }
            |}
            """.stripMargin
         ).withFallback(ConfigFactory.load())

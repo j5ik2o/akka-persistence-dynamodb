@@ -22,25 +22,30 @@ class DynamoDBJournalPerfSpec
       ConfigFactory
         .parseString(
           s"""
-        |dynamo-db-journal.dynamodb-client {
-        |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |dynamo-db-journal{
+        |  query-batch-size = 1
+        |  dynamodb-client {
+        |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |  }
         |}
         |
         |dynamo-db-snapshot.dynamodb-client {
         |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |}
         |
-        |dynamo-db-read-journal.dynamodb-client {
-        |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |dynamo-db-read-journal {
+        |  query-batch-size = 1
+        |  dynamodb-client {
+        |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |  }
         |}
-      """.stripMargin
+        """.stripMargin
         ).withFallback(ConfigFactory.load())
     )
     with ScalaFutures
     with DynamoDBSpecSupport {
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 
-  // override def awaitDurationMillis: Long = 1.minutes.toMillis
   override def eventsCount: Int = 10
 
   implicit val pc: PatienceConfig = PatienceConfig(1 minutes, 1 seconds)

@@ -127,17 +127,23 @@ class DynamoDBEventsByPersistenceIdTest
       ConfigFactory
         .parseString(
           s"""
-             |dynamo-db-journal.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
-             |}
-             |
+           |dynamo-db-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |  }
+           |}
+           |
            |dynamo-db-snapshot.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
-             |}
-             |
-           |dynamo-db-read-journal.dynamodb-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
-             |}
+           |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |}
+           |
+           |dynamo-db-read-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |  }
+           |}
            """.stripMargin
         ).withFallback(ConfigFactory.load())
     )

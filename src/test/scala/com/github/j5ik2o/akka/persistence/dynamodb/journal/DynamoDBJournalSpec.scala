@@ -22,41 +22,26 @@ class DynamoDBJournalSpec
       ConfigFactory
         .parseString(
           s"""
-           |akka.persistence.journal.plugin = "dynamo-db-journal"
-           |akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
-           |
            |dynamo-db-journal {
-           |  refresh-interval = 10ms
-           |  
+           |  query-batch-size = 1
            |  dynamodb-client {
-           |    access-key-id = "x"
-           |    secret-access-key = "x"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
            |}
            |
            |dynamo-db-snapshot {
-           |  refresh-interval = 10ms
-           |  
            |  dynamodb-client {
-           |    access-key-id = "x"
-           |    secret-access-key = "x"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
            |}
            |
            |dynamo-db-read-journal {
-           |  write-plugin = "dynamo-db-journal"
-           |  refresh-interval = 10ms
-           |
+           |  query-batch-size = 1
            |  dynamodb-client {
-           |    access-key-id = "x"
-           |    secret-access-key = "x"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
-           |
-        |}
-      """.stripMargin
+           |}
+           """.stripMargin
         ).withFallback(ConfigFactory.load())
     )
     with ScalaFutures

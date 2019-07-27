@@ -62,7 +62,9 @@ class DynamoDBCurrentEventsByTagTest1
            |dynamo-db-snapshot.dynamodb-client {
            |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
            |}
-           |
+           |dynamo-db-read-journal {
+           |  batch-size = 1
+           |}
            |dynamo-db-read-journal.dynamodb-client {
            |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
            |}

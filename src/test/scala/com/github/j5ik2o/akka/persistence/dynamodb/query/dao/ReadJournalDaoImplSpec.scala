@@ -65,7 +65,7 @@ class ReadJournalDaoImplSpec
   private val serialization = SerializationExtension(system)
 
   protected val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamodb-journal"))
+    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-journal"))
 
   protected val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))

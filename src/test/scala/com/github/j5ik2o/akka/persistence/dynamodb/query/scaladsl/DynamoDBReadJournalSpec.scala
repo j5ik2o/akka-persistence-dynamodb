@@ -33,7 +33,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoIm
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
@@ -47,8 +47,32 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+object DynamoDBReadJournalSpec {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
 class DynamoDBReadJournalSpec
-    extends TestKit(ActorSystem("DynamoDBReadJournalSpec", ConfigFactory.load("default.conf")))
+    extends TestKit(
+      ActorSystem(
+        "DynamoDBReadJournalSpec",
+        ConfigFactory
+          .parseString(
+            s"""
+             |dynamo-db-journal.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |}
+             |
+             |dynamo-db-snapshot.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |}
+             |
+             |dynamo-db-read-journal.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |}
+             """.stripMargin
+          ).withFallback(ConfigFactory.load())
+      )
+    )
     with FreeSpecLike
     with Matchers
     with Eventually
@@ -58,7 +82,7 @@ class DynamoDBReadJournalSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBReadJournalSpec.dynamoDBPort
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

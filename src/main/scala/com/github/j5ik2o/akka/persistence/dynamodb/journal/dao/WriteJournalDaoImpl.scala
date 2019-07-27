@@ -61,9 +61,19 @@ class WriteJournalDaoImpl(
   override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
   private val logger                                     = LoggerFactory.getLogger(getClass)
 
+  private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy.toLowerCase() match {
+    case s if s == OverflowStrategy.dropHead.toString.toLowerCase()     => OverflowStrategy.dropHead
+    case s if s == OverflowStrategy.dropTail.toString.toLowerCase()     => OverflowStrategy.dropTail
+    case s if s == OverflowStrategy.dropBuffer.toString.toLowerCase()   => OverflowStrategy.dropBuffer
+    case s if s == OverflowStrategy.dropNew.toString.toLowerCase()      => OverflowStrategy.dropNew
+    case s if s == OverflowStrategy.fail.toString.toLowerCase()         => OverflowStrategy.fail
+    case s if s == OverflowStrategy.backpressure.toString.toLowerCase() => OverflowStrategy.backpressure
+    case _                                                              => throw new IllegalArgumentException()
+  }
+
   private def putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
     Source
-      .queue[(Promise[Long], Seq[JournalRow])](bufferSize, OverflowStrategy.backpressure)
+      .queue[(Promise[Long], Seq[JournalRow])](bufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           if (rows.size == 1)
@@ -101,7 +111,7 @@ class WriteJournalDaoImpl(
 
   private def deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
     Source
-      .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, OverflowStrategy.dropNew)
+      .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](bufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           if (rows.size == 1)
@@ -110,7 +120,7 @@ class WriteJournalDaoImpl(
               .map(result => promise.success(result))
               .recover { case t => promise.failure(t) }
               .runWith(Sink.ignore)
-          if (rows.size > clientConfig.batchWriteItemLimit)
+          else if (rows.size > clientConfig.batchWriteItemLimit)
             Source(rows.toVector)
               .batch(clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).log("grouped")
               .via(deleteJournalRowsFlow).log("delete")

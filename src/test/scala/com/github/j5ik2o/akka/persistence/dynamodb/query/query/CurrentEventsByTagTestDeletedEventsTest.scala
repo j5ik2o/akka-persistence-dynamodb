@@ -21,14 +21,15 @@ import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTestDeletedEventsTest(config: String) extends QueryJournalSpec(config) {
+abstract class CurrentEventsByTagTestDeletedEventsTest(config: Config) extends QueryJournalSpec(config) {
   it should "show deleted events in event stream" in {
     withTestActors() { (actor1, _, _) =>
       sendMessage(withTags("a", "one"), actor1).toTry should be a 'success
@@ -78,13 +79,34 @@ abstract class CurrentEventsByTagTestDeletedEventsTest(config: String) extends Q
   }
 }
 
+object DynamoDBCurrentEventsByTagTestDeletedEventsTest {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
 class DynamoDBCurrentEventsByTagTestDeletedEventsTest
-    extends CurrentEventsByTagTestDeletedEventsTest("default.conf")
+    extends CurrentEventsByTagTestDeletedEventsTest(
+      ConfigFactory
+        .parseString(
+          s"""
+           |dynamo-db-journal.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |}
+           |
+         |dynamo-db-snapshot.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |}
+           |
+         |dynamo-db-read-journal.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |}
+         """.stripMargin
+        ).withFallback(ConfigFactory.load())
+    )
     with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

@@ -18,7 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 import java.net.URI
 
 import akka.persistence.snapshot.SnapshotStoreSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
@@ -28,14 +28,35 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 
 import scala.concurrent.duration._
 
+object DynamoDBSnapshotStoreSpec {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
 class DynamoDBSnapshotStoreSpec
-    extends SnapshotStoreSpec(ConfigFactory.load("snapshot.conf"))
+    extends SnapshotStoreSpec(
+      ConfigFactory
+        .parseString(
+          s"""
+             |dynamo-db-journal.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
+             |}
+             |
+           |dynamo-db-snapshot.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
+             |}
+             |
+           |dynamo-db-read-journal.dynamodb-client {
+             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
+             |}
+         """.stripMargin
+        ).withFallback(ConfigFactory.load())
+    )
     with ScalaFutures
     with DynamoDBSpecSupport {
 
   implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreSpec.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

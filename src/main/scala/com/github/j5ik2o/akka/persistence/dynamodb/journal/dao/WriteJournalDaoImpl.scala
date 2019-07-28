@@ -53,16 +53,16 @@ class WriteJournalDaoImpl(
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
   private implicit val scheduler: Scheduler               = Scheduler(ec)
 
-  protected val shardCount: Int                          = pluginConfig.shardCount
-  override val tableName: String                         = pluginConfig.tableName
-  override val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
-  private val queueBufferSize                            = pluginConfig.queueBufferSize
-  private val queueParallelism: Int                      = pluginConfig.queueParallelism
-  private val writeParallelism: Int                      = pluginConfig.writeParallelism
-  override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-  override protected val queryBatchSize: Int             = pluginConfig.queryBatchSize
-  override protected val consistentRead: Boolean         = pluginConfig.consistentRead
-  private val logger                                     = LoggerFactory.getLogger(getClass)
+  override protected val shardCount: Int                           = pluginConfig.shardCount
+  override protected val tableName: String                         = pluginConfig.tableName
+  override protected val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
+  private val queueBufferSize                                      = pluginConfig.queueBufferSize
+  private val queueParallelism: Int                                = pluginConfig.queueParallelism
+  private val writeParallelism: Int                                = pluginConfig.writeParallelism
+  override protected val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+  override protected val queryBatchSize: Int                       = pluginConfig.queryBatchSize
+  override protected val consistentRead: Boolean                   = pluginConfig.consistentRead
+  private val logger                                               = LoggerFactory.getLogger(getClass)
 
   private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy.toLowerCase() match {
     case s if s == OverflowStrategy.dropHead.toString.toLowerCase()     => OverflowStrategy.dropHead
@@ -79,6 +79,7 @@ class WriteJournalDaoImpl(
       .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
+          logger.debug(s"put rows.size = ${rows.size}")
           if (rows.size == 1)
             Source
               .single(rows.head).via(singlePutJournalRowFlow).log("put")
@@ -87,7 +88,7 @@ class WriteJournalDaoImpl(
               .runWith(Sink.ignore)
           else if (rows.size > clientConfig.batchWriteItemLimit)
             Source(rows.toVector)
-              .batch(clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).log("grouped")
+              .grouped(clientConfig.batchWriteItemLimit).log("grouped")
               .via(putJournalRowsFlow).log("put")
               .fold(0L)(_ + _).log("fold")
               .map(result => promise.success(result))
@@ -117,6 +118,7 @@ class WriteJournalDaoImpl(
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
+          logger.debug(s"delete rows.size = ${rows.size}")
           if (rows.size == 1)
             Source
               .single(rows.head).via(singleDeleteJournalRowFlow).log("delete")
@@ -125,7 +127,7 @@ class WriteJournalDaoImpl(
               .runWith(Sink.ignore)
           else if (rows.size > clientConfig.batchWriteItemLimit)
             Source(rows.toVector)
-              .batch(clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).log("grouped")
+              .grouped(clientConfig.batchWriteItemLimit).log("grouped")
               .via(deleteJournalRowsFlow).log("delete")
               .fold(0L)(_ + _).log("fold")
               .map(result => promise.success(result))

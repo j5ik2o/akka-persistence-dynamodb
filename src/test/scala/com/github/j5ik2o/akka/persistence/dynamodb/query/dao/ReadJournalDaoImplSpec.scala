@@ -40,7 +40,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 class ReadJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load("default.conf")))
+    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
     with FreeSpecLike
     with Matchers
     with ScalaFutures
@@ -64,10 +64,10 @@ class ReadJournalDaoImplSpec
 
   private val serialization = SerializationExtension(system)
 
-  protected val journalPluginConfig: JournalPluginConfig =
+  private val journalPluginConfig: JournalPluginConfig =
     JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-journal"))
 
-  protected val queryPluginConfig: QueryPluginConfig =
+  private val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
 
   implicit val mat = ActorMaterializer()

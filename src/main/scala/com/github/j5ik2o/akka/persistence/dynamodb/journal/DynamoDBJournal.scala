@@ -131,7 +131,8 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     log.debug(s"asyncDeleteMessagesTo($persistenceId, $toSequenceNr): start")
     val startTime = System.nanoTime()
     val future = journalDao
-      .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr)).runWith(Sink.head).map(_ => ())
+      .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
+      .runWith(Sink.head).map(_ => ())
     future.onComplete { result =>
       metricsReporter.setAsyncDeleteMessagesToCallDuration(System.nanoTime() - startTime)
       if (result.isSuccess)
@@ -154,7 +155,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         SequenceNumber(fromSequenceNr),
         SequenceNumber(toSequenceNr),
         max,
-        consistentRead = pluginConfig.consistentRead
+        deleted = Some(false)
       )
       .via(serializer.deserializeFlowWithoutTags)
       .async

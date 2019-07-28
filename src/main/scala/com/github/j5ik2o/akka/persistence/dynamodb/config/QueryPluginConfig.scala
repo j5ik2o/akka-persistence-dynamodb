@@ -29,9 +29,10 @@ object QueryPluginConfig {
       tagsIndexName = config.asString("tags-index-name", "TagsIndex"),
       getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRowsIndex"),
       tagSeparator = config.asString("tag-separator", ","),
-      queryBatchSize = config.asInt("query-batch-size", 1024),
       refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       shardCount = config.asInt("shard-count", 1),
+      queryBatchSize = config.asInt("query-batch-size", 1024),
+      consistentRead = config.asBoolean("consistent-read", false),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
       metricsReporterClassName = config.asString(
@@ -50,9 +51,10 @@ case class QueryPluginConfig(
     tagsIndexName: String,
     getJournalRowsIndexName: String,
     tagSeparator: String,
-    queryBatchSize: Int,
     refreshInterval: FiniteDuration,
     shardCount: Int,
+    queryBatchSize: Int,
+    consistentRead: Boolean,
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig

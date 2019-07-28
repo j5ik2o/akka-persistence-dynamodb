@@ -20,6 +20,7 @@ trait DaoSupport {
   protected val getJournalRowsIndexName: String
   protected val columnsDefConfig: JournalColumnsDefConfig
   protected val queryBatchSize: Int
+  protected val consistentRead: Boolean
 
   protected val metricsReporter: MetricsReporter
 
@@ -39,10 +40,10 @@ trait DaoSupport {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false),
-      consistentRead: Boolean = false
+      deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed] = {
-    def createNonGSIRequest(lastKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
+    if (consistentRead) require(shardCount == 1)
+    def createNonGSIRequest(lastEvaluatedKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
       QueryRequest
         .builder()
         .tableName(tableName)
@@ -65,11 +66,11 @@ trait DaoSupport {
           ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
         )
         .limit(limit)
-        .exclusiveStartKeyAsScala(lastKey)
+        .exclusiveStartKeyAsScala(lastEvaluatedKey)
         .build()
 
     }
-    def createGSIRequest(lastKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
+    def createGSIRequest(lastEvaluatedKey: Option[Map[String, AttributeValue]], limit: Int): QueryRequest = {
       QueryRequest
         .builder()
         .tableName(tableName)
@@ -93,12 +94,12 @@ trait DaoSupport {
           ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
         )
         .limit(limit)
-        .exclusiveStartKeyAsScala(lastKey)
+        .exclusiveStartKeyAsScala(lastEvaluatedKey)
         .build()
 
     }
     def loop(
-        lastKey: Option[Map[String, AttributeValue]],
+        lastEvaluatedKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],
         count: Long,
         index: Int
@@ -108,8 +109,8 @@ trait DaoSupport {
           logger.debug(s"index = $index, count = $count")
           logger.debug(s"query-batch-size = $queryBatchSize")
           val queryRequest =
-            if (shardCount == 1) createNonGSIRequest(lastKey, queryBatchSize)
-            else createGSIRequest(lastKey, queryBatchSize)
+            if (shardCount == 1) createNonGSIRequest(lastEvaluatedKey, queryBatchSize)
+            else createGSIRequest(lastEvaluatedKey, queryBatchSize)
           Source
             .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
               metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)

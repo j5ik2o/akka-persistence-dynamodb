@@ -42,8 +42,7 @@ trait ReadJournalDao {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false),
-      consistentRead: Boolean = false
+      deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed]
 
   /**

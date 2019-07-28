@@ -42,22 +42,22 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq(
   "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
   "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
-  "com.typesafe.akka" %% "akka-persistence"               % akkaVersion,
-  "com.typesafe.akka" %% "akka-persistence-query"         % akkaVersion,
-  "com.typesafe.akka" %% "akka-stream"                    % akkaVersion,
-  "com.github.j5ik2o" %% "reactive-aws-dynamodb-test"     % reactiveAwsDynamoDB % Test,
-  "com.typesafe.akka" %% "akka-stream-testkit"            % akkaVersion % Test,
-  "com.typesafe.akka" %% "akka-persistence-tck"           % akkaVersion % Test,
-  "com.typesafe.akka" %% "akka-testkit"                   % akkaVersion % Test,
-  "ch.qos.logback"    % "logback-classic"                 % "1.2.3" % Test,
-  "org.slf4j"         % "jul-to-slf4j"                    % "1.7.26" % Test
+  "com.typesafe.akka" %% "akka-persistence"            % akkaVersion,
+  "com.typesafe.akka" %% "akka-persistence-query"      % akkaVersion,
+  "com.typesafe.akka" %% "akka-stream"                 % akkaVersion,
+  "com.github.j5ik2o" %% "reactive-aws-dynamodb-test"  % reactiveAwsDynamoDB % Test,
+  "com.typesafe.akka" %% "akka-stream-testkit"         % akkaVersion % Test,
+  "com.typesafe.akka" %% "akka-persistence-tck"        % akkaVersion % Test,
+  "com.typesafe.akka" %% "akka-testkit"                % akkaVersion % Test,
+  "ch.qos.logback"    % "logback-classic"              % "1.2.3" % Test,
+  "org.slf4j"         % "jul-to-slf4j"                 % "1.7.26" % Test
 )
 
 dependencyOverrides ++= Seq(
-  "io.netty" % "netty-codec-http" % "4.1.33.Final",
-  "io.netty" % "netty-transport" % "4.1.33.Final",
-  "io.netty" % "netty-handler" % "4.1.33.Final",
-  "org.reactivestreams" % "reactive-streams" % "1.0.2",
+  "io.netty"               % "netty-codec-http"    % "4.1.33.Final",
+  "io.netty"               % "netty-transport"     % "4.1.33.Final",
+  "io.netty"               % "netty-handler"       % "4.1.33.Final",
+  "org.reactivestreams"    % "reactive-streams"    % "1.0.2",
   "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
 )
 

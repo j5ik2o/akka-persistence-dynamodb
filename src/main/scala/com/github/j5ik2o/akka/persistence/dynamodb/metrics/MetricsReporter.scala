@@ -56,6 +56,11 @@ trait MetricsReporter {
   def incrementGetJournalRowsItemCallCounter(): Unit = addGetJournalRowsItemCallCounter(1L)
   def addGetJournalRowsItemCallErrorCounter(value: Long): Unit
   def incrementGetJournalRowsItemCallErrorCounter(): Unit = addGetJournalRowsItemCallErrorCounter(1L)
+  def setGetJournalRowsCallDuration(value: Long): Unit
+  def addGetJournalRowsCallCounter(value: Long): Unit
+  def incrementGetJournalRowsCallCounter(): Unit = addGetJournalRowsCallCounter(1L)
+  def addGetJournalRowsCallErrorCounter(value: Long): Unit
+  def incrementGetJournalRowsCallErrorCounter(): Unit = addGetJournalRowsCallErrorCounter(1L)
 
   def setUpdateMessageCallDuration(value: Long): Unit
   def addUpdateMessageCallCounter(value: Long): Unit
@@ -218,6 +223,12 @@ class NullMetricsReporter extends MetricsReporter {
   override def addGetJournalRowsItemCallCounter(value: Long): Unit = {}
 
   override def addGetJournalRowsItemCallErrorCounter(value: Long): Unit = {}
+
+  override def setGetJournalRowsCallDuration(value: Long): Unit = {}
+
+  override def addGetJournalRowsCallCounter(value: Long): Unit = {}
+
+  override def addGetJournalRowsCallErrorCounter(value: Long): Unit = {}
 
   override def setUpdateMessageCallDuration(value: Long): Unit = {}
 

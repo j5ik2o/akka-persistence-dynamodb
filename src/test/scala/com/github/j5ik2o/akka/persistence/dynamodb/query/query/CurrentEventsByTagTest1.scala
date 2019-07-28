@@ -20,14 +20,15 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 import java.net.URI
 
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByTagTest1(config: String) extends QueryJournalSpec(config) {
+abstract class CurrentEventsByTagTest1(config: Config) extends QueryJournalSpec(config) {
 
   it should "not find an event by tag for unknown tag" in {
     withTestActors() { (actor1, actor2, actor3) =>
@@ -45,11 +46,36 @@ abstract class CurrentEventsByTagTest1(config: String) extends QueryJournalSpec(
   }
 }
 
-class DynamoDBCurrentEventsByTagTest1 extends CurrentEventsByTagTest1("default.conf") with DynamoDBSpecSupport {
+object DynamoDBCurrentEventsByTagTest1 {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
+class DynamoDBCurrentEventsByTagTest1
+    extends CurrentEventsByTagTest1(
+      ConfigFactory
+        .parseString(
+          s"""
+           |dynamo-db-journal.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
+           |}
+           |
+           |dynamo-db-snapshot.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
+           |}
+           |dynamo-db-read-journal {
+           |  batch-size = 1
+           |}
+           |dynamo-db-read-journal.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
+           |}
+           """.stripMargin
+        ).withFallback(ConfigFactory.load())
+    )
+    with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByTagTest1.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

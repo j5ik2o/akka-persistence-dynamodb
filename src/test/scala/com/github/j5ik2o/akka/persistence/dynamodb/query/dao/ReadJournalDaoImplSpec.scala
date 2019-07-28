@@ -24,7 +24,7 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -40,7 +40,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 class ReadJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load("default.conf")))
+    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
     with FreeSpecLike
     with Matchers
     with ScalaFutures
@@ -64,10 +64,10 @@ class ReadJournalDaoImplSpec
 
   private val serialization = SerializationExtension(system)
 
-  protected val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamodb-journal"))
+  private val journalPluginConfig: JournalPluginConfig =
+    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-journal"))
 
-  protected val queryPluginConfig: QueryPluginConfig =
+  private val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
 
   implicit val mat = ActorMaterializer()
@@ -82,13 +82,13 @@ class ReadJournalDaoImplSpec
   val sch = Scheduler(ec)
 
   "ReadJournalDaoImpl" - {
-    "allPersistenceIdsSource" in {
+    "allPersistenceIds" in {
       val journalRows = (1 to 100).map { n =>
         JournalRow(PersistenceId(n.toString), SequenceNumber(1), deleted = false, "ABC".getBytes(), Long.MaxValue)
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao
-        .allPersistenceIdsSource(journalRows.size).runWith(Sink.seq).futureValue
+        .allPersistenceIds(journalRows.size).runWith(Sink.seq).futureValue
       val excepted = journalRows.map(_.persistenceId).toList
       result should contain theSameElementsAs excepted
     }

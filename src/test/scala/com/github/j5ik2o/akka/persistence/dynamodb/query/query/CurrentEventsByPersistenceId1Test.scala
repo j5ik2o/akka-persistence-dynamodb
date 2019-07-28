@@ -21,14 +21,15 @@ import java.net.URI
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
-abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJournalSpec(config) {
+abstract class CurrentEventsByPersistenceId1Test(config: Config) extends QueryJournalSpec(config) {
 
   it should "not find any events for unknown pid" in
   withCurrentEventsByPersistenceId()("unkown-pid", 0L, Long.MaxValue) { tp =>
@@ -96,13 +97,39 @@ abstract class CurrentEventsByPersistenceId1Test(config: String) extends QueryJo
   }
 }
 
+object DynamoDBCurrentEventsByPersistenceId1Test {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
 class DynamoDBCurrentEventsByPersistenceId1Test
-    extends CurrentEventsByPersistenceId1Test("default.conf")
+    extends CurrentEventsByPersistenceId1Test(
+      ConfigFactory
+        .parseString(
+          s"""
+           |dynamo-db-journal { 
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |  }
+           |}
+           |
+           |dynamo-db-snapshot.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |}
+           |dynamo-db-read-journal {
+           |  batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |  }
+           |}
+           """.stripMargin
+        ).withFallback(ConfigFactory.load())
+    )
     with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

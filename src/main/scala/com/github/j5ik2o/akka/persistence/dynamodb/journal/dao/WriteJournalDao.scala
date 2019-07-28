@@ -6,7 +6,10 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 trait WriteJournalDao {
   import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 
-  def deleteMessages(persistenceId: PersistenceId, toSequenceNr: SequenceNumber): Source[Long, NotUsed]
+  def deleteMessages(
+      persistenceId: PersistenceId,
+      toSequenceNr: SequenceNumber
+  ): Source[Long, NotUsed]
 
   def highestSequenceNr(persistenceId: PersistenceId, fromSequenceNr: SequenceNumber): Source[Long, NotUsed]
 
@@ -17,7 +20,7 @@ trait WriteJournalDao {
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       max: Long,
-      deleted: Option[Boolean] = Some(false)
+      deleted: Option[Boolean]
   ): Source[JournalRow, NotUsed]
 
   def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed]

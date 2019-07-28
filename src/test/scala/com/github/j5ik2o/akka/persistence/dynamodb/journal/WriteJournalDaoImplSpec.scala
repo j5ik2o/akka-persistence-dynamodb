@@ -7,12 +7,14 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
@@ -25,7 +27,7 @@ import software.amazon.awssdk.services.dynamodb.{
 import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec"))
+    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
     with FreeSpecLike
     with Matchers
     with ScalaFutures
@@ -57,10 +59,11 @@ class WriteJournalDaoImplSpec
 
   private val serialization = SerializationExtension(system)
 
-  protected val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config)
-  protected val queryPluginConfig: QueryPluginConfig =
-    QueryPluginConfig.fromConfig(system.settings.config)
+  private val journalPluginConfig: JournalPluginConfig =
+    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-journal"))
+
+  private val queryPluginConfig: QueryPluginConfig =
+    QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
 
   implicit val mat = ActorMaterializer()
   implicit val ec  = system.dispatcher
@@ -86,7 +89,7 @@ class WriteJournalDaoImplSpec
         )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
-      // result shouldBe max
+      result shouldBe max
     }
     "write-read" in {
       val pid = "b-1"
@@ -101,7 +104,7 @@ class WriteJournalDaoImplSpec
         )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
-      // result shouldBe max
+      result shouldBe max
       val results =
         writeJournalDao
           .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
@@ -131,7 +134,7 @@ class WriteJournalDaoImplSpec
         )
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
-      // result shouldBe max
+      result shouldBe max
       writeJournalDao.updateMessage(journalRows.head.withDeleted).runWith(Sink.head).futureValue
       val results =
         writeJournalDao
@@ -156,7 +159,8 @@ class WriteJournalDaoImplSpec
       }
       val result = writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       result shouldBe max
-      writeJournalDao.deleteMessages(PersistenceId(pid), SequenceNumber(60)).runWith(Sink.head).futureValue
+      writeJournalDao
+        .deleteMessages(PersistenceId(pid), SequenceNumber(60)).runWith(Sink.head).futureValue
       val results =
         writeJournalDao
           .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(

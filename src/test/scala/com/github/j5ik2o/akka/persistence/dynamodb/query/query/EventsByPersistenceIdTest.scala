@@ -21,14 +21,15 @@ import java.net.URI
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
-abstract class EventsByPersistenceIdTest(config: String) extends QueryJournalSpec(config) {
+abstract class EventsByPersistenceIdTest(config: Config) extends QueryJournalSpec(config) {
 
   it should "complete when toSeqNr=0" in
   withEventsByPersistenceId()("unkown-pid", 0L, 0L) { tp =>
@@ -117,11 +118,40 @@ abstract class EventsByPersistenceIdTest(config: String) extends QueryJournalSpe
 //
 //class InMemoryEventsByPersistenceIdTest extends EventsByPersistenceIdTest("inmemory.conf")
 
-class DynamoDBEventsByPersistenceIdTest extends EventsByPersistenceIdTest("default.conf") with DynamoDBSpecSupport {
+object DynamoDBEventsByPersistenceIdTest {
+  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+}
+
+class DynamoDBEventsByPersistenceIdTest
+    extends EventsByPersistenceIdTest(
+      ConfigFactory
+        .parseString(
+          s"""
+           |dynamo-db-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |  }
+           |}
+           |
+           |dynamo-db-snapshot.dynamodb-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |}
+           |
+           |dynamo-db-read-journal {
+           |  query-batch-size = 1
+           |  dynamodb-client {
+           |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
+           |  }
+           |}
+           """.stripMargin
+        ).withFallback(ConfigFactory.load())
+    )
+    with DynamoDBSpecSupport {
 
   override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = 8000
+  override protected lazy val dynamoDBPort: Int = DynamoDBEventsByPersistenceIdTest.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

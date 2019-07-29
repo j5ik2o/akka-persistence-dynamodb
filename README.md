@@ -93,7 +93,6 @@ dynamo-db-journal {
   queue-overflow-strategy = "Fail"
   queue-parallelism = 32
   write-parallelism = 32
-  refresh-interval = 0.5 s
   soft-delete = true
   query-batch-size = 1024
   consistent-read = false

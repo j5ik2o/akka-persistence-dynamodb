@@ -24,15 +24,15 @@ object QueryPluginConfig {
 
   def fromConfig(config: Config): QueryPluginConfig = {
     QueryPluginConfig(
-      tableName = config.asString("table-name", "Journal"),
+      tableName = config.asString("table-name", default = "Journal"),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      tagsIndexName = config.asString("tags-index-name", "TagsIndex"),
-      getJournalRowsIndexName = config.asString("get-journal-rows-index-name", "GetJournalRowsIndex"),
-      tagSeparator = config.asString("tag-separator", ","),
-      refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
-      shardCount = config.asInt("shard-count", 1),
-      queryBatchSize = config.asInt("query-batch-size", 1024),
-      consistentRead = config.asBoolean("consistent-read", false),
+      tagsIndexName = config.asString("tags-index-name", default = "TagsIndex"),
+      getJournalRowsIndexName = config.asString(key = "get-journal-rows-index-name", default = "GetJournalRowsIndex"),
+      tagSeparator = config.asString("tag-separator", default = ","),
+      shardCount = config.asInt("shard-count", default = 1),
+      refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
+      queryBatchSize = config.asInt("query-batch-size", default = 1024),
+      consistentRead = config.asBoolean("consistent-read", default = false),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
       metricsReporterClassName = config.asString(

@@ -19,8 +19,6 @@ import akka.stream.OverflowStrategy
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
-import scala.concurrent.duration._
-
 object JournalPluginConfig {
 
   def fromConfig(config: Config): JournalPluginConfig = {
@@ -34,7 +32,6 @@ object JournalPluginConfig {
       queueOverflowStrategy = config.asString("queue-overflow-strategy", OverflowStrategy.fail.getClass.getSimpleName),
       queueParallelism = config.asInt("queue-parallelism", default = 1),
       writeParallelism = config.asInt("write-parallelism", default = 8),
-      refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
       queryBatchSize = config.asInt("query-batch-size", default = 512),
       consistentRead = config.asBoolean("consistent-read", default = false),
       softDeleted = config.asBoolean("soft-delete", default = true),
@@ -58,7 +55,6 @@ case class JournalPluginConfig(
     queueOverflowStrategy: String,
     queueParallelism: Int,
     writeParallelism: Int,
-    refreshInterval: FiniteDuration,
     queryBatchSize: Int,
     consistentRead: Boolean,
     softDeleted: Boolean,

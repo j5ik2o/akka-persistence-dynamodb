@@ -26,13 +26,11 @@ object SnapshotPluginConfig {
     SnapshotPluginConfig(
       tableName = config.asString("table-name", "Snapshot"),
       columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      parallelism = config.asInt("parallelism", 32),
-      refreshInterval = config.asFiniteDuration("refresh-interval", 1 seconds),
       metricsReporterClassName = config.asString(
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
       ),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
+      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
     )
   }
 
@@ -41,8 +39,6 @@ object SnapshotPluginConfig {
 final case class SnapshotPluginConfig(
     tableName: String,
     columnsDefConfig: SnapshotColumnsDefConfig,
-    parallelism: Int,
-    refreshInterval: FiniteDuration,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
 )

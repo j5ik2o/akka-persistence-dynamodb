@@ -39,7 +39,7 @@ object QueryPluginConfig {
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
       ),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamodb-client"))
+      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
     )
   }
 

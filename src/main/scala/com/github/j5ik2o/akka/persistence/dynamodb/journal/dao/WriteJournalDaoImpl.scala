@@ -65,13 +65,13 @@ class WriteJournalDaoImpl(
   private val logger                                               = LoggerFactory.getLogger(getClass)
 
   private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy.toLowerCase() match {
-    case s if s == OverflowStrategy.dropHead.toString.toLowerCase()     => OverflowStrategy.dropHead
-    case s if s == OverflowStrategy.dropTail.toString.toLowerCase()     => OverflowStrategy.dropTail
-    case s if s == OverflowStrategy.dropBuffer.toString.toLowerCase()   => OverflowStrategy.dropBuffer
-    case s if s == OverflowStrategy.dropNew.toString.toLowerCase()      => OverflowStrategy.dropNew
-    case s if s == OverflowStrategy.fail.toString.toLowerCase()         => OverflowStrategy.fail
-    case s if s == OverflowStrategy.backpressure.toString.toLowerCase() => OverflowStrategy.backpressure
-    case _                                                              => throw new IllegalArgumentException()
+    case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase()     => OverflowStrategy.dropHead
+    case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase()     => OverflowStrategy.dropTail
+    case s if s == OverflowStrategy.dropBuffer.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropBuffer
+    case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase()      => OverflowStrategy.dropNew
+    case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase()         => OverflowStrategy.fail
+    case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() => OverflowStrategy.backpressure
+    case _                                                                            => throw new IllegalArgumentException()
   }
 
   private def putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =

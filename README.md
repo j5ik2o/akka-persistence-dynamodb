@@ -141,9 +141,6 @@ akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
 
 dynamo-db-snapshot {
   table-name = "Snapshot"
-  parallelism = 32
-  refresh-interval = 0.5 s
-  shard-count = 64
   columns-def {
     partition-key-column-name = "pkey"
     persistence-id-column-name = "persistence-id"

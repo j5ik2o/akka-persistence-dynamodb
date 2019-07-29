@@ -84,15 +84,19 @@ akka.persistence.journal.plugin = "dynamo-db-journal"
 dynamo-db-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal"
   plugin-dispatcher = "akka.actor.default-dispatcher"
+  
   table-name = "Journal"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
+  shard-count = 1
   queue-buffer-size = 1024
+  queue-overflow-strategy = "Fail"
   queue-parallelism = 32
   write-parallelism = 32
   refresh-interval = 0.5 s
   soft-delete = true
-  shard-count = 1
+  
+  
   columns-def {
     partition-key-column-name = "pkey"
     persistence-id-column-name = "persistence-id"

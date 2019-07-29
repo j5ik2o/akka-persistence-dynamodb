@@ -95,7 +95,7 @@ dynamo-db-journal {
   write-parallelism = 32
   refresh-interval = 0.5 s
   soft-delete = true
-  
+  query-batch-size = 1024
   
   columns-def {
     partition-key-column-name = "pkey"

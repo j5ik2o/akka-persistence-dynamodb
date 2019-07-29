@@ -101,7 +101,7 @@ dynamo-db-journal {
     ordering-column-name = "ordering"
     tags-column-name = "tags"
   }
-  dynamodb-client {
+  dynamo-db-client {
     max-concurrency = 128
     max-pending-connection-acquires = ?
     read-timeout = 3 s
@@ -148,7 +148,7 @@ dynamo-db-snapshot {
     ordering-column-name = "ordering"
     tags-column-name = "tags"
   }
-  dynamodb-client {
+  dynamo-db-client {
     max-concurrency = 128
     max-pending-connection-acquires = ?
     read-timeout = 3 s
@@ -203,7 +203,7 @@ dynamo-db-read-journal {
     ordering-column-name = "ordering"
     tags-column-name = "tags"
   }
-  dynamodb-client {
+  dynamo-db-client {
     max-concurrency = 128
     max-pending-connection-acquires = ?
     read-timeout = 3 s

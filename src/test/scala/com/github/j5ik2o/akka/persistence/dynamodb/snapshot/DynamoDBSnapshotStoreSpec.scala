@@ -37,15 +37,15 @@ class DynamoDBSnapshotStoreSpec
       ConfigFactory
         .parseString(
           s"""
-             |dynamo-db-journal.dynamodb-client {
+             |dynamo-db-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
              |
-           |dynamo-db-snapshot.dynamodb-client {
+           |dynamo-db-snapshot.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
              |
-           |dynamo-db-read-journal.dynamodb-client {
+           |dynamo-db-read-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
          """.stripMargin

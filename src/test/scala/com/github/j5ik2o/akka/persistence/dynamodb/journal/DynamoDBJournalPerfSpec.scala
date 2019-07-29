@@ -26,12 +26,12 @@ class DynamoDBJournalPerfSpec
         |  queue-parallelism = 1
         |  write-parallelism = 1
         |  query-batch-size = 1024
-        |  dynamodb-client {
+        |  dynamo-db-client {
         |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |  }
         |}
         |
-        |dynamo-db-snapshot.dynamodb-client {
+        |dynamo-db-snapshot.dynamo-db-client {
         |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |}
         |

@@ -129,18 +129,18 @@ class DynamoDBEventsByPersistenceIdTest
           s"""
            |dynamo-db-journal {
            |  query-batch-size = 1
-           |  dynamodb-client {
+           |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
            |  }
            |}
            |
-           |dynamo-db-snapshot.dynamodb-client {
+           |dynamo-db-snapshot.dynamo-db-client {
            |  endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
            |}
            |
            |dynamo-db-read-journal {
            |  query-batch-size = 1
-           |  dynamodb-client {
+           |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBEventsByPersistenceIdTest.dynamoDBPort}/"
            |  }
            |}

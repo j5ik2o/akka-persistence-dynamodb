@@ -87,11 +87,12 @@ dynamo-db-journal {
   table-name = "Journal"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
-  buffer-size = 1024
-  parallelism = 32
+  queue-buffer-size = 1024
+  queue-parallelism = 32
+  write-parallelism = 32
   refresh-interval = 0.5 s
   soft-delete = true
-  shard-count = 64
+  shard-count = 1
   columns-def {
     partition-key-column-name = "pkey"
     persistence-id-column-name = "persistence-id"

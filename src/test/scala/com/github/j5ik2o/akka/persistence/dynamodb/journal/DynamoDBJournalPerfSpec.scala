@@ -20,7 +20,11 @@ class DynamoDBJournalPerfSpec
       ConfigFactory
         .parseString(
           s"""
-        |dynamo-db-journal{
+        |dynamo-db-journal {
+        |  shard-count = 1
+        |  queue-buffer-size = 1024
+        |  queue-parallelism = 1
+        |  write-parallelism = 1
         |  query-batch-size = 1024
         |  dynamodb-client {
         |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
@@ -38,7 +42,7 @@ class DynamoDBJournalPerfSpec
     with DynamoDBSpecSupport {
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
 
-  override def eventsCount: Int = 10
+  override def eventsCount: Int = 100
 
   override protected lazy val dynamoDBPort: Int = DynamoDBJournalPerfSpec.dynamoDBPort
 

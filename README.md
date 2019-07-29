@@ -96,6 +96,7 @@ dynamo-db-journal {
   refresh-interval = 0.5 s
   soft-delete = true
   query-batch-size = 1024
+  consistentRead = false
   
   columns-def {
     partition-key-column-name = "pkey"
@@ -191,11 +192,11 @@ dynamo-db-read-journal {
   tags-index-name = "TagsIndex"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
-  buffer-size = 1024
-  parallelism = 32
+  shard-count = 1
   refresh-interval = 0.5 s
-  soft-delete = true
-  shard-count = 64
+  query-batch-size = 1024
+  consistent-read = false
+  
   columns-def {
     partition-key-column-name = "pkey"
     persistence-id-column-name = "persistence-id"

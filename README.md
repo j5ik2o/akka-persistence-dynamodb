@@ -176,7 +176,7 @@ Just this, if you like the default settings.
 ```hocon
 dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
-  write-plugin = "dynamo-db-journal"
+  write-plugin = "j5ik2o.dynamo-db-journal"
 }
 ```
 
@@ -186,7 +186,7 @@ If overwrite the default values.
 dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
   plugin-dispatcher = "akka.actor.default-dispatcher"
-  write-plugin = "dynamo-db-journal"
+  write-plugin = "j5ik2o.dynamo-db-journal"
   table-name = "Journal"
   tags-index-name = "TagsIndex"
   get-journal-rows-index-name = "GetJournalRows"

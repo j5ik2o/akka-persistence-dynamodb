@@ -37,15 +37,15 @@ class DynamoDBSnapshotStoreSpec
       ConfigFactory
         .parseString(
           s"""
-             |dynamo-db-journal.dynamo-db-client {
+             |j5ik2o.dynamo-db-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
              |
-           |dynamo-db-snapshot.dynamo-db-client {
+             |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
              |
-           |dynamo-db-read-journal.dynamo-db-client {
+             |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
          """.stripMargin
@@ -54,7 +54,7 @@ class DynamoDBSnapshotStoreSpec
     with ScalaFutures
     with DynamoDBSpecSupport {
 
-  implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreSpec.dynamoDBPort
 

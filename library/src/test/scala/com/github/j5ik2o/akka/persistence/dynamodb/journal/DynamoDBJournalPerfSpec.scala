@@ -20,7 +20,7 @@ class DynamoDBJournalPerfSpec
       ConfigFactory
         .parseString(
           s"""
-        |dynamo-db-journal {
+        |j5ik2o.dynamo-db-journal {
         |  shard-count = 1
         |  queue-buffer-size = 1024
         |  queue-parallelism = 1
@@ -31,7 +31,7 @@ class DynamoDBJournalPerfSpec
         |  }
         |}
         |
-        |dynamo-db-snapshot.dynamo-db-client {
+        |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
         |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |}
         |

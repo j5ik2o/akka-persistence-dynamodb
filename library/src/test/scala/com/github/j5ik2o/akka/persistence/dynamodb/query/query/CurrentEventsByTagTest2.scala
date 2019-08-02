@@ -82,17 +82,17 @@ class DynamoDBCurrentEventsByTagTest2
       ConfigFactory
         .parseString(
           s"""
-             |dynamo-db-journal.dynamo-db-client {
+             |j5ik2o.dynamo-db-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest2.dynamoDBPort}/"
              |}
              |
-             |dynamo-db-snapshot.dynamo-db-client {
+             |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest2.dynamoDBPort}/"
              |}
-             |dynamo-db-read-journal {
+             |j5ik2o.dynamo-db-read-journal {
              |  batch-size = 1
              |}
-             |dynamo-db-read-journal.dynamo-db-client {
+             |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
              |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest2.dynamoDBPort}/"
              |}
            """.stripMargin
@@ -100,7 +100,7 @@ class DynamoDBCurrentEventsByTagTest2
     )
     with DynamoDBSpecSupport {
 
-  override implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
+  override implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByTagTest2.dynamoDBPort
 

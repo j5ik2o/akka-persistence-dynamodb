@@ -32,7 +32,7 @@ class WriteJournalDaoImplSpec
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {
-  implicit val pc: PatienceConfig = PatienceConfig(20 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

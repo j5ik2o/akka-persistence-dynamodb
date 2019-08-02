@@ -48,7 +48,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 object DynamoDBReadJournal {
-  final val Identifier = "dynamo-db-read-journal"
+  final val Identifier = "j5ik2o.dynamo-db-read-journal"
 
   private sealed trait FlowControl
 

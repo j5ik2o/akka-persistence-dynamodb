@@ -26,6 +26,7 @@ import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
+import scala.concurrent.duration._
 
 abstract class CurrentEventsByPersistenceId2Test(config: Config) extends QueryJournalSpec(config) {
 
@@ -111,18 +112,18 @@ class DynamoDBCurrentEventsByPersistenceId2Test
       ConfigFactory
         .parseString(
           s"""
-           |dynamo-db-journal{
+           |j5ik2o.dynamo-db-journal{
            |  query-batch-size = 1
            |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
            |  }
            |}
            |
-           |dynamo-db-snapshot.dynamo-db-client {
+           |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
            |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
            |}
            |
-           |dynamo-db-read-journal{ 
+           |j5ik2o.dynamo-db-read-journal{ 
            |  query-batch-size = 1
            |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
@@ -132,6 +133,8 @@ class DynamoDBCurrentEventsByPersistenceId2Test
         ).withFallback(ConfigFactory.load())
     )
     with DynamoDBSpecSupport {
+
+  override implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort
 

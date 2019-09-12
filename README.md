@@ -73,15 +73,15 @@ libraryDependencies += Seq(
 Just this, if you like the default settings.
 
 ```hocon
-akka.persistence.journal.plugin = "dynamo-db-journal"
+akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
 ```
 
 If overwrite the default values.
 
 ```hocon
-akka.persistence.journal.plugin = "dynamo-db-journal"
+akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
 
-dynamo-db-journal {
+j5ik2o.dynamo-db-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal"
   plugin-dispatcher = "akka.actor.default-dispatcher"
   
@@ -131,15 +131,15 @@ dynamo-db-journal {
 Just this, if you like the default settings.
 
 ```hocon
-akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
+akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
 ```
 
 If overwrite the default values.
 
 ```hocon
-akka.persistence.snapshot-store.plugin = "dynamo-db-snapshot"
+akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
 
-dynamo-db-snapshot {
+j5ik2o.dynamo-db-snapshot {
   table-name = "Snapshot"
   columns-def {
     partition-key-column-name = "pkey"
@@ -183,7 +183,7 @@ dynamo-db-read-journal {
 If overwrite the default values.
 
 ```hocon
-dynamo-db-read-journal {
+j5ik2o.dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
   plugin-dispatcher = "akka.actor.default-dispatcher"
   write-plugin = "j5ik2o.dynamo-db-journal"
@@ -248,7 +248,7 @@ Assuming the default values are used (adjust as necessary if not):
 I also found it necessary to specify the journal index name in the configuration:
 
 ```hocon
-dynamo-db-read-journal {
+j5ik2o.dynamo-db-read-journal {
   table-name = "Journal"
   get-journal-rows-index-name = "GetJournalRows"
 }

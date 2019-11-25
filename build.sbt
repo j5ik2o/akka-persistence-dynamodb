@@ -1,8 +1,8 @@
 val scala211Version     = "2.11.12"
-val scala212Version     = "2.12.8"
-val scala213Version     = "2.13.0"
-val akkaVersion         = "2.5.23"
-val reactiveAwsDynamoDB = "1.1.4"
+val scala212Version     = "2.12.10"
+val scala213Version     = "2.13.1"
+val akkaVersion         = "2.5.26"
+val reactiveAwsDynamoDB = "1.1.5"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -72,7 +72,7 @@ lazy val library = (project in file("library"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb",
-    // crossScalaVersions += scala213Version,
+    crossScalaVersions += scala213Version,
     libraryDependencies ++= Seq(
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
@@ -102,7 +102,7 @@ lazy val benchmark = (project in file("benchmark"))
       name := "benchmark",
       skip in publish := true,
       libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-persistence-dynamodb" % "1.1.1"
+          "com.typesafe.akka" %% "akka-persistence-dynamodb" % "1.2.0-RC1"
         )
     )
   )

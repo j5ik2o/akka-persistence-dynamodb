@@ -20,6 +20,7 @@ import java.net.URI
 import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbAsyncClientBuilder }
 
 object DynamoDbClientBuilderUtils {
@@ -35,6 +36,9 @@ object DynamoDbClientBuilderUtils {
     }
     clientConfig.endpoint.foreach { ep =>
       dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.endpointOverride(URI.create(ep))
+    }
+    clientConfig.region.foreach { r =>
+      dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.region(Region.of(r))
     }
     dynamoDbAsyncClientBuilder
   }

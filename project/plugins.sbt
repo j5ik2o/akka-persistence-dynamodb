@@ -8,7 +8,7 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.h2database"  % "h2"         % "1.4.195",
-  "commons-io"      % "commons-io" % "2.5",
+  "commons-io"      % "commons-io" % "2.6",
   "org.seasar.util" % "s2util"     % "0.0.1"
 )
 

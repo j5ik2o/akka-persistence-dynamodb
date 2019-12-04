@@ -22,4 +22,4 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.1")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.4.2")
 
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.3.5")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.3.7")

@@ -1,8 +1,8 @@
 val scala211Version     = "2.11.12"
 val scala212Version     = "2.12.8"
 val scala213Version     = "2.13.0"
-val akkaVersion         = "2.5.23"
-val reactiveAwsDynamoDB = "1.1.4"
+val akkaVersion         = "2.5.26"
+val reactiveAwsDynamoDB = "1.1.5"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -84,7 +84,7 @@ lazy val library = (project in file("library"))
         "com.typesafe.akka" %% "akka-persistence-tck"        % akkaVersion % Test,
         "com.typesafe.akka" %% "akka-testkit"                % akkaVersion % Test,
         "ch.qos.logback"    % "logback-classic"              % "1.2.3" % Test,
-        "org.slf4j"         % "jul-to-slf4j"                 % "1.7.26" % Test
+        "org.slf4j"         % "jul-to-slf4j"                 % "1.7.29" % Test
       ),
     dependencyOverrides ++= Seq(
         "io.netty"               % "netty-codec-http"    % "4.1.33.Final",

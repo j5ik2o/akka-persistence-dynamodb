@@ -8,18 +8,18 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.h2database"  % "h2"         % "1.4.195",
-  "commons-io"      % "commons-io" % "2.5",
+  "commons-io"      % "commons-io" % "2.6",
   "org.seasar.util" % "s2util"     % "0.0.1"
 )
 
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.2")
 
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.11")
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.12")
 
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.5")
 
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.1")
+addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.2")
 
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.4.2")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.4.3")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.3.5")

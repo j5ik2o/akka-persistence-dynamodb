@@ -31,6 +31,7 @@ lazy val baseSettings = Seq(
   resolvers ++= Seq(
       Resolver.sonatypeRepo("snapshots"),
       Resolver.sonatypeRepo("releases"),
+      "Seasar Repository" at "http://maven.seasar.org/maven2/",
       "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
     ),
   parallelExecution in Test := false,

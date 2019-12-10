@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.seasar.util" % "s2util"     % "0.0.1"
 )
 
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.7")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.3.0")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.12")
 

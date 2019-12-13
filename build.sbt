@@ -17,7 +17,7 @@ lazy val baseSettings = Seq(
   sonatypeProfileName := "com.github.j5ik2o",
   organization := "com.github.j5ik2o",
   scalaVersion := scala212Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version,scala213Version),
+  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",
       "-deprecation",

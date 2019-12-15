@@ -1,6 +1,6 @@
 val scala211Version     = "2.11.12"
-val scala212Version     = "2.12.8"
-val scala213Version     = "2.13.0"
+val scala212Version     = "2.12.10"
+val scala213Version     = "2.13.1"
 val akkaVersion         = "2.5.27"
 val reactiveAwsDynamoDB = "1.1.6"
 
@@ -17,7 +17,7 @@ lazy val baseSettings = Seq(
   sonatypeProfileName := "com.github.j5ik2o",
   organization := "com.github.j5ik2o",
   scalaVersion := scala212Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version),
+  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",
       "-deprecation",
@@ -81,6 +81,7 @@ lazy val library = (project in file("library"))
         "com.typesafe.akka" %% "akka-persistence"            % akkaVersion,
         "com.typesafe.akka" %% "akka-persistence-query"      % akkaVersion,
         "com.typesafe.akka" %% "akka-stream"                 % akkaVersion,
+        "com.typesafe.akka" %% "akka-slf4j"                  % akkaVersion,
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-test"  % reactiveAwsDynamoDB % Test,
         "com.typesafe.akka" %% "akka-stream-testkit"         % akkaVersion % Test,
         "com.typesafe.akka" %% "akka-persistence-tck"        % akkaVersion % Test,
@@ -97,23 +98,9 @@ lazy val library = (project in file("library"))
       )
   )
 
-lazy val benchmark = (project in file("benchmark"))
-  .settings(baseSettings)
-  .settings(
-    Seq(
-      name := "benchmark",
-      skip in publish := true,
-      libraryDependencies ++= Seq(
-          "com.typesafe.akka" %% "akka-persistence-dynamodb" % "1.1.1"
-        )
-    )
-  )
-  .enablePlugins(JmhPlugin)
-  .dependsOn(library)
-
 lazy val root = (project in file("."))
   .settings(baseSettings)
   .settings(
     skip in publish := true
   )
-  .aggregate(library, benchmark)
+  .aggregate(library)

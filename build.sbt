@@ -87,7 +87,7 @@ lazy val library = (project in file("library"))
         "com.typesafe.akka" %% "akka-persistence-tck"        % akkaVersion % Test,
         "com.typesafe.akka" %% "akka-testkit"                % akkaVersion % Test,
         "ch.qos.logback"    % "logback-classic"              % "1.2.3" % Test,
-        "org.slf4j"         % "jul-to-slf4j"                 % "1.7.29" % Test
+        "org.slf4j"         % "jul-to-slf4j"                 % "1.7.30" % Test
       ),
     dependencyOverrides ++= Seq(
         "io.netty"               % "netty-codec-http"    % "4.1.33.Final",

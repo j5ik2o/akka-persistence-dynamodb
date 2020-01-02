@@ -100,6 +100,7 @@ class DynamoDBReadJournalSpec
 
   protected val journalPluginConfig: JournalPluginConfig =
     JournalPluginConfig.fromConfig(config)
+
   protected val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(config)
 

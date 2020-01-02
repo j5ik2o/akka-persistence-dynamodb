@@ -34,6 +34,7 @@ object JournalColumnsDefConfig {
   }
 
 }
+
 case class JournalColumnsDefConfig(
     partitionKeyColumnName: String,
     persistenceIdColumnName: String,

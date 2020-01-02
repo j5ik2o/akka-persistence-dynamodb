@@ -86,6 +86,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     pluginConfig.journalSequenceRetrievalConfig
 
   private val asyncHttpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
+
   private val dynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, asyncHttpClientBuilder.build())
 
@@ -126,8 +127,8 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
 
   override def persistenceIds(): Source[String, NotUsed] =
     Source
-      .repeat(0).flatMapConcat(
-        _ => Source.tick(refreshInterval, 0.seconds, 0).take(1).flatMapConcat(_ => currentPersistenceIds())
+      .repeat(0).flatMapConcat(_ =>
+        Source.tick(refreshInterval, 0.seconds, 0).take(1).flatMapConcat(_ => currentPersistenceIds())
       )
       .statefulMapConcat[String] { () =>
         var knownIds = Set.empty[String]

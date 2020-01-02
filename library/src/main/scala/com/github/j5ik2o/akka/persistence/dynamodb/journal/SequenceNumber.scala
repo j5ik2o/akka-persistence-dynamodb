@@ -6,6 +6,7 @@ object SequenceNumber {
 }
 
 case class SequenceNumber(value: Long) extends Ordered[SequenceNumber] {
+
   override def compare(that: SequenceNumber): Int = {
     value compare that.value
   }

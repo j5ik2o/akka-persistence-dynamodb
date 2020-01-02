@@ -50,6 +50,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
   private val httpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
+
   private val dynamoDbAsyncClientBuilder =
     DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, httpClientBuilder.build())
   protected val javaClient: JavaDynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
@@ -98,16 +99,12 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         snapshotDao.deleteUpToMaxTimestamp(pid, maxTimestamp).runWith(Sink.ignore).map(_ => ())
       case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
         snapshotDao
-          .deleteUpToMaxSequenceNr(pid, SequenceNumber(maxSequenceNr)).runWith(Sink.ignore).map(
-            _ => ()
-          )
+          .deleteUpToMaxSequenceNr(pid, SequenceNumber(maxSequenceNr)).runWith(Sink.ignore).map(_ => ())
       case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
         snapshotDao
           .deleteUpToMaxSequenceNrAndMaxTimestamp(pid, SequenceNumber(maxSequenceNr), maxTimestamp).runWith(
             Sink.ignore
-          ).map(
-            _ => ()
-          )
+          ).map(_ => ())
       case _ => Future.successful(())
     }
   }

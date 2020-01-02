@@ -1,4 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.serialization
+
 import akka.persistence.SnapshotMetadata
 
 trait SnapshotSerializer[T] {

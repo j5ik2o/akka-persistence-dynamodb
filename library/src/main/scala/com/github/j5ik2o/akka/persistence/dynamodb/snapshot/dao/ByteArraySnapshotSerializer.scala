@@ -31,6 +31,7 @@ trait SnapshotSerializer[T] {
 }
 
 class ByteArraySnapshotSerializer(serialization: Serialization) extends SnapshotSerializer[SnapshotRow] {
+
   override def serialize(
       metadata: SnapshotMetadata,
       snapshot: Any

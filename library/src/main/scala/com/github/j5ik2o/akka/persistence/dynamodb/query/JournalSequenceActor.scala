@@ -59,6 +59,7 @@ object JournalSequenceActor {
     def contains(id: OrderingId): Boolean = elements.exists(_.containsTyped(id))
     def isEmpty: Boolean                  = elements.forall(_.isEmpty)
   }
+
   private object MissingElements {
     def empty: MissingElements = MissingElements(Vector.empty)
   }

@@ -174,7 +174,7 @@ j5ik2o.dynamo-db-snapshot {
 Just this, if you like the default settings.
 
 ```hocon
-dynamo-db-read-journal {
+j5ik2o.dynamo-db-read-journal {
   class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
   write-plugin = "j5ik2o.dynamo-db-journal"
 }

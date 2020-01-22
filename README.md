@@ -56,7 +56,7 @@ By the way, akka/akka-persistence-dynamodb maybe has a heavy maintenance cost be
 
 ## Installation
 
-Add the following to your sbt build (Scala 2.11.x, 2.12.x):
+Add the following to your sbt build (Scala 2.11.x, 2.12.x, 2.13.x):
 
 ```scala
 resolvers += "Sonatype OSS Release Repository" at "https://oss.sonatype.org/content/repositories/releases/"

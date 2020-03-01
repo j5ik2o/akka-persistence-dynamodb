@@ -50,9 +50,7 @@ trait DaoSupport {
         .keyConditionExpression(
           "#pid = :pid and #snr between :min and :max"
         )
-        .filterExpressionAsScala(deleted.map { _ =>
-          s"#flg = :flg"
-        })
+        .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
         .expressionAttributeNamesAsScala(
           Map(
             "#pid" -> columnsDefConfig.partitionKeyColumnName,
@@ -78,9 +76,7 @@ trait DaoSupport {
         .keyConditionExpression(
           "#pid = :pid and #snr between :min and :max"
         )
-        .filterExpressionAsScala(deleted.map { _ =>
-          s"#flg = :flg"
-        })
+        .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
         .expressionAttributeNamesAsScala(
           Map(
             "#pid" -> columnsDefConfig.persistenceIdColumnName,

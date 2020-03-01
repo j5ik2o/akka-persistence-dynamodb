@@ -37,9 +37,7 @@ object DynamoDbClientBuilderUtils {
     clientConfig.endpoint.foreach { ep =>
       dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.endpointOverride(URI.create(ep))
     }
-    clientConfig.region.foreach { r =>
-      dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.region(Region.of(r))
-    }
+    clientConfig.region.foreach { r => dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.region(Region.of(r)) }
     dynamoDbAsyncClientBuilder
   }
 

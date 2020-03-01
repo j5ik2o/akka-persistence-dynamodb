@@ -285,9 +285,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   def currentEventsByTag(tag: String, offset: Long): Source[EventEnvelope, NotUsed] =
     readJournalDao
       .maxJournalSequence()
-      .flatMapConcat { maxOrderingInDb =>
-        eventsByTag(tag, offset, terminateAfterOffset = Some(maxOrderingInDb))
-      }
+      .flatMapConcat { maxOrderingInDb => eventsByTag(tag, offset, terminateAfterOffset = Some(maxOrderingInDb)) }
 
   override def currentEventsByTag(tag: String, offset: Offset): Source[EventEnvelope, NotUsed] = {
     offset match {

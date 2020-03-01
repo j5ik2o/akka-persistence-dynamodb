@@ -228,9 +228,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         )
     }
     val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
-    future.onComplete { _ =>
-      log.debug(s"asyncUpdateEvent($persistenceId, $sequenceNumber, $message): finished")
-    }
+    future.onComplete { _ => log.debug(s"asyncUpdateEvent($persistenceId, $sequenceNumber, $message): finished") }
     future
   }
 }

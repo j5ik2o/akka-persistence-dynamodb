@@ -240,9 +240,7 @@ class WriteJournalDaoImpl(
                       persistenceId,
                       SequenceNumber(highestMarkedSequenceNr - 1),
                       deleted = false
-                    ).flatMapConcat { _ =>
-                      deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-                    }
+                    ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
                   }
               } else
                 Source.single(result)
@@ -740,9 +738,9 @@ class WriteJournalDaoImpl(
                   columnsDefConfig.messageColumnName -> AttributeValue
                     .builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
                 ) ++ journalRow.tags
-                  .map { tag =>
-                    Map(columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build())
-                  }.getOrElse(Map.empty)
+                  .map { tag => Map(columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()) }.getOrElse(
+                    Map.empty
+                  )
               ).build()
             Source.single(request).via(streamClient.putItemFlow(1)).flatMapConcat { response =>
               metricsReporter.setPutJournalRowsItemDuration(System.nanoTime() - itemStart)

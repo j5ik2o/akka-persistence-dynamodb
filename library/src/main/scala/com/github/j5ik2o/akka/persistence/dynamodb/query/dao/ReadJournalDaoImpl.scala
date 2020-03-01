@@ -179,9 +179,7 @@ class ReadJournalDaoImpl(
               val index = new AtomicLong()
               journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
             }
-            .filter { row =>
-              row.ordering > offset && row.ordering <= maxOffset
-            }
+            .filter { row => row.ordering > offset && row.ordering <= maxOffset }
             .take(max)
             .map { response =>
               metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
@@ -241,9 +239,7 @@ class ReadJournalDaoImpl(
             }
         }
         loop(None, Source.empty, 0L, 1)
-          .map { result =>
-            result(columnsDefConfig.orderingColumnName).n.toLong
-          }
+          .map { result => result(columnsDefConfig.orderingColumnName).n.toLong }
           .drop(offset)
           .take(limit)
           .withAttributes(logLevels).map { response =>

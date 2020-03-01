@@ -199,20 +199,19 @@ class SnapshotDaoImpl(
       .scanIndexForward(false)
       .limit(1).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
-        response.itemsAsScala.get.headOption
-      }.map { rows =>
-        rows.map { row =>
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ).right.get
-        }
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
+        rows =>
+          rows.map { row =>
+            serializer
+              .deserialize(
+                SnapshotRow(
+                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                  created = row(columnsDefConfig.createdColumnName).n.toLong
+                )
+              ).right.get
+          }
       }
   }
 
@@ -240,20 +239,19 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
-        response.itemsAsScala.get.headOption
-      }.map { rows =>
-        rows.map { row =>
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ).right.get
-        }
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
+        rows =>
+          rows.map { row =>
+            serializer
+              .deserialize(
+                SnapshotRow(
+                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                  created = row(columnsDefConfig.createdColumnName).n.toLong
+                )
+              ).right.get
+          }
       }
   }
 
@@ -275,20 +273,19 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
-        response.itemsAsScala.get.headOption
-      }.map { rows =>
-        rows.map { row =>
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ).right.get
-        }
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
+        rows =>
+          rows.map { row =>
+            serializer
+              .deserialize(
+                SnapshotRow(
+                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                  created = row(columnsDefConfig.createdColumnName).n.toLong
+                )
+              ).right.get
+          }
       }
   }
 
@@ -317,20 +314,19 @@ class SnapshotDaoImpl(
         )
       ).scanIndexForward(false).build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response =>
-        response.itemsAsScala.get.headOption
-      }.map { rows =>
-        rows.map { row =>
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ).right.get
-        }
+      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
+        rows =>
+          rows.map { row =>
+            serializer
+              .deserialize(
+                SnapshotRow(
+                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                  created = row(columnsDefConfig.createdColumnName).n.toLong
+                )
+              ).right.get
+          }
       }
   }
 

@@ -104,6 +104,7 @@ lazy val library = (project in file("library"))
 
 lazy val root = (project in file("."))
   .settings(baseSettings)
+  .settings(deploySettings)
   .settings(
     skip in publish := true
   )

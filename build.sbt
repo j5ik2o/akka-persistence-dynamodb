@@ -44,8 +44,8 @@ lazy val deploySettings = Seq(
   publishTo := sonatypePublishToBundle.value,
   credentials := {
     val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
-    val pgpCredentials = (baseDirectory in LocalRootProject).value / ".pgpCredentials"
-    Credentials(ivyCredentials) :: Credentials(pgpCredentials) :: Nil
+    val gpgCredentials = (baseDirectory in LocalRootProject).value / ".gpgCredentials"
+    Credentials(ivyCredentials) :: Credentials(gpgCredentials) :: Nil
   },
 )
 

@@ -61,7 +61,8 @@ lazy val baseSettings = Seq(
         </developer>
       </developers>
   },
-  publishTo in ThisBuild := sonatypePublishTo.value,
+  publishTo in ThisBuild := sonatypePublishToBundle.value,
+  releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   // Global / useGpg := false,
   credentials := {
     val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"

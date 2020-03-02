@@ -13,28 +13,8 @@ def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partial
     )
 }
 
-lazy val baseSettings = Seq(
+lazy val deploySettings = Seq(
   sonatypeProfileName := "com.github.j5ik2o",
-  organization := "com.github.j5ik2o",
-  scalaVersion := scala212Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
-  scalacOptions ++= (Seq(
-      "-feature",
-      "-deprecation",
-      "-unchecked",
-      "-encoding",
-      "UTF-8",
-      "-language:_",
-      "-Ydelambdafy:method",
-      "-target:jvm-1.8"
-    ) ++ crossScalacOptions(scalaVersion.value)),
-  resolvers ++= Seq(
-      Resolver.sonatypeRepo("snapshots"),
-      Resolver.sonatypeRepo("releases"),
-      "Seasar Repository" at "https://maven.seasar.org/maven2/",
-      "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
-    ),
-  parallelExecution in Test := false,
   publishMavenStyle := true,
   publishArtifact in Test := false,
   pomIncludeRepository := { _ =>
@@ -61,17 +41,41 @@ lazy val baseSettings = Seq(
         </developer>
       </developers>
   },
-  publishTo in ThisBuild := sonatypePublishToBundle.value,
+  publishTo := sonatypePublishToBundle.value,
   credentials := {
     val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
     val pgpCredentials = (baseDirectory in LocalRootProject).value / ".pgpCredentials"
     Credentials(ivyCredentials) :: Credentials(pgpCredentials) :: Nil
   },
+)
+
+lazy val baseSettings = Seq(
+  organization := "com.github.j5ik2o",
+  scalaVersion := scala212Version,
+  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
+  scalacOptions ++= (Seq(
+      "-feature",
+      "-deprecation",
+      "-unchecked",
+      "-encoding",
+      "UTF-8",
+      "-language:_",
+      "-Ydelambdafy:method",
+      "-target:jvm-1.8"
+    ) ++ crossScalacOptions(scalaVersion.value)),
+  resolvers ++= Seq(
+      Resolver.sonatypeRepo("snapshots"),
+      Resolver.sonatypeRepo("releases"),
+      "Seasar Repository" at "https://maven.seasar.org/maven2/",
+      "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
+    ),
+  parallelExecution in Test := false,
   scalafmtOnCompile in ThisBuild := true
 )
 
 lazy val library = (project in file("library"))
   .settings(baseSettings)
+  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb",
     // crossScalaVersions += scala213Version,

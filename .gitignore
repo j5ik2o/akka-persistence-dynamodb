@@ -26,4 +26,4 @@ dump.rdb
 
 .DS_Store
 .credentials
-.pgpCredentials
+.gpgCredentials

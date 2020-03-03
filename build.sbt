@@ -42,7 +42,6 @@ lazy val deploySettings = Seq(
       </developers>
   },
   publishTo := sonatypePublishToBundle.value,
-  Global / useGpg := false,
   credentials := {
     val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
     val gpgCredentials = (baseDirectory in LocalRootProject).value / ".gpgCredentials"

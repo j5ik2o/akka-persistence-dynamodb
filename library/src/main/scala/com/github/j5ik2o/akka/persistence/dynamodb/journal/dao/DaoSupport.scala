@@ -33,7 +33,7 @@ trait DaoSupport {
   )
 
   protected val startTimeSource: Source[Long, NotUsed] = Source
-    .lazily(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
+    .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
 
   def getMessages(
       persistenceId: PersistenceId,

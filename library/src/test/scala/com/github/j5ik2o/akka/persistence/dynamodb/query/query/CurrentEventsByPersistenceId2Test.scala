@@ -46,47 +46,47 @@ abstract class CurrentEventsByPersistenceId2Test(config: Config) extends QueryJo
 
       withCurrentEventsByPersistenceId()("my-1", 0, 1) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(1), "my-1", 1, "a-1"))
+        tp.expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", 1, 1) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(1), "my-1", 1, "a-1"))
+        tp.expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", 1, 2) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(1), "my-1", 1, "a-1"))
-        tp.expectNext(EventEnvelope(Sequence(2), "my-1", 2, "a-2"))
+        tp.expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
+        tp.expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "a-2", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", -1, 2) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(1), "my-1", 1, "a-1"))
-        tp.expectNext(EventEnvelope(Sequence(2), "my-1", 2, "a-2"))
+        tp.expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
+        tp.expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "a-2", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", 2, 3) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(2), "my-1", 2, "a-2"))
-        tp.expectNext(EventEnvelope(Sequence(3), "my-1", 3, "a-3"))
+        tp.expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "a-2", 0L))
+        tp.expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "a-3", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", 6, 7) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(6), "my-1", 6, "a-6"))
-        tp.expectNext(EventEnvelope(Sequence(7), "my-1", 7, "a-7"))
+        tp.expectNext(new EventEnvelope(Sequence(6), "my-1", 6, "a-6", 0L))
+        tp.expectNext(new EventEnvelope(Sequence(7), "my-1", 7, "a-7", 0L))
         tp.expectComplete()
       }
 
       withCurrentEventsByPersistenceId()("my-1", 7, 7) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(7), "my-1", 7, "a-7"))
+        tp.expectNext(new EventEnvelope(Sequence(7), "my-1", 7, "a-7", 0L))
         tp.expectComplete()
       }
 

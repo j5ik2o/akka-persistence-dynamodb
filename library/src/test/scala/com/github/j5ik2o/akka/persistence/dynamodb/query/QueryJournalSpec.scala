@@ -32,7 +32,9 @@ import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
+import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -40,14 +42,13 @@ import scala.language.implicitConversions
 import scala.util.Try
 
 abstract class QueryJournalSpec(config: Config)
-    extends FlatSpec
+    extends AnyFlatSpecLike
     with Matchers
     with ScalaFutures
     with BeforeAndAfterAll
     with BeforeAndAfterEach
     with Eventually {
   implicit val system: ActorSystem  = ActorSystem("test", config)
-  implicit val mat: Materializer    = ActorMaterializer()
   implicit val ec: ExecutionContext = system.dispatcher
   val log: LoggingAdapter           = Logging(system, this.getClass)
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)

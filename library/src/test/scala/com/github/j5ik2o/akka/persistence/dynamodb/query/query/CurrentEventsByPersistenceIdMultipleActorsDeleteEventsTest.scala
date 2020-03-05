@@ -44,9 +44,9 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
-          .expectNext(EventEnvelope(Sequence(1), "my-1", 1, "a-1"))
-          .expectNext(EventEnvelope(Sequence(2), "my-1", 2, "b-2"))
-          .expectNext(EventEnvelope(Sequence(3), "my-1", 3, "c-3"))
+          .expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
+          .expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "b-2", 0L))
+          .expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "c-3", 0L))
           .expectComplete()
       }
 
@@ -54,8 +54,8 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
-          .expectNext(EventEnvelope(Sequence(2), "my-1", 2, "b-2"))
-          .expectNext(EventEnvelope(Sequence(3), "my-1", 3, "c-3"))
+          .expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "b-2", 0L))
+          .expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "c-3", 0L))
           .expectComplete()
       }
 
@@ -63,7 +63,7 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
-          .expectNext(EventEnvelope(Sequence(3), "my-1", 3, "c-3"))
+          .expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "c-3", 0L))
           .expectComplete()
       }
 

@@ -75,7 +75,6 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with EventsByTagQuery {
   private val logger                = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContext = system.dispatcher
-  implicit val mat: Materializer    = ActorMaterializer()(system)
 
   protected val pluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(config)
@@ -171,7 +170,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   ): Source[EventEnvelope, NotUsed] =
     currentJournalEventsByPersistenceId(persistenceId, fromSequenceNr, toSequenceNr)
       .mapConcat(adaptEvents)
-      .map(repr => EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload))
+      .map(repr => new EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload, 0L))
       .log("currentEventsByPersistenceId")
       .withAttributes(logLevels)
 
@@ -194,7 +193,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
                   .take(queryBatchSize)
               }
               .mapConcat(adaptEvents)
-              .map(repr => EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload))
+              .map(repr =>
+                new EventEnvelope(Sequence(repr.sequenceNr), repr.persistenceId, repr.sequenceNr, repr.payload, 0L)
+              )
               .runWith(Sink.seq).map { xs =>
                 val newFromSeqNr = nextFromSeqNr(xs)
                 Some((newFromSeqNr, xs))
@@ -215,7 +216,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         .via(serializer.deserializeFlow)
         .mapConcat {
           case (repr, _, ordering) =>
-            adaptEvents(repr).map(r => EventEnvelope(Sequence(ordering), r.persistenceId, r.sequenceNr, r.payload))
+            adaptEvents(repr).map(r =>
+              new EventEnvelope(Sequence(ordering), r.persistenceId, r.sequenceNr, r.payload, 0L)
+            )
         }
     }
   }

@@ -45,8 +45,8 @@ abstract class CurrentPersistenceIds1Test(config: Config) extends QueryJournalSp
 
       withCurrentEventsByPersistenceId()("my-1", 2, 3) { tp =>
         tp.request(Int.MaxValue)
-        tp.expectNext(EventEnvelope(Sequence(2), "my-1", 2, "a-2"))
-        tp.expectNext(EventEnvelope(Sequence(3), "my-1", 3, "a-3"))
+        tp.expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "a-2", 0L))
+        tp.expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "a-3", 0L))
         tp.expectComplete()
       }
     }

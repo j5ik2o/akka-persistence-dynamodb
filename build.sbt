@@ -1,4 +1,3 @@
-val scala211Version     = "2.11.12"
 val scala212Version     = "2.12.10"
 val scala213Version     = "2.13.1"
 val akkaVersion         = "2.6.3"
@@ -7,10 +6,6 @@ val reactiveAwsDynamoDB = "1.1.6"
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
     Seq.empty
-  case Some((2L, scalaMajor)) if scalaMajor <= 11 =>
-    Seq(
-      "-Yinline-warnings"
-    )
 }
 
 lazy val deploySettings = Seq(
@@ -53,7 +48,7 @@ lazy val deploySettings = Seq(
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
   scalaVersion := scala212Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
+  crossScalaVersions := Seq(scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",
       "-deprecation",

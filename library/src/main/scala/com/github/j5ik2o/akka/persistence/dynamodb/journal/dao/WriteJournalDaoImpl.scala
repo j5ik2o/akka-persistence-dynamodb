@@ -19,9 +19,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 import java.io.IOException
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete }
-import akka.stream.{ Materializer, OverflowStrategy, QueueOfferResult }
+import akka.stream.{ OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
@@ -44,7 +45,7 @@ class WriteJournalDaoImpl(
     protected val metricsReporter: MetricsReporter
 )(
     implicit ec: ExecutionContext,
-    mat: Materializer
+    system: ActorSystem
 ) extends WriteJournalDao
     with DaoSupport {
 
@@ -675,7 +676,7 @@ class WriteJournalDaoImpl(
               Source.single(0L)
             else
               Source
-                .lazily { () =>
+                .lazySource { () =>
                   val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
                     WriteRequest
                       .builder().deleteRequest(
@@ -804,7 +805,7 @@ class WriteJournalDaoImpl(
             Source.single(0L)
           else
             Source
-              .lazily { () =>
+              .lazySource { () =>
                 val requestItems = journalRows.map { journalRow =>
                   WriteRequest
                     .builder().putRequest(

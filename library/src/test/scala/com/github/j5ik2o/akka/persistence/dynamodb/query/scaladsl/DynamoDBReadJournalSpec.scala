@@ -39,7 +39,10 @@ import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
+import org.scalatest.{ BeforeAndAfter, Matchers }
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.freespec.AnyFreeSpecLike
+
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
@@ -73,7 +76,7 @@ class DynamoDBReadJournalSpec
           ).withFallback(ConfigFactory.load())
       )
     )
-    with FreeSpecLike
+    with AnyFreeSpecLike
     with Matchers
     with Eventually
     with ScalaFutures
@@ -93,8 +96,7 @@ class DynamoDBReadJournalSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  implicit val mat = ActorMaterializer()
-  implicit val ec  = system.dispatcher
+  implicit val ec = system.dispatcher
 
   private val config = system.settings.config
 
@@ -114,7 +116,7 @@ class DynamoDBReadJournalSpec
     new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, mat)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, system)
 
   val readJournal: ReadJournal
     with CurrentPersistenceIdsQuery

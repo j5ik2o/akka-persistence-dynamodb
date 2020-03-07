@@ -58,7 +58,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem  = context.system
-  implicit val mat: Materializer    = ActorMaterializer()
   implicit val scheduler: Scheduler = Scheduler(ec)
 
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)

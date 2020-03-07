@@ -18,7 +18,8 @@ import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSy
 import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FreeSpecLike, Matchers }
+import org.scalatest.freespec.AnyFreeSpecLike
+import org.scalatest.matchers.should.Matchers
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -29,7 +30,7 @@ import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
     extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
-    with FreeSpecLike
+    with AnyFreeSpecLike
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {
@@ -66,14 +67,13 @@ class WriteJournalDaoImplSpec
   private val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
 
-  implicit val mat = ActorMaterializer()
-  implicit val ec  = system.dispatcher
+  implicit val ec = system.dispatcher
 
   val readJournalDao =
     new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, mat)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, system)
 
   val sch = Scheduler(ec)
 

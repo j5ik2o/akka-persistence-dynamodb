@@ -44,7 +44,6 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   implicit val ec: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem  = context.system
-  implicit val mat: Materializer    = ActorMaterializer()
 
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)

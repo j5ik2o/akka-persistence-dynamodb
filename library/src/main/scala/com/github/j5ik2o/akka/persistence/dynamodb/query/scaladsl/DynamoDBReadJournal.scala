@@ -23,8 +23,8 @@ import akka.persistence.query._
 import akka.persistence.query.scaladsl._
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
+import akka.stream.Attributes
 import akka.stream.scaladsl.{ Sink, Source }
-import akka.stream.{ ActorMaterializer, Attributes, Materializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }

@@ -211,13 +211,13 @@ class ReadJournalDaoImpl(
             index: Int
         ): Source[Map[String, AttributeValue], NotUsed] = {
           logger.debug(s"index = $index, count = $count")
-          val queryRequest = QueryRequest
+          val queryRequest = ScanRequest
             .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
               columnsDefConfig.orderingColumnName
             ).limit(queryBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey).build()
           Source
             .single(queryRequest)
-            .via(streamClient.queryFlow(1)).flatMapConcat { response =>
+            .via(streamClient.scanFlow(1)).flatMapConcat { response =>
               metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
               if (response.sdkHttpResponse().isSuccessful) {
                 metricsReporter.addJournalSequenceItemCounter(response.count().toLong)

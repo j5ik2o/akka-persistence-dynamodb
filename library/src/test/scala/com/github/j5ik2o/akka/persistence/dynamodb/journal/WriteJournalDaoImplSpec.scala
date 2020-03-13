@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.dynamodb.{
 import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
+    extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load()))
     with AnyFreeSpecLike
     with Matchers
     with ScalaFutures
@@ -62,10 +62,10 @@ class WriteJournalDaoImplSpec
   private val serialization = SerializationExtension(system)
 
   private val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-journal"))
+    JournalPluginConfig.fromConfig(system.settings.config.asConfig("j5ik2o.dynamo-db-journal"))
 
   private val queryPluginConfig: QueryPluginConfig =
-    QueryPluginConfig.fromConfig(system.settings.config.asConfig("dynamo-db-read-journal"))
+    QueryPluginConfig.fromConfig(system.settings.config.asConfig("j5ik2o.dynamo-db-read-journal"))
 
   implicit val ec = system.dispatcher
 

@@ -16,53 +16,103 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query
 
-import akka.actor.{ Actor, ActorLogging, Props, Status, Timers }
+import akka.actor.{Actor, ActorLogging, Props, Status, Timers}
 import akka.pattern._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalSequenceRetrievalConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDao
 
-import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.Breaks
 
 object JournalSequenceActor {
 
   def props(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-      implicit materializer: Materializer
+    implicit materializer: Materializer
   ): Props = Props(new JournalSequenceActor(readJournalDao, config))
 
   private case object QueryOrderingIds
+
   private case class NewOrderingIds(originalOffset: Long, elements: Seq[OrderingId])
 
   private case class ScheduleAssumeMaxOrderingId(max: OrderingId)
+
   private case class AssumeMaxOrderingId(max: OrderingId)
 
   case object GetMaxOrderingId
+
   case class MaxOrderingId(maxOrdering: OrderingId)
 
   private case object QueryOrderingIdsTimerKey
+
   private case object AssumeMaxOrderingIdTimerKey
 
   private type OrderingId = Long
+
+  case class Range[T: Numeric](from: T, until: T) {
+    private val ev = implicitly[Numeric[T]]
+
+    def contain(value: T): Boolean =
+      if (ev.lteq(from, value) && ev.gt(value, until)) true else false
+
+    def isEmpty: Boolean = ev.lteq(until, from)
+
+    def nonEmpty: Boolean = !isEmpty
+  }
 
   /**
     * Efficient representation of missing elements using NumericRanges.
     * It can be seen as a collection of OrderingIds
     */
-  private case class MissingElements(elements: Seq[NumericRange[OrderingId]]) {
+  private case class MissingElements(elements: Seq[Range[OrderingId]]) {
 
     def addRange(from: OrderingId, until: OrderingId): MissingElements = {
-      val newRange = from.until(until)
+      val newRange = Range(from, until)
       MissingElements(elements :+ newRange)
     }
-    def contains(id: OrderingId): Boolean = elements.exists(_.containsTyped(id))
-    def isEmpty: Boolean                  = elements.forall(_.isEmpty)
+
+    def contains(id: OrderingId): Boolean = elements.exists(_.contain(id))
+
+    def isEmpty: Boolean = {
+      val b = new Breaks
+      var result = true
+      b.breakable {
+        val itr = elements.toIterator
+        while (itr.hasNext) {
+          val v = itr.next()
+          if (v.nonEmpty) {
+            result = false
+            b.break()
+          }
+        }
+      }
+      result
+    }
   }
 
   private object MissingElements {
     def empty: MissingElements = MissingElements(Vector.empty)
   }
+
+  implicit private class IntOps(val init: OrderingId) extends AnyVal {
+    def untilWithForall(until: OrderingId, f: OrderingId => Boolean): Boolean = {
+      val b = new Breaks
+      var result = true
+      var index = init
+      b.breakable {
+        while (index < until) {
+          if (!f(index)) {
+            result = false
+            b.break()
+          }
+          index += 1
+        }
+      }
+      result
+    }
+  }
+
 }
 
 /**
@@ -71,12 +121,13 @@ object JournalSequenceActor {
   * visible in the database before rows with a lower (ordering) id.
   */
 class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-    implicit materializer: Materializer
+  implicit materializer: Materializer
 ) extends Actor
-    with ActorLogging
-    with Timers {
+  with ActorLogging
+  with Timers {
+
   import JournalSequenceActor._
-  import config.{ batchSize, maxBackoffQueryDelay, maxTries, queryDelay }
+  import config.{batchSize, maxBackoffQueryDelay, maxTries, queryDelay}
   import context.dispatcher
 
   override def receive: Receive = receive(0L, Map.empty, 0)
@@ -93,17 +144,17 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
 
   /**
     * @param currentMaxOrdering The highest ordering value for which it is known that no missing elements exist
-    * @param missingByCounter A map with missing orderingIds. The key of the map is the count at which the missing elements
-    *                         can be assumed to be "skipped ids" (they are no longer assumed missing).
-    * @param moduloCounter A counter which is incremented every time a new query have been executed, modulo `maxTries`
-    * @param previousDelay The last used delay (may change in case failures occur)
+    * @param missingByCounter   A map with missing orderingIds. The key of the map is the count at which the missing elements
+    *                           can be assumed to be "skipped ids" (they are no longer assumed missing).
+    * @param moduloCounter      A counter which is incremented every time a new query have been executed, modulo `maxTries`
+    * @param previousDelay      The last used delay (may change in case failures occur)
     */
   def receive(
-      currentMaxOrdering: OrderingId,
-      missingByCounter: Map[Int, MissingElements],
-      moduloCounter: Int,
-      previousDelay: FiniteDuration = queryDelay
-  ): Receive = {
+               currentMaxOrdering: OrderingId,
+               missingByCounter: Map[Int, MissingElements],
+               moduloCounter: Int,
+               previousDelay: FiniteDuration = queryDelay
+             ): Receive = {
 
     case ScheduleAssumeMaxOrderingId(max) =>
       // All elements smaller than max can be assumed missing after this delay
@@ -145,33 +196,26 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     * This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
     */
   def findGaps(
-      elements: Seq[OrderingId],
-      currentMaxOrdering: OrderingId,
-      missingByCounter: Map[Int, MissingElements],
-      moduloCounter: Int
-  ): Unit = {
+                elements: Seq[OrderingId],
+                currentMaxOrdering: OrderingId,
+                missingByCounter: Map[Int, MissingElements],
+                moduloCounter: Int
+              ): Unit = {
 
     // list of elements that will be considered as genuine gaps.
     // `givenUp` is either empty or is was filled on a previous iteration
     val givenUp = missingByCounter.getOrElse(moduloCounter, MissingElements.empty)
 
     val (nextMax, _, missingElems) =
-      // using the ordering elements that were fetched, we verify if there are any gaps
+    // using the ordering elements that were fetched, we verify if there are any gaps
       elements.foldLeft[(OrderingId, OrderingId, MissingElements)](
         currentMaxOrdering,
         currentMaxOrdering,
         MissingElements.empty
-      ) {
-
-        case ((currentMax, previousElement, missing), currentElement) =>
+      ) { case ((currentMax, previousElement, missing), currentElement) =>
           // we must decide if we move the cursor forward
-          val newMax =
-            if ((currentMax + 1).until(currentElement).forall(givenUp.contains)) {
-              // we move the cursor forward when:
-              // 1) they have been detected as missing on previous iteration, it's time now to give up
-              // 2) current + 1 == currentElement (meaning no gap). Note that `forall` on an empty range always returns true
-              currentElement
-            } else currentMax
+          val newMax = if ((currentMax + 1).untilWithForall(currentElement, index => givenUp.contains(index)))
+            currentElement else currentMax
 
           // we accumulate in newMissing the gaps we detect on each iteration
           val newMissing =

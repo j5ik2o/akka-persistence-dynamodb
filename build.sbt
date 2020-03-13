@@ -1,6 +1,6 @@
 val scala212Version     = "2.12.10"
 val scala213Version     = "2.13.1"
-val akkaVersion         = "2.6.3"
+val akkaVersion         = "2.6.4"
 val reactiveAwsDynamoDB = "1.1.8"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {

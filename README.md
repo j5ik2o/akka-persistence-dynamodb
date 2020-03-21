@@ -15,10 +15,10 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 ## Supported versions:
 
+- Java: `1.8+`
 - Scala: `2.12.x` or `2.13.x` 
 - Akka: `2.6.x+`
 - AWS-SDK: `2.4.x`
-- Java: `1.8+`
 
 ## Features
 

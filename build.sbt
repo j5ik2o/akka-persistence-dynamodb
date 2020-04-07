@@ -17,27 +17,25 @@ lazy val deploySettings = Seq(
   },
   pomExtra := {
     <url>https://github.com/j5ik2o/akka-persistence-dynamodb</url>
-      <licenses>
-        <license>
-          <name>Apache 2</name>
-          <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-          <distribution>repo</distribution>
-        </license>
-      </licenses>
-      <scm>
-        <url>git@github.com:j5ik2o/akka-persistence-dynamodb.git</url>
-        <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamodb</connection>
-        <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamodb.git</developerConnection>
-      </scm>
-      <developers>
-        <developer>
-          <id>j5ik2o</id>
-          <name>Junichi Kato</name>
-        </developer>
-      </developers>
+    <licenses>
+      <license>
+        <name>Apache 2</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      </license>
+    </licenses>
+    <scm>
+      <url>git@github.com:j5ik2o/akka-persistence-dynamodb.git</url>
+      <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamodb</connection>
+      <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamodb.git</developerConnection>
+    </scm>
+    <developers>
+      <developer>
+        <id>j5ik2o</id>
+        <name>Junichi Kato</name>
+      </developer>
+    </developers>
   },
   publishTo := sonatypePublishToBundle.value,
-//  Global / useGpg := false,
   credentials := {
     val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
     val gpgCredentials = (baseDirectory in LocalRootProject).value / ".gpgCredentials"

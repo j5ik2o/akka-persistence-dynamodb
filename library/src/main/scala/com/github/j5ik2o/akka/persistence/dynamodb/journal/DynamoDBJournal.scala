@@ -50,7 +50,7 @@ object DynamoDBJournal {
 
   final case class InPlaceUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef)
 
-  private case class WriteFinished(pid: String, f: Future[_])
+  case class WriteFinished(pid: String, f: Future[_])
 
 }
 

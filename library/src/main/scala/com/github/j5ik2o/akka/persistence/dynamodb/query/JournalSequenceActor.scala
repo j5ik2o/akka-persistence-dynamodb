@@ -16,7 +16,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query
 
-import akka.actor.{Actor, ActorLogging, Props, Status, Timers}
+import akka.actor.{ Actor, ActorLogging, Props, Status, Timers }
 import akka.pattern._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
@@ -29,7 +29,7 @@ import scala.util.control.Breaks
 object JournalSequenceActor {
 
   def props(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-    implicit materializer: Materializer
+      implicit materializer: Materializer
   ): Props = Props(new JournalSequenceActor(readJournalDao, config))
 
   private case object QueryOrderingIds
@@ -75,7 +75,7 @@ object JournalSequenceActor {
     def contains(id: OrderingId): Boolean = elements.exists(_.contain(id))
 
     def isEmpty: Boolean = {
-      val b = new Breaks
+      val b      = new Breaks
       var result = true
       b.breakable {
         val itr = elements.toIterator
@@ -96,10 +96,11 @@ object JournalSequenceActor {
   }
 
   implicit private class IntOps(val init: OrderingId) extends AnyVal {
+
     def untilWithForall(until: OrderingId, f: OrderingId => Boolean): Boolean = {
-      val b = new Breaks
+      val b      = new Breaks
       var result = true
-      var index = init
+      var index  = init
       b.breakable {
         while (index < until) {
           if (!f(index)) {
@@ -121,13 +122,13 @@ object JournalSequenceActor {
   * visible in the database before rows with a lower (ordering) id.
   */
 class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-  implicit materializer: Materializer
+    implicit materializer: Materializer
 ) extends Actor
-  with ActorLogging
-  with Timers {
+    with ActorLogging
+    with Timers {
 
   import JournalSequenceActor._
-  import config.{batchSize, maxBackoffQueryDelay, maxTries, queryDelay}
+  import config.{ batchSize, maxBackoffQueryDelay, maxTries, queryDelay }
   import context.dispatcher
 
   override def receive: Receive = receive(0L, Map.empty, 0)
@@ -150,11 +151,11 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     * @param previousDelay      The last used delay (may change in case failures occur)
     */
   def receive(
-               currentMaxOrdering: OrderingId,
-               missingByCounter: Map[Int, MissingElements],
-               moduloCounter: Int,
-               previousDelay: FiniteDuration = queryDelay
-             ): Receive = {
+      currentMaxOrdering: OrderingId,
+      missingByCounter: Map[Int, MissingElements],
+      moduloCounter: Int,
+      previousDelay: FiniteDuration = queryDelay
+  ): Receive = {
 
     case ScheduleAssumeMaxOrderingId(max) =>
       // All elements smaller than max can be assumed missing after this delay
@@ -196,26 +197,29 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     * This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
     */
   def findGaps(
-                elements: Seq[OrderingId],
-                currentMaxOrdering: OrderingId,
-                missingByCounter: Map[Int, MissingElements],
-                moduloCounter: Int
-              ): Unit = {
+      elements: Seq[OrderingId],
+      currentMaxOrdering: OrderingId,
+      missingByCounter: Map[Int, MissingElements],
+      moduloCounter: Int
+  ): Unit = {
 
     // list of elements that will be considered as genuine gaps.
     // `givenUp` is either empty or is was filled on a previous iteration
     val givenUp = missingByCounter.getOrElse(moduloCounter, MissingElements.empty)
 
     val (nextMax, _, missingElems) =
-    // using the ordering elements that were fetched, we verify if there are any gaps
+      // using the ordering elements that were fetched, we verify if there are any gaps
       elements.foldLeft[(OrderingId, OrderingId, MissingElements)](
         currentMaxOrdering,
         currentMaxOrdering,
         MissingElements.empty
-      ) { case ((currentMax, previousElement, missing), currentElement) =>
+      ) {
+        case ((currentMax, previousElement, missing), currentElement) =>
           // we must decide if we move the cursor forward
-          val newMax = if ((currentMax + 1).untilWithForall(currentElement, index => givenUp.contains(index)))
-            currentElement else currentMax
+          val newMax =
+            if ((currentMax + 1).untilWithForall(currentElement, index => givenUp.contains(index)))
+              currentElement
+            else currentMax
 
           // we accumulate in newMissing the gaps we detect on each iteration
           val newMissing =

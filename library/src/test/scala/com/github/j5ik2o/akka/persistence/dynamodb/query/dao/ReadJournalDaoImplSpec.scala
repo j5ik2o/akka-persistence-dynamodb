@@ -25,6 +25,10 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -73,11 +77,20 @@ class ReadJournalDaoImplSpec
 
   implicit val ec = system.dispatcher
 
+  private val serializer: FlowPersistentReprSerializer[JournalRow] =
+    new ByteArrayJournalSerializer(serialization, ",")
+
   val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
+    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, system)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val sch = Scheduler(ec)
 
@@ -99,7 +112,9 @@ class ReadJournalDaoImplSpec
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao
-        .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(1000), Long.MaxValue).runWith(Sink.seq).futureValue
+        .getMessagesAsJournalRow(PersistenceId(pid), SequenceNumber(1), SequenceNumber(1000), Long.MaxValue).runWith(
+          Sink.seq
+        ).futureValue
       result.map(v => (v.persistenceId, v.sequenceNumber, v.deleted)) should contain theSameElementsAs journalRows.map(
         v => (v.persistenceId, v.sequenceNumber, v.deleted)
       )

@@ -20,29 +20,38 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
-import akka.stream.scaladsl.{ Concat, Source }
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{ Concat, Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.model._
 
+import scala.collection.immutable.Set
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 class ReadJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: QueryPluginConfig,
+    override val serializer: FlowPersistentReprSerializer[JournalRow],
     override protected val metricsReporter: MetricsReporter
-)(implicit ec: ExecutionContext)
+)(implicit val ec: ExecutionContext, system: ActorSystem)
     extends ReadJournalDao
     with DaoSupport {
+
+  implicit val mat = ActorMaterializer()
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -53,6 +62,7 @@ class ReadJournalDaoImpl(
   override val columnsDefConfig: JournalColumnsDefConfig  = pluginConfig.columnsDefConfig
   override protected val consistentRead                   = pluginConfig.consistentRead
   override protected val queryBatchSize: Int              = pluginConfig.queryBatchSize
+  override protected val scanBatchSize: Int               = pluginConfig.queryBatchSize
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
@@ -69,7 +79,7 @@ class ReadJournalDaoImpl(
           .tableName(tableName)
           .select(Select.SPECIFIC_ATTRIBUTES)
           .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
-          .limit(queryBatchSize)
+          .limit(scanBatchSize)
           .exclusiveStartKeyAsScala(lastEvaluatedKey)
           .build()
         Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
@@ -115,9 +125,28 @@ class ReadJournalDaoImpl(
     }
   }
 
-  override def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed] = {
+  private def perfectlyMatchTag(tag: String, separator: String): Flow[JournalRow, JournalRow, NotUsed] =
+    Flow[JournalRow].filter(_.tags.exists(tags => tags.split(separator).contains(tag)))
+
+  override def eventsByTag(
+      tag: String,
+      offset: Long,
+      maxOffset: Long,
+      max: Long
+  ): Source[Try[(PersistentRepr, Set[String], Long)], NotUsed] = {
+    eventsByTagAsJournalRow(tag, offset, maxOffset, max)
+      .via(perfectlyMatchTag(tag, pluginConfig.tagSeparator))
+      .via(serializer.deserializeFlowAsTry)
+  }
+
+  override def eventsByTagAsJournalRow(
+      tag: String,
+      offset: Long,
+      maxOffset: Long,
+      max: Long
+  ): Source[JournalRow, NotUsed] = {
     startTimeSource.flatMapConcat { callStart =>
-      logger.debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): start")
+      logger.debug(s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): start")
       startTimeSource
         .flatMapConcat { itemStart =>
           def loop(
@@ -127,7 +156,7 @@ class ReadJournalDaoImpl(
               index: Int
           ): Source[Map[String, AttributeValue], NotUsed] = {
             logger.debug(s"index = $index, count = $count")
-            val request = ScanRequest
+            val scanRequest = ScanRequest
               .builder()
               .tableName(tableName)
               .indexName(pluginConfig.tagsIndexName)
@@ -140,11 +169,11 @@ class ReadJournalDaoImpl(
                   ":tag" -> AttributeValue.builder().s(tag).build()
                 )
               )
-              .limit(queryBatchSize)
+              .limit(scanBatchSize)
               .exclusiveStartKeyAsScala(lastEvaluatedKey)
               .build()
             Source
-              .single(request).via(streamClient.scanFlow(1)).flatMapConcat { response =>
+              .single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
                 metricsReporter.setEventsByTagItemDuration(System.nanoTime() - itemStart)
                 if (response.sdkHttpResponse().isSuccessful) {
                   metricsReporter.incrementEventsByTagItemCallCounter()
@@ -184,7 +213,9 @@ class ReadJournalDaoImpl(
             .map { response =>
               metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
               metricsReporter.incrementEventsByTagCallCounter()
-              logger.debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished")
+              logger.debug(
+                s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
+              )
               response
             }.recoverWithRetries(
               attempts = 1, {
@@ -192,7 +223,9 @@ class ReadJournalDaoImpl(
                   metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
                   metricsReporter.incrementEventsByTagCallErrorCounter()
                   logger
-                    .debug(s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished")
+                    .debug(
+                      s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
+                    )
                   Source.failed(t)
               }
             ).withAttributes(logLevels)
@@ -211,12 +244,12 @@ class ReadJournalDaoImpl(
             index: Int
         ): Source[Map[String, AttributeValue], NotUsed] = {
           logger.debug(s"index = $index, count = $count")
-          val queryRequest = ScanRequest
+          val scanRequest = ScanRequest
             .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
               columnsDefConfig.orderingColumnName
-            ).limit(queryBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey).build()
+            ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey).build()
           Source
-            .single(queryRequest)
+            .single(scanRequest)
             .via(streamClient.scanFlow(1)).flatMapConcat { response =>
               metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
               if (response.sdkHttpResponse().isSuccessful) {
@@ -261,7 +294,8 @@ class ReadJournalDaoImpl(
     }
   }
 
-  override def maxJournalSequence(): Source[Long, NotUsed] =
+  override def maxJournalSequence(): Source[Long, NotUsed] = {
     Source.single(Long.MaxValue)
+  }
 
 }

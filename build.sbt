@@ -116,7 +116,7 @@ lazy val library = (project in file("library"))
             "com.typesafe.akka"      %% "akka-testkit"            % akka25Version % Test,
             "com.typesafe.akka"      %% "akka-stream-testkit"     % akka25Version % Test,
             "com.typesafe.akka"      %% "akka-persistence-tck"    % akka25Version % Test,
-            "org.scalatest"          %% "scalatest"               % "3.0.8" % Test
+            "org.scalatest"          %% "scalatest"               % "3.1.1" % Test
           )
       }
     },

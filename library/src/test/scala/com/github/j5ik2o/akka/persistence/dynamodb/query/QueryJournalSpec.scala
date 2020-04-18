@@ -32,15 +32,17 @@ import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
 import com.typesafe.config.Config
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FlatSpecLike, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.implicitConversions
 import scala.util.Try
+import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.matchers.should.Matchers
 
 abstract class QueryJournalSpec(config: Config)
-    extends FlatSpecLike
+    extends AnyFlatSpecLike
     with Matchers
     with ScalaFutures
     with BeforeAndAfterAll

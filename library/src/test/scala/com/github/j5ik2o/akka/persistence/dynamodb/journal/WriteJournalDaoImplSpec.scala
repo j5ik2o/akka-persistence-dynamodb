@@ -21,7 +21,6 @@ import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
-import org.scalatest.{ FreeSpecLike, Matchers }
 import org.scalatest.concurrent.ScalaFutures
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{
@@ -30,10 +29,12 @@ import software.amazon.awssdk.services.dynamodb.{
 }
 
 import scala.concurrent.duration._
+import org.scalatest.freespec.AnyFreeSpecLike
+import org.scalatest.matchers.should.Matchers
 
 class WriteJournalDaoImplSpec
     extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load()))
-    with FreeSpecLike
+    with AnyFreeSpecLike
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {

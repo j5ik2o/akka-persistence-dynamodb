@@ -3,12 +3,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDBEmbeddedSpecSupport, DynamoDbAsyncClient }
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfter, Matchers, Suite }
+import org.scalatest.{ BeforeAndAfter, Suite }
 import org.slf4j.bridge.SLF4JBridgeHandler
 import org.slf4j.{ Logger, LoggerFactory }
 import software.amazon.awssdk.services.dynamodb.model._
 
 import scala.concurrent.duration._
+import org.scalatest.matchers.should.Matchers
 
 trait DynamoDBSpecSupport
     extends Matchers

@@ -221,14 +221,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def receivePluginInternal: Receive = {
-    case msg @ WriteFinished(persistenceId, _) =>
-      log.debug(s"receivePluginInternal:$msg: start")
+    case WriteFinished(persistenceId, _) =>
       writeInProgress.remove(persistenceId)
-      log.debug(s"receivePluginInternal:$msg: finished")
-    case msg @ InPlaceUpdateEvent(pid, seq, message) =>
-      log.debug(s"receivePluginInternal:$msg: start")
+    case InPlaceUpdateEvent(pid, seq, message) =>
       asyncUpdateEvent(pid, seq, message).pipeTo(sender())
-      log.debug(s"receivePluginInternal:$msg: finished")
   }
 
   private def asyncUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef): Future[Done] = {

@@ -30,7 +30,7 @@ import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, NullMetricsReporter }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
@@ -39,10 +39,7 @@ import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfter, Matchers }
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.freespec.AnyFreeSpecLike
-
+import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
@@ -76,12 +73,14 @@ class DynamoDBReadJournalSpec
           ).withFallback(ConfigFactory.load())
       )
     )
-    with AnyFreeSpecLike
+    with FreeSpecLike
     with Matchers
     with Eventually
     with ScalaFutures
     with BeforeAndAfter
     with DynamoDBSpecSupport {
+
+  implicit val mat = ActorMaterializer()
 
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 

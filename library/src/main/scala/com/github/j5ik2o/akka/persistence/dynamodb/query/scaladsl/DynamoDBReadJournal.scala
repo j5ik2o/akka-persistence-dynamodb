@@ -23,7 +23,7 @@ import akka.persistence.query._
 import akka.persistence.query.scaladsl._
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.Attributes
+import akka.stream.{ ActorMaterializer, Attributes }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
@@ -75,6 +75,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with EventsByTagQuery {
   private val logger                = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContext = system.dispatcher
+  implicit val mat                  = ActorMaterializer()
 
   protected val pluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(config)

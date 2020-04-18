@@ -4,7 +4,7 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.stream.Attributes
-import akka.stream.scaladsl.{ Concat, Source }
+import akka.stream.scaladsl.{ Concat, Source, SourceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
@@ -32,8 +32,9 @@ trait DaoSupport {
     onFinish = Attributes.LogLevels.Debug
   )
 
-  protected val startTimeSource: Source[Long, NotUsed] = Source
-    .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
+  protected val startTimeSource: Source[Long, NotUsed] =
+    SourceUtils
+      .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
 
   def getMessages(
       persistenceId: PersistenceId,

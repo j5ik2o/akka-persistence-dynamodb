@@ -21,8 +21,8 @@ import java.io.IOException
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.serialization.Serialization
-import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete }
-import akka.stream.{ OverflowStrategy, QueueOfferResult }
+import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete, SourceUtils }
+import akka.stream.{ ActorMaterializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
@@ -49,6 +49,7 @@ class WriteJournalDaoImpl(
 ) extends WriteJournalDao
     with DaoSupport {
 
+  implicit val mat = ActorMaterializer()
   import pluginConfig._
 
   override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
@@ -675,7 +676,7 @@ class WriteJournalDaoImpl(
             if (persistenceIdWithSeqNrs.isEmpty)
               Source.single(0L)
             else
-              Source
+              SourceUtils
                 .lazySource { () =>
                   val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
                     WriteRequest
@@ -804,7 +805,7 @@ class WriteJournalDaoImpl(
           if (journalRows.isEmpty)
             Source.single(0L)
           else
-            Source
+            SourceUtils
               .lazySource { () =>
                 val requestItems = journalRows.map { journalRow =>
                   WriteRequest

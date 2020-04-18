@@ -1,4 +1,4 @@
-# akka-persistence-dynamodb(not-forked from akka)
+# akka-persistence-dynamodb
 
 [![CircleCI](https://circleci.com/gh/j5ik2o/akka-persistence-dynamodb/tree/master.svg?style=shield&circle-token=9f6f53d09f0fb87ee8ea81246e69683d668291cd)](https://circleci.com/gh/j5ik2o/akka-persistence-dynamodb/tree/master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb_2.12)
@@ -9,9 +9,9 @@ akka-persistence-dynamodb writes journal and snapshot entries to DynamoDB. It im
 
 ## Genealogy of plugins
 
-This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
+This plugin is derived from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
 
-It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc).
+It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc).
 
 ## Supported versions:
 
@@ -22,7 +22,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 ## Features
 
-| Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
+| Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[akka/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
 |:-------:|:----:|:----:|:----:|
 |DynamoDB support|✓|✓|-|
 |Write Sharding|✓|✓|-|
@@ -254,5 +254,5 @@ Apache License
 
 This product was made by duplicating or referring to the code of the following products, so Dennis Vriend's license is included in the product code and test code.
 
-- [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
+- [akka/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
 - [dnvriend/akka-persistence-query-test](https://github.com/dnvriend/akka-persistence-query-test)

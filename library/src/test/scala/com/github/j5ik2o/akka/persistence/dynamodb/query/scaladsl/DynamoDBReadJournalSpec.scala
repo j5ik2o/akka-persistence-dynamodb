@@ -29,17 +29,23 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
+import org.scalatest.{ BeforeAndAfter, FreeSpecLike }
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
+import org.scalatest.matchers.should.Matchers
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
@@ -111,11 +117,20 @@ class DynamoDBReadJournalSpec
   val taskClient   = DynamoDbMonixClient(asyncClient)
   val streamClient = DynamoDbAkkaClient(asyncClient)
 
+  private val serializer: FlowPersistentReprSerializer[JournalRow] =
+    new ByteArrayJournalSerializer(serialization, ",")
+
   val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
+    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, system)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val readJournal: ReadJournal
     with CurrentPersistenceIdsQuery

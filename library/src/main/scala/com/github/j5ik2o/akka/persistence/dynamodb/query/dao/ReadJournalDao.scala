@@ -17,8 +17,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import akka.NotUsed
+import akka.persistence.PersistentRepr
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+
+import scala.collection.immutable.Set
+import scala.util.Try
 
 trait ReadJournalDao {
 
@@ -32,12 +36,19 @@ trait ReadJournalDao {
     * the global ordering of the events.
     * Each element with be a try with a PersistentRepr, set of tags, and a Long representing the global ordering of events
     */
-  def eventsByTag(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed]
+  def eventsByTagAsJournalRow(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed]
+
+  def eventsByTag(
+      tag: String,
+      offset: Long,
+      maxOffset: Long,
+      max: Long
+  ): Source[Try[(PersistentRepr, Set[String], Long)], NotUsed]
 
   /**
     * Returns a Source of bytes for a certain persistenceId
     */
-  def getMessages(
+  def getMessagesAsJournalRow(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,

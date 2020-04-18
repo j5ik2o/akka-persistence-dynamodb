@@ -20,6 +20,8 @@ import akka.NotUsed
 import akka.persistence.PersistentRepr
 import akka.stream.scaladsl.Flow
 
+import scala.util.Try
+
 trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
 
   def deserializeFlow: Flow[T, (PersistentRepr, Set[String], Long), NotUsed] = {
@@ -30,10 +32,31 @@ trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
   }
 
   def deserializeFlowWithoutTags: Flow[T, PersistentRepr, NotUsed] = {
-    deserializeFlow.map {
-      case (repr, _, _) =>
-        repr
-    }
+    deserializeFlow.map(keepPersistentRepr)
+  }
+
+  // ---
+
+  def deserializeFlowAsEither: Flow[T, Either[Throwable, (PersistentRepr, Set[String], Long)], NotUsed] = {
+    Flow[T].map(deserialize)
+  }
+
+  def deserializeFlowWithoutTagsAsEither: Flow[T, Either[Throwable, PersistentRepr], NotUsed] = {
+    deserializeFlowAsEither.map(_.map(keepPersistentRepr))
+  }
+
+  // ---
+
+  def deserializeFlowAsTry: Flow[T, Try[(PersistentRepr, Set[String], Long)], NotUsed] = {
+    Flow[T].map(deserialize).map(_.toTry)
+  }
+
+  def deserializeFlowWithoutTagsAsTry: Flow[T, Try[PersistentRepr], NotUsed] = {
+    deserializeFlowAsTry.map(_.map(keepPersistentRepr))
+  }
+
+  private def keepPersistentRepr(tup: (PersistentRepr, Set[String], Long)): PersistentRepr = tup match {
+    case (repr, _, _) => repr
   }
 
 }

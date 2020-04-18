@@ -150,7 +150,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     * @param moduloCounter      A counter which is incremented every time a new query have been executed, modulo `maxTries`
     * @param previousDelay      The last used delay (may change in case failures occur)
     */
-  def receive(
+  private def receive(
       currentMaxOrdering: OrderingId,
       missingByCounter: Map[Int, MissingElements],
       moduloCounter: Int,
@@ -196,7 +196,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
   /**
     * This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
     */
-  def findGaps(
+  private def findGaps(
       elements: Seq[OrderingId],
       currentMaxOrdering: OrderingId,
       missingByCounter: Map[Int, MissingElements],
@@ -251,7 +251,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     }
   }
 
-  def scheduleQuery(delay: FiniteDuration): Unit = {
+  private def scheduleQuery(delay: FiniteDuration): Unit = {
     timers.startSingleTimer(key = QueryOrderingIdsTimerKey, QueryOrderingIds, delay)
   }
 }

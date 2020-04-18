@@ -22,11 +22,11 @@ import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.stream.{ ActorMaterializer, Materializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ WriteJournalDao, WriteJournalDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalDaoWithUpdates, WriteJournalDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -76,11 +76,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   protected val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
 
-  protected val journalDao: WriteJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, metricsReporter)
-
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
+
+  protected val journalDao: JournalDaoWithUpdates =
+    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, serializer, metricsReporter)
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
@@ -150,15 +150,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     log.debug(s"asyncReplayMessages($persistenceId, $fromSequenceNr, $toSequenceNr, $max): start")
     val startTime = System.nanoTime()
     val future = journalDao
-      .getMessages(
-        PersistenceId(persistenceId),
-        SequenceNumber(fromSequenceNr),
-        SequenceNumber(toSequenceNr),
-        max,
-        deleted = Some(false)
-      )
-      .via(serializer.deserializeFlowWithoutTags)
-      .async
+      .getMessagesWithBatch(persistenceId, fromSequenceNr, toSequenceNr, pluginConfig.replayBatchSize, None)
+      .take(max)
+      .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
     future.onComplete { result =>

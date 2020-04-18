@@ -89,7 +89,6 @@ trait DaoSupport {
       max: Long,
       deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed] = {
-    if (consistentRead) require(shardCount == 1)
     def loop(
         lastEvaluatedKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],

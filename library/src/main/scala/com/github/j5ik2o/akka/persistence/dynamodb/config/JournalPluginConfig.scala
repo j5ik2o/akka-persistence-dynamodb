@@ -16,6 +16,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import akka.stream.OverflowStrategy
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
@@ -28,6 +30,8 @@ object JournalPluginConfig {
       getJournalRowsIndexName = config.asString("get-journal-rows-index-name", default = "GetJournalRowsIndex"),
       tagSeparator = config.asString("tag-separator", default = ","),
       shardCount = config.asInt("shard-count", default = 1),
+      partitionKeyResolverClassName =
+        config.asString("partition-key-resolver-class-name", default = classOf[PartitionKeyResolver.Default].getName),
       queueBufferSize = config.asInt("queue-buffer-size", default = 1024),
       queueOverflowStrategy = config.asString("queue-overflow-strategy", OverflowStrategy.fail.getClass.getSimpleName),
       queueParallelism = config.asInt("queue-parallelism", default = 1),
@@ -39,7 +43,7 @@ object JournalPluginConfig {
       softDeleted = config.asBoolean("soft-delete", default = true),
       metricsReporterClassName = config.asString(
         "metrics-reporter-class-name",
-        "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
+        classOf[NullMetricsReporter].getName
       ),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
     )
@@ -52,6 +56,7 @@ case class JournalPluginConfig(
     columnsDefConfig: JournalColumnsDefConfig,
     getJournalRowsIndexName: String,
     tagSeparator: String,
+    partitionKeyResolverClassName: String,
     shardCount: Int,
     queueBufferSize: Int,
     queueOverflowStrategy: String,

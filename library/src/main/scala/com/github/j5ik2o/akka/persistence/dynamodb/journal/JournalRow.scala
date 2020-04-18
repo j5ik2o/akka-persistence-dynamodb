@@ -8,7 +8,10 @@ final case class JournalRow(
     ordering: Long,
     tags: Option[String] = None
 ) {
-  def partitionKey: PartitionKey            = PartitionKey(persistenceId, sequenceNumber)
+
+  def partitionKey(partitionKeyResolver: PartitionKeyResolver): PartitionKey =
+    partitionKeyResolver.resolve(persistenceId, sequenceNumber)
+
   def withDeleted: JournalRow               = copy(deleted = true)
   def withOrdering(value: Long): JournalRow = copy(ordering = value)
 }

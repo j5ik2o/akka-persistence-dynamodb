@@ -61,7 +61,20 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val scheduler: Scheduler   = Scheduler(ec)
 
+  private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
+
+  private val partitionKeyResolver: PartitionKeyResolver = {
+    val className = pluginConfig.partitionKeyResolverClassName
+    val args =
+      Seq(classOf[Config] -> config)
+    dynamicAccess
+      .createInstanceFor[PartitionKeyResolver](
+        className,
+        args
+      ).getOrElse(throw new ClassNotFoundException(className))
+  }
 
   protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
     HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
@@ -80,25 +93,31 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
   protected val journalDao: JournalDaoWithUpdates =
-    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, serializer, metricsReporter)
+    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, partitionKeyResolver, serializer, metricsReporter)
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    log.debug(s"asyncWriteMessages($atomicWrites): start")
+    log.debug(s"asyncWriteMessages(${atomicWrites.mkString("[", ",\n", "]")}): start")
+
     val startTime = System.nanoTime()
 
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
-      row          <- serializeTry.right.getOrElse(Seq.empty)
+      row <- serializeTry match {
+        case Right(value) => value
+        case Left(_)      => Seq.empty
+      }
     } yield row
 
     def resultWhenWriteComplete: Seq[Either[Throwable, Unit]] =
       if (serializedTries.forall(_.isRight)) Nil
       else
-        serializedTries
-          .map(_.right.map(_ => ()))
+        serializedTries.map {
+          case Right(_) => Right(())
+          case Left(ex) => Left(ex)
+        }
 
     val future: Future[immutable.Seq[Try[Unit]]] =
       journalDao

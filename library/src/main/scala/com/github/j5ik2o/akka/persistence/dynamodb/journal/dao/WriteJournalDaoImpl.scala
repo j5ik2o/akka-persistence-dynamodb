@@ -22,10 +22,14 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete, SourceUtils }
-import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.stream.{ ActorMaterializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
+  JournalRow,
+  PartitionKeyResolver,
+  PersistenceId,
+  SequenceNumber
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -44,6 +48,7 @@ class WriteJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: JournalPluginConfig,
+    val partitionKeyResolver: PartitionKeyResolver,
     val serializer: FlowPersistentReprSerializer[JournalRow],
     protected val metricsReporter: MetricsReporter
 )(
@@ -167,7 +172,7 @@ class WriteJournalDaoImpl(
             Map(
               columnsDefConfig.partitionKeyColumnName -> AttributeValue
                 .builder()
-                .s(journalRow.partitionKey.asString(shardCount)).build(),
+                .s(journalRow.partitionKey(partitionKeyResolver).asString).build(),
               columnsDefConfig.sequenceNrColumnName -> AttributeValue
                 .builder()
                 .n(journalRow.sequenceNumber.asString).build()
@@ -740,7 +745,7 @@ class WriteJournalDaoImpl(
                   columnsDefConfig.partitionKeyColumnName -> AttributeValue
                     .builder()
                     .s(
-                      PartitionKey(journalRow.persistenceId, journalRow.sequenceNumber).asString(shardCount)
+                      partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
                     ).build(),
                   columnsDefConfig.persistenceIdColumnName -> AttributeValue
                     .builder()
@@ -833,7 +838,8 @@ class WriteJournalDaoImpl(
                             columnsDefConfig.partitionKeyColumnName -> AttributeValue
                               .builder()
                               .s(
-                                PartitionKey(journalRow.persistenceId, journalRow.sequenceNumber).asString(shardCount)
+                                partitionKeyResolver
+                                  .resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
                               ).build(),
                             columnsDefConfig.persistenceIdColumnName -> AttributeValue
                               .builder()

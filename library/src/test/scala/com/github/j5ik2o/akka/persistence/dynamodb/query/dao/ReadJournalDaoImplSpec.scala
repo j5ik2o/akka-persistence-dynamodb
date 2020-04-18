@@ -23,7 +23,12 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
+  JournalRow,
+  PartitionKeyResolver,
+  PersistenceId,
+  SequenceNumber
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -36,8 +41,8 @@ import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
-import org.scalatest.{ FreeSpecLike, Matchers }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
@@ -87,8 +92,19 @@ class ReadJournalDaoImplSpec
       system
     )
 
+  val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
+
+  val partitionKeyResolver = new PartitionKeyResolver.Default(config)
+
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, serializer, new NullMetricsReporter)(
+    new WriteJournalDaoImpl(
+      asyncClient,
+      serialization,
+      journalPluginConfig,
+      partitionKeyResolver,
+      serializer,
+      new NullMetricsReporter
+    )(
       ec,
       system
     )

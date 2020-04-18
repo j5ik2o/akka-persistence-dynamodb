@@ -73,7 +73,7 @@ class ReadJournalDaoImpl(
           count: Long,
           index: Int
       ): Source[Map[String, AttributeValue], NotUsed] = {
-        logger.debug(s"index = $index, count = $count")
+        // logger.debug(s"index = $index, count = $count")
         val scanRequest = ScanRequest
           .builder()
           .tableName(tableName)
@@ -89,7 +89,7 @@ class ReadJournalDaoImpl(
             val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
             if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-              logger.debug(s"index = $index, next loop")
+              // logger.debug(s"index = $index, next loop")
               loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
             } else
               combinedSource
@@ -156,7 +156,7 @@ class ReadJournalDaoImpl(
               count: Long,
               index: Int
           ): Source[Map[String, AttributeValue], NotUsed] = {
-            logger.debug(s"index = $index, count = $count")
+            // logger.debug(s"index = $index, count = $count")
             val scanRequest = ScanRequest
               .builder()
               .tableName(tableName)
@@ -185,7 +185,7 @@ class ReadJournalDaoImpl(
                   val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                   val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                   if (lastEvaluatedKey.nonEmpty) {
-                    logger.debug(s"index = $index, next loop")
+                    // logger.debug(s"index = $index, next loop")
                     loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                   } else
                     combinedSource
@@ -262,7 +262,7 @@ class ReadJournalDaoImpl(
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                 if (lastEvaluatedKey.nonEmpty) {
-                  logger.debug(s"index = $index, next loop")
+                  // logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource

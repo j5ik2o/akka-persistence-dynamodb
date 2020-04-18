@@ -17,7 +17,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.Done
-import akka.actor.{ ActorLogging, ActorSystem }
+import akka.actor.{ ActorLogging, ActorSystem, ExtendedActorSystem }
 import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }

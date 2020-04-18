@@ -98,8 +98,8 @@ trait DaoSupport {
     ): Source[Map[String, AttributeValue], NotUsed] = {
       startTimeSource
         .flatMapConcat { itemStart =>
-          logger.debug(s"index = $index, count = $count")
-          logger.debug(s"query-batch-size = $queryBatchSize")
+          // logger.debug(s"index = $index, count = $count")
+          // logger.debug(s"query-batch-size = $queryBatchSize")
           val queryRequest =
             if (shardCount == 1)
               createNonGSIRequest(
@@ -123,7 +123,7 @@ trait DaoSupport {
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                 if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-                  logger.debug(s"index = $index, next loop")
+                  //logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource

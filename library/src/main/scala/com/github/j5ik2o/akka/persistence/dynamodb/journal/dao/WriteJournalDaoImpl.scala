@@ -90,7 +90,7 @@ class WriteJournalDaoImpl(
       .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
-          logger.debug(s"put rows.size = ${rows.size}")
+          // logger.debug(s"put rows.size = ${rows.size}")
           if (rows.size == 1)
             Source
               .single(rows.head).via(singlePutJournalRowFlow).log("put")
@@ -403,8 +403,8 @@ class WriteJournalDaoImpl(
         ): Source[Map[String, AttributeValue], NotUsed] =
           startTimeSource
             .flatMapConcat { itemStart =>
-              logger.debug(s"index = $index, count = $count")
-              logger.debug(s"query-batch-size = $queryBatchSize")
+              // logger.debug(s"index = $index, count = $count")
+              // logger.debug(s"query-batch-size = $queryBatchSize")
               val queryRequest =
                 if (shardCount == 1) createNonGSIRequest(lastEvaluatedKey) else createGSIRequest(lastEvaluatedKey)
               Source
@@ -418,7 +418,7 @@ class WriteJournalDaoImpl(
                     val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                     val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                     if (lastEvaluatedKey.nonEmpty) {
-                      logger.debug(s"index = $index, next loop")
+                      // logger.debug(s"index = $index, next loop")
                       loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                     } else
                       combinedSource

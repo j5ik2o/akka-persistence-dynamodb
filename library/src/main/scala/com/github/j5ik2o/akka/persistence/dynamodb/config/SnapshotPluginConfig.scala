@@ -24,8 +24,9 @@ object SnapshotPluginConfig {
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
     SnapshotPluginConfig(
-      tableName = config.asString("table-name", "Snapshot"),
+      tableName = config.asString("table-name", default = "Snapshot"),
       columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
+      consistentRead = config.asBoolean("consistent-read", default = false),
       metricsReporterClassName = config.asString(
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
@@ -39,6 +40,7 @@ object SnapshotPluginConfig {
 final case class SnapshotPluginConfig(
     tableName: String,
     columnsDefConfig: SnapshotColumnsDefConfig,
+    consistentRead: Boolean,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
 )

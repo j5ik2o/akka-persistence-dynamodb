@@ -108,7 +108,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         )
-      ).build()
+      ).consistentRead(pluginConfig.consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -128,7 +128,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).build()
+      ).consistentRead(pluginConfig.consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -178,7 +178,7 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).build()
+      ).consistentRead(pluginConfig.consistentRead).build()
     queryDelete(queryRequest)
   }
 

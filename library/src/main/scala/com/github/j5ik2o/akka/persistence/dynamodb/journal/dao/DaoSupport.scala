@@ -292,6 +292,7 @@ trait DaoSupport {
       )
       .limit(limit)
       .exclusiveStartKeyAsScala(lastEvaluatedKey)
+      .consistentRead(consistentRead)
       .build()
 
   }

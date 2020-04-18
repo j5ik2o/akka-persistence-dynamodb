@@ -392,6 +392,7 @@ class WriteJournalDaoImpl(
             )
             .limit(queryBatchSize)
             .exclusiveStartKeyAsScala(lastEvaluatedKey)
+            .consistentRead(consistentRead)
             .build()
         }
         def loop(
@@ -519,7 +520,9 @@ class WriteJournalDaoImpl(
           .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
           .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
       ).scanIndexForward(false)
-      .limit(1).build()
+      .limit(1)
+      .consistentRead(consistentRead)
+      .build()
   }
 
   private def createGSIRequest(
@@ -548,7 +551,9 @@ class WriteJournalDaoImpl(
           .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
           .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
       ).scanIndexForward(false)
-      .limit(1).build()
+      .limit(1)
+      .consistentRead(consistentRead)
+      .build()
   }
 
   private def highestSequenceNr(

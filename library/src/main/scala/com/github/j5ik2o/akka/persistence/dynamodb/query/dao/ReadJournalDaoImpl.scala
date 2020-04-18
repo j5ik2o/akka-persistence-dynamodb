@@ -81,6 +81,7 @@ class ReadJournalDaoImpl(
           .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
           .limit(scanBatchSize)
           .exclusiveStartKeyAsScala(lastEvaluatedKey)
+          .consistentRead(consistentRead)
           .build()
         Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
@@ -171,6 +172,7 @@ class ReadJournalDaoImpl(
               )
               .limit(scanBatchSize)
               .exclusiveStartKeyAsScala(lastEvaluatedKey)
+              .consistentRead(consistentRead)
               .build()
             Source
               .single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
@@ -243,11 +245,13 @@ class ReadJournalDaoImpl(
             count: Long,
             index: Int
         ): Source[Map[String, AttributeValue], NotUsed] = {
-          logger.debug(s"index = $index, count = $count")
+          // logger.debug(s"index = $index, count = $count")
           val scanRequest = ScanRequest
             .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
               columnsDefConfig.orderingColumnName
-            ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey).build()
+            ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey)
+            .consistentRead(consistentRead)
+            .build()
           Source
             .single(scanRequest)
             .via(streamClient.scanFlow(1)).flatMapConcat { response =>

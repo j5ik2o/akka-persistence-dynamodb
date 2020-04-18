@@ -42,7 +42,10 @@ trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
   }
 
   def deserializeFlowWithoutTagsAsEither: Flow[T, Either[Throwable, PersistentRepr], NotUsed] = {
-    deserializeFlowAsEither.map(_.right.map(keepPersistentRepr))
+    deserializeFlowAsEither.map {
+      case Right(v) => Right(keepPersistentRepr(v))
+      case Left(ex) => Left(ex)
+    }
   }
 
   // ---

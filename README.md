@@ -11,7 +11,7 @@ akka-persistence-dynamodb writes journal and snapshot entries to DynamoDB. It im
 
 This plugin is derived from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
 
-It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc).
+It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc).
 
 ## Supported versions:
 
@@ -254,5 +254,5 @@ Apache License
 
 This product was made by duplicating or referring to the code of the following products, so Dennis Vriend's license is included in the product code and test code.
 
-- [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
+- [akka/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
 - [dnvriend/akka-persistence-query-test](https://github.com/dnvriend/akka-persistence-query-test)

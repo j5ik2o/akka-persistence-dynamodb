@@ -786,7 +786,7 @@ class WriteJournalDaoImpl(
         .flatMapConcat { callStart =>
           logger.debug(s"putJournalRows.size: ${journalRows.size}")
           logger.debug(s"putJournalRows: $journalRows")
-          journalRows.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
+          journalRows.map(p => s"pid = ${p.persistenceId}, seqNr = ${p.sequenceNumber}").foreach(logger.debug)
 
           def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
             Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>

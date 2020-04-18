@@ -21,7 +21,7 @@ class DynamoDBJournalPerfSpec
         .parseString(
           s"""
         |j5ik2o.dynamo-db-journal {
-        |  shard-count = 1
+        |  shard-count = 2
         |  queue-buffer-size = 1024
         |  queue-parallelism = 1
         |  write-parallelism = 1

@@ -29,7 +29,7 @@ object QueryPluginConfig {
       tagsIndexName = config.asString("tags-index-name", default = "TagsIndex"),
       getJournalRowsIndexName = config.asString(key = "get-journal-rows-index-name", default = "GetJournalRowsIndex"),
       tagSeparator = config.asString("tag-separator", default = ","),
-      shardCount = config.asInt("shard-count", default = 1),
+      shardCount = config.asInt("shard-count", default = 2),
       refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
       maxBufferSize = config.asInt("max-buffer-size", default = 500),
       queryBatchSize = config.asInt("query-batch-size", default = 1024),
@@ -62,4 +62,6 @@ case class QueryPluginConfig(
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
-)
+) {
+  require(shardCount > 1)
+}

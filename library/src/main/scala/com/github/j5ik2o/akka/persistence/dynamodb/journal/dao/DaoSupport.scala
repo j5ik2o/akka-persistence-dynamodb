@@ -100,17 +100,7 @@ trait DaoSupport {
           // logger.debug(s"index = $index, count = $count")
           // logger.debug(s"query-batch-size = $queryBatchSize")
           val queryRequest =
-            if (shardCount == 1)
-              createNonGSIRequest(
-                lastEvaluatedKey,
-                queryBatchSize,
-                persistenceId,
-                fromSequenceNr,
-                toSequenceNr,
-                deleted
-              )
-            else
-              createGSIRequest(lastEvaluatedKey, queryBatchSize, persistenceId, fromSequenceNr, toSequenceNr, deleted)
+            createGSIRequest(lastEvaluatedKey, queryBatchSize, persistenceId, fromSequenceNr, toSequenceNr, deleted)
           Source
             .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
               metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)
@@ -130,14 +120,12 @@ trait DaoSupport {
                 metricsReporter.incrementGetMessagesItemCallErrorCounter()
                 val statusCode = response.sdkHttpResponse().statusCode()
                 val statusText = response.sdkHttpResponse().statusText()
-                logger.debug(s"getMessages(max = $max): finished")
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
             }
         }
     }
     startTimeSource.flatMapConcat { callStart =>
-      logger.debug(s"getMessages(max = $max): start")
       if (max == 0L || fromSequenceNr > toSequenceNr)
         Source.empty
       else {
@@ -214,39 +202,6 @@ trait DaoSupport {
     )
   }
 
-  private def createNonGSIRequest(
-      lastEvaluatedKey: Option[Map[String, AttributeValue]],
-      limit: Int,
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      deleted: Option[Boolean]
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(tableName)
-      .keyConditionExpression(
-        "#pid = :pid and #snr between :min and :max"
-      )
-      .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> columnsDefConfig.partitionKeyColumnName,
-          "#snr" -> columnsDefConfig.sequenceNrColumnName
-        ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-      ).expressionAttributeValuesAsScala(
-        Map(
-          ":pid" -> AttributeValue.builder().s(persistenceId.asString + "-0").build(),
-          ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-          ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-      )
-      .limit(limit)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .build()
-
-  }
-
   private def createGSIRequest(
       lastEvaluatedKey: Option[Map[String, AttributeValue]],
       limit: Int,
@@ -277,7 +232,6 @@ trait DaoSupport {
       )
       .limit(limit)
       .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .consistentRead(consistentRead)
       .build()
 
   }

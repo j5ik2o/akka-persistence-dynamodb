@@ -65,7 +65,6 @@ class ReadJournalDaoImpl(
   override protected val scanBatchSize: Int               = pluginConfig.queryBatchSize
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
-    logger.debug(s"allPersistenceIdsSource(max = $max): start")
     def loop(
         lastEvaluatedKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],
@@ -95,7 +94,6 @@ class ReadJournalDaoImpl(
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          logger.debug(s"allPersistenceIdsSource(max = $max): finished")
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
         }
       }
@@ -131,8 +129,6 @@ class ReadJournalDaoImpl(
       maxOffset: Long,
       max: Long
   ): Source[JournalRow, NotUsed] = {
-    logger.debug(s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): start")
-
     def loop(
         lastEvaluatedKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],
@@ -178,9 +174,6 @@ class ReadJournalDaoImpl(
                 metricsReporter.incrementEventsByTagItemCallErrorCounter()
                 val statusCode = response.sdkHttpResponse().statusCode()
                 val statusText = response.sdkHttpResponse().statusText()
-                logger.debug(
-                  s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
-                )
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
             }
@@ -202,7 +195,6 @@ class ReadJournalDaoImpl(
   }
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
-    logger.debug(s"journalSequence(offset = $offset, limit = $limit): start")
     def loop(
         lastEvaluatedKey: Option[Map[String, AttributeValue]],
         acc: Source[Map[String, AttributeValue], NotUsed],
@@ -234,7 +226,6 @@ class ReadJournalDaoImpl(
             metricsReporter.incrementEventsByTagItemCallErrorCounter()
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
-            logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
           }
         }

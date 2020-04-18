@@ -29,7 +29,7 @@ object JournalPluginConfig {
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
       getJournalRowsIndexName = config.asString("get-journal-rows-index-name", default = "GetJournalRowsIndex"),
       tagSeparator = config.asString("tag-separator", default = ","),
-      shardCount = config.asInt("shard-count", default = 1),
+      shardCount = config.asInt("shard-count", default = 2),
       partitionKeyResolverClassName =
         config.asString("partition-key-resolver-class-name", default = classOf[PartitionKeyResolver.Default].getName),
       queueBufferSize = config.asInt("queue-buffer-size", default = 1024),
@@ -69,4 +69,6 @@ case class JournalPluginConfig(
     softDeleted: Boolean,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
-)
+) {
+  require(shardCount > 1)
+}

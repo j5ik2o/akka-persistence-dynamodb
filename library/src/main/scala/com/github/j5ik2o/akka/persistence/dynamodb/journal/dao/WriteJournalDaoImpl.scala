@@ -239,7 +239,6 @@ class WriteJournalDaoImpl(
   ): Source[Long, NotUsed] = {
     startTimeSource
       .flatMapConcat { callStart =>
-        logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): start")
         getJournalRows(persistenceId, toSequenceNr, deleted = false)
           .flatMapConcat { journalRows =>
             putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
@@ -259,14 +258,12 @@ class WriteJournalDaoImpl(
           }.map { response =>
             metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementDeleteMessagesCallCounter()
-            logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): finished")
             response
           }.recoverWithRetries(
             attempts = 1, {
               case t: Throwable =>
                 metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
                 metricsReporter.incrementDeleteMessagesCallErrorCounter()
-                logger.debug(s"deleteMessages(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr): finished")
                 Source.failed(t)
             }
           )
@@ -275,25 +272,11 @@ class WriteJournalDaoImpl(
 
   override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
     startTimeSource.flatMapConcat { callStart =>
-      logger.debug(s"putMessages(messages = $messages): start")
       if (messages.isEmpty)
         Source.single(0L)
       else
         Source
-          .single(messages).via(requestPutJournalRows).map { response =>
-            metricsReporter.setPutMessagesCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementPutMessagesCallCounter()
-            logger.debug(s"putMessages(messages = $messages): finished")
-            response
-          }.recoverWithRetries(
-            attempts = 1, {
-              case t: Throwable =>
-                metricsReporter.setPutMessagesCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementPutMessagesCallErrorCounter()
-                logger.debug(s"putMessages(messages = $messages): finished")
-                Source.failed(t)
-            }
-          )
+          .single(messages).via(requestPutJournalRows)
     }
 
   override def highestSequenceNr(
@@ -335,39 +318,8 @@ class WriteJournalDaoImpl(
       toSequenceNr: SequenceNumber,
       deleted: Boolean
   ): Source[Seq[JournalRow], NotUsed] = {
-    if (consistentRead) require(shardCount == 1)
     startTimeSource
       .flatMapConcat { callStart =>
-        logger.debug(
-          s"getJournalRows(persistenceId = $persistenceId, toSequenceNr = $toSequenceNr, deleted = $deleted): start"
-        )
-        def createNonGSIRequest(lastEvaluatedKey: Option[Map[String, AttributeValue]]): QueryRequest = {
-          QueryRequest
-            .builder()
-            .tableName(tableName)
-            .keyConditionExpression("#pid = :pid and #snr <= :snr")
-            .filterExpression("#d = :flg")
-            .expressionAttributeNamesAsScala(
-              Map(
-                "#pid" -> columnsDefConfig.partitionKeyColumnName,
-                "#snr" -> columnsDefConfig.sequenceNrColumnName,
-                "#d"   -> columnsDefConfig.deletedColumnName
-              )
-            )
-            .expressionAttributeValuesAsScala(
-              Some(
-                Map(
-                  ":pid" -> AttributeValue.builder().s(persistenceId.asString + "-0").build(),
-                  ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
-                  ":flg" -> AttributeValue.builder().bool(deleted).build()
-                )
-              )
-            )
-            .limit(queryBatchSize)
-            .exclusiveStartKeyAsScala(lastEvaluatedKey)
-            .consistentRead(consistentRead)
-            .build()
-        }
         def createGSIRequest(lastEvaluatedKey: Option[Map[String, AttributeValue]]): QueryRequest = {
           QueryRequest
             .builder()
@@ -393,7 +345,6 @@ class WriteJournalDaoImpl(
             )
             .limit(queryBatchSize)
             .exclusiveStartKeyAsScala(lastEvaluatedKey)
-            .consistentRead(consistentRead)
             .build()
         }
         def loop(
@@ -406,8 +357,7 @@ class WriteJournalDaoImpl(
             .flatMapConcat { itemStart =>
               // logger.debug(s"index = $index, count = $count")
               // logger.debug(s"query-batch-size = $queryBatchSize")
-              val queryRequest =
-                if (shardCount == 1) createNonGSIRequest(lastEvaluatedKey) else createGSIRequest(lastEvaluatedKey)
+              val queryRequest = createGSIRequest(lastEvaluatedKey)
               Source
                 .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
                   metricsReporter.setGetJournalRowsItemDuration(System.nanoTime() - itemStart)
@@ -568,9 +518,7 @@ class WriteJournalDaoImpl(
       )
       startTimeSource
         .flatMapConcat { itemStart =>
-          val queryRequest =
-            if (shardCount == 1) createNonGSIRequest(persistenceId, fromSequenceNr, deleted)
-            else createGSIRequest(persistenceId, fromSequenceNr, deleted)
+          val queryRequest = createGSIRequest(persistenceId, fromSequenceNr, deleted)
           Source
             .single(queryRequest)
             .via(streamClient.queryFlow())
@@ -796,7 +744,6 @@ class WriteJournalDaoImpl(
       startTimeSource
         .flatMapConcat { callStart =>
           logger.debug(s"putJournalRows.size: ${journalRows.size}")
-          logger.debug(s"putJournalRows: $journalRows")
           journalRows.map(p => s"pid = ${p.persistenceId}, seqNr = ${p.sequenceNumber}").foreach(logger.debug)
 
           def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =

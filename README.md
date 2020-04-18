@@ -104,7 +104,7 @@ j5ik2o.dynamo-db-journal {
   table-name = "Journal"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
-  shard-count = 1
+  shard-count = 2
   queue-buffer-size = 1024
   queue-overflow-strategy = "Fail"
   queue-parallelism = 32
@@ -207,7 +207,7 @@ j5ik2o.dynamo-db-read-journal {
   tags-index-name = "TagsIndex"
   get-journal-rows-index-name = "GetJournalRows"
   tag-separator = ","
-  shard-count = 1
+  shard-count = 2
   refresh-interval = 0.5 s
   query-batch-size = 1024
   consistent-read = false

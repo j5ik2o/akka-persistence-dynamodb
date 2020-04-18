@@ -33,6 +33,8 @@ object JournalPluginConfig {
       queueParallelism = config.asInt("queue-parallelism", default = 1),
       writeParallelism = config.asInt("write-parallelism", default = 8),
       queryBatchSize = config.asInt("query-batch-size", default = 512),
+      scanBatchSize = config.asInt("scan-batch-size", default = 512),
+      replayBatchSize = config.asInt("replay-batch-size", default = 512),
       consistentRead = config.asBoolean("consistent-read", default = false),
       softDeleted = config.asBoolean("soft-delete", default = true),
       metricsReporterClassName = config.asString(
@@ -56,6 +58,8 @@ case class JournalPluginConfig(
     queueParallelism: Int,
     writeParallelism: Int,
     queryBatchSize: Int,
+    scanBatchSize: Int,
+    replayBatchSize: Int,
     consistentRead: Boolean,
     softDeleted: Boolean,
     metricsReporterClassName: String,

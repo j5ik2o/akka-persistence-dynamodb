@@ -32,6 +32,7 @@ object QueryPluginConfig {
       shardCount = config.asInt("shard-count", default = 1),
       refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
       queryBatchSize = config.asInt("query-batch-size", default = 1024),
+      scanBatchSize = config.asInt("scan-batch-size", default = 1024),
       consistentRead = config.asBoolean("consistent-read", default = false),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
@@ -54,6 +55,7 @@ case class QueryPluginConfig(
     refreshInterval: FiniteDuration,
     shardCount: Int,
     queryBatchSize: Int,
+    scanBatchSize: Int,
     consistentRead: Boolean,
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterClassName: String,

@@ -16,15 +16,17 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
+import java.io.IOException
+
 import akka.NotUsed
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 

@@ -10,6 +10,10 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
@@ -69,11 +73,20 @@ class WriteJournalDaoImplSpec
 
   implicit val ec = system.dispatcher
 
+  private val serializer: FlowPersistentReprSerializer[JournalRow] =
+    new ByteArrayJournalSerializer(serialization, ",")
+
   val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, new NullMetricsReporter)(ec)
+    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, new NullMetricsReporter)(ec, system)
+    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, serializer, new NullMetricsReporter)(
+      ec,
+      system
+    )
 
   val sch = Scheduler(ec)
 
@@ -108,7 +121,7 @@ class WriteJournalDaoImplSpec
       result shouldBe max
       val results =
         writeJournalDao
-          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
+          .getMessagesAsJournalRow(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
             Seq.empty[JournalRow]
           )(_ :+ _).futureValue
       results.size shouldBe 60
@@ -139,7 +152,7 @@ class WriteJournalDaoImplSpec
       writeJournalDao.updateMessage(journalRows.head.withDeleted).runWith(Sink.head).futureValue
       val results =
         writeJournalDao
-          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue, None).runFold(
+          .getMessagesAsJournalRow(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue, None).runFold(
             Seq.empty[JournalRow]
           )(_ :+ _).futureValue
       results.head.persistenceId shouldBe PersistenceId(pid)
@@ -164,7 +177,7 @@ class WriteJournalDaoImplSpec
         .deleteMessages(PersistenceId(pid), SequenceNumber(60)).runWith(Sink.head).futureValue
       val results =
         writeJournalDao
-          .getMessages(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
+          .getMessagesAsJournalRow(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue).runFold(
             Seq.empty[JournalRow]
           )(_ :+ _).futureValue
       results.size shouldBe 0

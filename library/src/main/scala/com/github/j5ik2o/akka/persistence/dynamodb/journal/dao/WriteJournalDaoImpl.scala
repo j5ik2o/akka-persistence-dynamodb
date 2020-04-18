@@ -22,10 +22,11 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Concat, Flow, Keep, Sink, Source, SourceQueueWithComplete }
-import akka.stream.{ OverflowStrategy, QueueOfferResult }
+import akka.stream.{ ActorMaterializer, OverflowStrategy, QueueOfferResult }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKey, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
@@ -42,12 +43,15 @@ class WriteJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
     serialization: Serialization,
     pluginConfig: JournalPluginConfig,
+    val serializer: FlowPersistentReprSerializer[JournalRow],
     protected val metricsReporter: MetricsReporter
 )(
-    implicit ec: ExecutionContext,
+    implicit val ec: ExecutionContext,
     system: ActorSystem
-) extends WriteJournalDao
+) extends JournalDaoWithUpdates
     with DaoSupport {
+
+  implicit val mat = ActorMaterializer()
 
   import pluginConfig._
 
@@ -62,6 +66,7 @@ class WriteJournalDaoImpl(
   private val writeParallelism: Int                                = pluginConfig.writeParallelism
   override protected val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
   override protected val queryBatchSize: Int                       = pluginConfig.queryBatchSize
+  override protected val scanBatchSize: Int                        = pluginConfig.scanBatchSize
   override protected val consistentRead: Boolean                   = pluginConfig.consistentRead
   private val logger                                               = LoggerFactory.getLogger(getClass)
 
@@ -285,6 +290,13 @@ class WriteJournalDaoImpl(
           )
     }
 
+  override def highestSequenceNr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber
+  ): Source[Long, NotUsed] = {
+    highestSequenceNr(persistenceId, Some(fromSequenceNr))
+  }
+
   private def requestPutJournalRows: Flow[Seq[JournalRow], Long, NotUsed] =
     Flow[Seq[JournalRow]]
       .mapAsync(1) { messages =>
@@ -477,11 +489,61 @@ class WriteJournalDaoImpl(
         }
       }.withAttributes(logLevels)
 
-  override def highestSequenceNr(
+  private def createNonGSIRequest(
       persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber
-  ): Source[Long, NotUsed] = {
-    highestSequenceNr(persistenceId, Some(fromSequenceNr))
+      fromSequenceNr: Option[SequenceNumber] = None,
+      deleted: Option[Boolean] = None
+  ): QueryRequest = {
+    QueryRequest
+      .builder()
+      .tableName(tableName)
+      .keyConditionExpressionAsScala(
+        fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+      )
+      .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> columnsDefConfig.partitionKeyColumnName
+        ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+        fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+      )
+      .expressionAttributeValuesAsScala(
+        Map(
+          ":id" -> AttributeValue.builder().s(persistenceId.asString + "-0").build()
+        ) ++ deleted
+          .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+      ).scanIndexForward(false)
+      .limit(1).build()
+  }
+
+  private def createGSIRequest(
+      persistenceId: PersistenceId,
+      fromSequenceNr: Option[SequenceNumber] = None,
+      deleted: Option[Boolean] = None
+  ): QueryRequest = {
+    QueryRequest
+      .builder()
+      .tableName(tableName)
+      .indexName(getJournalRowsIndexName)
+      .keyConditionExpressionAsScala(
+        fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+      )
+      .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> columnsDefConfig.persistenceIdColumnName
+        ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+        fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+      )
+      .expressionAttributeValuesAsScala(
+        Map(
+          ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
+        ) ++ deleted
+          .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
+          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+      ).scanIndexForward(false)
+      .limit(1).build()
   }
 
   private def highestSequenceNr(
@@ -489,60 +551,15 @@ class WriteJournalDaoImpl(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): Source[Long, NotUsed] = {
-    def createNonGSIRequest: QueryRequest = {
-      QueryRequest
-        .builder()
-        .tableName(tableName)
-        .keyConditionExpressionAsScala(
-          fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
-        )
-        .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-        .expressionAttributeNamesAsScala(
-          Map(
-            "#pid" -> columnsDefConfig.partitionKeyColumnName
-          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-        )
-        .expressionAttributeValuesAsScala(
-          Map(
-            ":id" -> AttributeValue.builder().s(persistenceId.asString + "-0").build()
-          ) ++ deleted
-            .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-            .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
-        ).scanIndexForward(false)
-        .limit(1).build()
-    }
-    def createGSIRequest: QueryRequest = {
-      QueryRequest
-        .builder()
-        .tableName(tableName)
-        .indexName(getJournalRowsIndexName)
-        .keyConditionExpressionAsScala(
-          fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
-        )
-        .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-        .expressionAttributeNamesAsScala(
-          Map(
-            "#pid" -> columnsDefConfig.persistenceIdColumnName
-          ) ++ deleted.map(_ => Map("#d"     -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-          fromSequenceNr.map(_ => Map("#snr" -> columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-        )
-        .expressionAttributeValuesAsScala(
-          Map(
-            ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
-          ) ++ deleted
-            .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-            .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
-        ).scanIndexForward(false)
-        .limit(1).build()
-    }
     startTimeSource.flatMapConcat { callStat =>
       logger.debug(
         s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): start"
       )
       startTimeSource
         .flatMapConcat { itemStart =>
-          val queryRequest = if (shardCount == 1) createNonGSIRequest else createGSIRequest
+          val queryRequest =
+            if (shardCount == 1) createNonGSIRequest(persistenceId, fromSequenceNr, deleted)
+            else createGSIRequest(persistenceId, fromSequenceNr, deleted)
           Source
             .single(queryRequest)
             .via(streamClient.queryFlow())
@@ -596,7 +613,7 @@ class WriteJournalDaoImpl(
         .flatMapConcat { callStart =>
           startTimeSource
             .flatMapConcat { start =>
-              val request = DeleteItemRequest
+              val deleteRequest = DeleteItemRequest
                 .builder().keyAsScala(
                   Map(
                     columnsDefConfig.persistenceIdColumnName -> AttributeValue
@@ -608,7 +625,7 @@ class WriteJournalDaoImpl(
                       ).build()
                   )
                 ).build()
-              Source.single(request).via(streamClient.deleteItemFlow(1)).flatMapConcat { response =>
+              Source.single(deleteRequest).via(streamClient.deleteItemFlow(1)).flatMapConcat { response =>
                 metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
                 if (response.sdkHttpResponse().isSuccessful) {
                   metricsReporter.incrementDeleteJournalRowsItemCallCounter()
@@ -769,7 +786,7 @@ class WriteJournalDaoImpl(
         .flatMapConcat { callStart =>
           logger.debug(s"putJournalRows.size: ${journalRows.size}")
           logger.debug(s"putJournalRows: $journalRows")
-          journalRows.map(_.persistenceId).map(p => s"pid = $p").foreach(logger.debug)
+          journalRows.map(p => s"pid = ${p.persistenceId}, seqNr = ${p.sequenceNumber}").foreach(logger.debug)
 
           def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
             Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>

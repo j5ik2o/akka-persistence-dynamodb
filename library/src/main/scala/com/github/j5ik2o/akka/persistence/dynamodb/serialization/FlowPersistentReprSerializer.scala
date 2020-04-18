@@ -20,7 +20,7 @@ import akka.NotUsed
 import akka.persistence.PersistentRepr
 import akka.stream.scaladsl.Flow
 
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
 
@@ -42,13 +42,16 @@ trait FlowPersistentReprSerializer[T] extends PersistentReprSerializer[T] {
   }
 
   def deserializeFlowWithoutTagsAsEither: Flow[T, Either[Throwable, PersistentRepr], NotUsed] = {
-    deserializeFlowAsEither.map(_.map(keepPersistentRepr))
+    deserializeFlowAsEither.map(_.right.map(keepPersistentRepr))
   }
 
   // ---
 
   def deserializeFlowAsTry: Flow[T, Try[(PersistentRepr, Set[String], Long)], NotUsed] = {
-    Flow[T].map(deserialize).map(_.toTry)
+    Flow[T].map(deserialize).map {
+      case Right(v) => Success(v)
+      case Left(ex) => Failure(ex)
+    }
   }
 
   def deserializeFlowWithoutTagsAsTry: Flow[T, Try[PersistentRepr], NotUsed] = {

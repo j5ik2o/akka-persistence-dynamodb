@@ -23,7 +23,7 @@ object JournalColumnsDefConfig {
 
   def fromConfig(config: Config): JournalColumnsDefConfig = {
     JournalColumnsDefConfig(
-      partitionKeyColumnName = config.asString("partition-key-column-name", DefaultColumnsDef.PartitionKey),
+      partitionKeyColumnName = config.asString("partition-key-column-name", DefaultColumnsDef.PartitionKeyColumnName),
       persistenceIdColumnName =
         config.asString("persistence-id-column-name", DefaultColumnsDef.PersistenceIdColumnName),
       sequenceNrColumnName = config.asString("sequence-nr-column-name", DefaultColumnsDef.SequenceNrColumnName),

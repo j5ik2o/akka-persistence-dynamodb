@@ -17,7 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.const
 
 object DefaultColumnsDef {
 
-  val PartitionKey            = "pkey"
+  val PartitionKeyColumnName  = "pkey"
   val OrderingColumnName      = "ordering"
   val DeletedColumnName       = "deleted"
   val MessageColumnName       = "message"

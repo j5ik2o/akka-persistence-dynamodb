@@ -215,7 +215,8 @@ class WriteJournalDaoImpl(
               logger.debug(s"updateMessage(journalRow = $journalRow): finished")
               Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
             }
-          }.map { response =>
+          }
+          .map { response =>
             metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - callStart)
             metricsReporter.incrementUpdateMessageCallCounter()
             logger.debug(s"updateMessage(journalRow = $journalRow): finished")

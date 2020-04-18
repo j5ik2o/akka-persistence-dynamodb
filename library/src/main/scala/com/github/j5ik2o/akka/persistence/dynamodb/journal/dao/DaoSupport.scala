@@ -145,20 +145,6 @@ trait DaoSupport {
           .map(convertToJournalRow)
           .take(max)
           .withAttributes(logLevels)
-          .map { response =>
-            metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementGetMessagesCallCounter()
-            logger.debug(s"getMessages(max = $max): finished")
-            response
-          }.recoverWithRetries(
-            attempts = 1, {
-              case t: Throwable =>
-                metricsReporter.setGetMessagesCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementGetMessagesCallErrorCounter()
-                logger.debug(s"getMessages(max = $max): finished")
-                Source.failed(t)
-            }
-          )
       }
     }
   }

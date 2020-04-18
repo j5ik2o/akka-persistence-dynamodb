@@ -23,18 +23,16 @@ import akka.event.{ Logging, LoggingAdapter }
 import akka.persistence.journal.Tagged
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, PersistenceQuery }
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
-import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.{ TestKit, TestProbe }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.Config
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import org.scalatest.flatspec.AnyFlatSpecLike
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FlatSpecLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -42,7 +40,7 @@ import scala.language.implicitConversions
 import scala.util.Try
 
 abstract class QueryJournalSpec(config: Config)
-    extends AnyFlatSpecLike
+    extends FlatSpecLike
     with Matchers
     with ScalaFutures
     with BeforeAndAfterAll
@@ -53,6 +51,8 @@ abstract class QueryJournalSpec(config: Config)
   val log: LoggingAdapter           = Logging(system, this.getClass)
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
   implicit val timeout: Timeout     = 30.seconds
+
+  implicit val mat = ActorMaterializer()
 
   val identifier: String = DynamoDBReadJournal.Identifier
 

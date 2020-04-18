@@ -22,6 +22,7 @@ import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
@@ -55,9 +56,10 @@ object DynamoDBJournal {
 
 class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
 
-  implicit val ec: ExecutionContext = context.dispatcher
-  implicit val system: ActorSystem  = context.system
-  implicit val scheduler: Scheduler = Scheduler(ec)
+  implicit val ec: ExecutionContext   = context.dispatcher
+  implicit val system: ActorSystem    = context.system
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val scheduler: Scheduler   = Scheduler(ec)
 
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 

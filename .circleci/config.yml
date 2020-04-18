@@ -27,8 +27,9 @@ jobs:
           key: scala-library-dependencies-{{ checksum "build.sbt" }}
       - run:
           command: |
-            sbt ++"2.12.10" test
-            sbt ++"2.13.1" test
+            sbt clean ++"2.11.12" test
+            sbt clean ++"2.12.10" test
+            sbt clean ++"2.13.1" test
           no_output_timeout: 1h
       - save_cache:
           paths: [ "~/.sbt/boot", "~/.ivy2/cache", "~/.cache/coursier",  "~/.wixMySQL" ]

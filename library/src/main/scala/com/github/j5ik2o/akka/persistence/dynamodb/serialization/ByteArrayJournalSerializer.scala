@@ -38,7 +38,7 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
           SequenceNumber(persistentRepr.sequenceNr),
           persistentRepr.deleted,
           _,
-          System.nanoTime(),
+          System.currentTimeMillis(),
           encodeTags(tags, separator)
         )
       ) match {

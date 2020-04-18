@@ -110,7 +110,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         )
-      ).consistentRead(pluginConfig.consistentRead).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -130,7 +130,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).consistentRead(pluginConfig.consistentRead).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -180,7 +180,7 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).consistentRead(pluginConfig.consistentRead).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -200,7 +200,7 @@ class SnapshotDaoImpl(
       )
       .scanIndexForward(false)
       .limit(1)
-      .consistentRead(pluginConfig.consistentRead)
+      .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(1))
@@ -254,7 +254,7 @@ class SnapshotDaoImpl(
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
       ).scanIndexForward(false)
-      .consistentRead(pluginConfig.consistentRead)
+      .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
@@ -301,7 +301,7 @@ class SnapshotDaoImpl(
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
       ).scanIndexForward(false)
-      .consistentRead(pluginConfig.consistentRead)
+      .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
@@ -355,7 +355,7 @@ class SnapshotDaoImpl(
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
       ).scanIndexForward(false)
-      .consistentRead(pluginConfig.consistentRead)
+      .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>

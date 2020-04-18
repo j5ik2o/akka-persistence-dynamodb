@@ -71,6 +71,8 @@ libraryDependencies += Seq(
 If you want to use the module for Akka2.5 in Scala 2.13 or 2.12, you can do the following
 
 ```scala
+val akka25Version = "2.5.30"
+
 libraryDependencies += Seq(
   "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version excludeAll(
     ExclusionRule(organization = "com.typesafe.akka"),

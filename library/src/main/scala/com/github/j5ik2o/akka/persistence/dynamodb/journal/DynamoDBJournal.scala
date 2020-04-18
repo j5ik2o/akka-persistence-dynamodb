@@ -42,6 +42,7 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClientBuilder => JavaDynamoDbAsyncClientBuilder
 }
 
+import scala.collection.immutable._
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }

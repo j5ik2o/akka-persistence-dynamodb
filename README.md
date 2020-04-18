@@ -68,6 +68,20 @@ libraryDependencies += Seq(
 )
 ```
 
+If you want to use the module for Akka2.5 in Scala 2.13 or 2.12, you can do the following
+
+```scala
+libraryDependencies += Seq(
+  "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version excludeAll(
+    ExclusionRule(organization = "com.typesafe.akka"),
+  ),
+  "com.typesafe.akka"      %% "akka-slf4j"              % akka25Version,
+  "com.typesafe.akka"      %% "akka-stream"             % akka25Version,
+  "com.typesafe.akka"      %% "akka-persistence"        % akka25Version,
+  "com.typesafe.akka"      %% "akka-persistence-query"  % akka25Version
+)
+```
+
 ## akka-persistence journal plugin
 
 Just this, if you like the default settings.

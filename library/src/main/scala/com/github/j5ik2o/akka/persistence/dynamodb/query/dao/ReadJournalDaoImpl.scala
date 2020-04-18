@@ -204,13 +204,13 @@ class ReadJournalDaoImpl(
           loop(None, Source.empty, 0L, 1)
             .map(convertToJournalRow)
             .fold(ArrayBuffer.empty[JournalRow])(_ += _)
-            .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
+            .map(_.sortBy(journalRow => (journalRow.persistenceId.value, journalRow.sequenceNumber.value)))
             .mapConcat(_.toVector)
             .statefulMapConcat { () =>
               val index = new AtomicLong()
               journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
             }
-            .filter { row => row.ordering > offset && row.ordering <= maxOffset }
+            .filter(journalRow => journalRow.ordering > offset && journalRow.ordering <= maxOffset)
             .take(max)
             .map { response =>
               metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)

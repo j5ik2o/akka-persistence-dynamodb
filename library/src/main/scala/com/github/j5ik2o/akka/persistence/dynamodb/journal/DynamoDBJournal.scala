@@ -77,6 +77,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       ).getOrElse(throw new ClassNotFoundException(className))
   }
 
+  private val sortKeyResolver: SortKeyResolver = {
+    val className = pluginConfig.sortKeyResolverClassName
+    val args =
+      Seq(classOf[Config] -> config)
+    dynamicAccess
+      .createInstanceFor[SortKeyResolver](
+        className,
+        args
+      ).getOrElse(throw new ClassNotFoundException(className))
+  }
+
   protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
     HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
 
@@ -94,7 +105,15 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
   protected val journalDao: JournalDaoWithUpdates =
-    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, partitionKeyResolver, serializer, metricsReporter)
+    new WriteJournalDaoImpl(
+      asyncClient,
+      serialization,
+      pluginConfig,
+      partitionKeyResolver,
+      sortKeyResolver,
+      serializer,
+      metricsReporter
+    )
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 

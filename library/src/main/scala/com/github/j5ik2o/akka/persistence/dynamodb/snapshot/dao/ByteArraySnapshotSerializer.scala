@@ -51,7 +51,7 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
       .deserialize(snapshotRow.snapshot, classOf[Snapshot])
       .map(snapshot => {
         val snapshotMetadata =
-          SnapshotMetadata(snapshotRow.persistenceId.value, snapshotRow.sequenceNumber.value, snapshotRow.created)
+          SnapshotMetadata(snapshotRow.persistenceId.asString, snapshotRow.sequenceNumber.value, snapshotRow.created)
         (snapshotMetadata, snapshot.data)
       }) match {
       case Success(value) => Right(value)

@@ -114,6 +114,10 @@ trait DynamoDBSpecSupport
             .attributeType(ScalarAttributeType.S).build(),
           AttributeDefinition
             .builder()
+            .attributeName("skey")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
             .attributeName("persistence-id")
             .attributeType(ScalarAttributeType.S).build(),
           AttributeDefinition
@@ -134,7 +138,7 @@ trait DynamoDBSpecSupport
             .keyType(KeyType.HASH).build(),
           KeySchemaElement
             .builder()
-            .attributeName("sequence-nr")
+            .attributeName("skey")
             .keyType(KeyType.RANGE).build()
         )
       )

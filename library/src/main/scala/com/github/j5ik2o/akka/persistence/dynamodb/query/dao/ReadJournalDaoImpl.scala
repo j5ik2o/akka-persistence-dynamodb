@@ -71,7 +71,6 @@ class ReadJournalDaoImpl(
         count: Long,
         index: Int
     ): Source[Map[String, AttributeValue], NotUsed] = {
-      // logger.debug(s"index = $index, count = $count")
       val scanRequest = ScanRequest
         .builder()
         .tableName(tableName)
@@ -153,7 +152,6 @@ class ReadJournalDaoImpl(
             )
             .limit(scanBatchSize)
             .exclusiveStartKeyAsScala(lastEvaluatedKey)
-            .consistentRead(consistentRead)
             .build()
           Source
             .single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
@@ -182,7 +180,7 @@ class ReadJournalDaoImpl(
     loop(None, Source.empty, 0L, 1)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
-      .map(_.sortBy(journalRow => (journalRow.persistenceId.value, journalRow.sequenceNumber.value)))
+      .map(_.sortBy(journalRow => (journalRow.persistenceId.asString, journalRow.sequenceNumber.value)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
         val index = new AtomicLong()
@@ -201,7 +199,6 @@ class ReadJournalDaoImpl(
         count: Long,
         index: Int
     ): Source[Map[String, AttributeValue], NotUsed] = startTimeSource.flatMapConcat { requestStart =>
-      // logger.debug(s"index = $index, count = $count")
       val scanRequest = ScanRequest
         .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
           columnsDefConfig.orderingColumnName

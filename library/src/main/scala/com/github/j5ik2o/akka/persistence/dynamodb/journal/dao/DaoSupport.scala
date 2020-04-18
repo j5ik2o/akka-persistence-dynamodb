@@ -97,8 +97,6 @@ trait DaoSupport {
     ): Source[Map[String, AttributeValue], NotUsed] = {
       startTimeSource
         .flatMapConcat { itemStart =>
-          // logger.debug(s"index = $index, count = $count")
-          // logger.debug(s"query-batch-size = $queryBatchSize")
           val queryRequest =
             createGSIRequest(lastEvaluatedKey, queryBatchSize, persistenceId, fromSequenceNr, toSequenceNr, deleted)
           Source
@@ -112,7 +110,6 @@ trait DaoSupport {
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                 if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-                  //logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource
@@ -125,15 +122,13 @@ trait DaoSupport {
             }
         }
     }
-    startTimeSource.flatMapConcat { callStart =>
-      if (max == 0L || fromSequenceNr > toSequenceNr)
-        Source.empty
-      else {
-        loop(None, Source.empty, 0L, 1)
-          .map(convertToJournalRow)
-          .take(max)
-          .withAttributes(logLevels)
-      }
+    if (max == 0L || fromSequenceNr > toSequenceNr)
+      Source.empty
+    else {
+      loop(None, Source.empty, 0L, 1)
+        .map(convertToJournalRow)
+        .take(max)
+        .withAttributes(logLevels)
     }
   }
 

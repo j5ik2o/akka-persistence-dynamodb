@@ -85,6 +85,7 @@ class WriteJournalDaoImplSpec
   val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
   val partitionKeyResolver = new PartitionKeyResolver.Default(config)
+  val sortKeyResolver      = new SortKeyResolver.Default(config)
 
   val writeJournalDao =
     new WriteJournalDaoImpl(
@@ -92,6 +93,7 @@ class WriteJournalDaoImplSpec
       serialization,
       journalPluginConfig,
       partitionKeyResolver,
+      sortKeyResolver,
       serializer,
       new NullMetricsReporter
     )(

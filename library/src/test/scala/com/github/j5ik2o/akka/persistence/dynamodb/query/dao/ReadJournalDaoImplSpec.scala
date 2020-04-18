@@ -27,7 +27,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
   JournalRow,
   PartitionKeyResolver,
   PersistenceId,
-  SequenceNumber
+  SequenceNumber,
+  SortKeyResolver
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
@@ -95,6 +96,7 @@ class ReadJournalDaoImplSpec
   val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
   val partitionKeyResolver = new PartitionKeyResolver.Default(config)
+  val sortKeyResolver      = new SortKeyResolver.Default(config)
 
   val writeJournalDao =
     new WriteJournalDaoImpl(
@@ -102,6 +104,7 @@ class ReadJournalDaoImplSpec
       serialization,
       journalPluginConfig,
       partitionKeyResolver,
+      sortKeyResolver,
       serializer,
       new NullMetricsReporter
     )(
@@ -114,7 +117,13 @@ class ReadJournalDaoImplSpec
   "ReadJournalDaoImpl" - {
     "allPersistenceIds" in {
       val journalRows = (1 to 100).map { n =>
-        JournalRow(PersistenceId(n.toString), SequenceNumber(1), deleted = false, "ABC".getBytes(), Long.MaxValue)
+        JournalRow(
+          PersistenceId("a-" + n.toString),
+          SequenceNumber(1),
+          deleted = false,
+          "ABC".getBytes(),
+          Long.MaxValue
+        )
       }
       writeJournalDao.putMessages(journalRows).runWith(Sink.head).futureValue
       val result = readJournalDao

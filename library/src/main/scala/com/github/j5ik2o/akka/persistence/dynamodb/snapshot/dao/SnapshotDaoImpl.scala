@@ -153,7 +153,7 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 

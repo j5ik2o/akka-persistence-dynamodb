@@ -22,7 +22,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 ## Features
 
-| Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
+| Product | **j5ik2o/akka-persistence-dynamodb** | **[akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb)** | **[akka/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)** |
 |:-------:|:----:|:----:|:----:|
 |DynamoDB support|✓|✓|-|
 |Write Sharding|✓|✓|-|

@@ -67,7 +67,7 @@ class DynamoDBSnapshotStoreSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  override def asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
+  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   before { createTable }
 

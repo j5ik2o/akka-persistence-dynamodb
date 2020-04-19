@@ -70,9 +70,9 @@ class ReadJournalDaoImplSpec
 
   import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 
-  val asyncClient  = DynamoDbAsyncClient(underlyingAsync)
-  val taskClient   = DynamoDbMonixClient(asyncClient)
-  val streamClient = DynamoDbAkkaClient(asyncClient)
+  val dynamoDbAsyncClient = DynamoDbAsyncClient(underlyingAsync)
+  val taskClient          = DynamoDbMonixClient(dynamoDbAsyncClient)
+  val streamClient        = DynamoDbAkkaClient(dynamoDbAsyncClient)
 
   private val serialization = SerializationExtension(system)
 
@@ -88,7 +88,7 @@ class ReadJournalDaoImplSpec
     new ByteArrayJournalSerializer(serialization, ",")
 
   val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+    new ReadJournalDaoImpl(dynamoDbAsyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
       ec,
       system
     )
@@ -100,7 +100,7 @@ class ReadJournalDaoImplSpec
 
   val writeJournalDao =
     new WriteJournalDaoImpl(
-      asyncClient,
+      dynamoDbAsyncClient,
       serialization,
       journalPluginConfig,
       partitionKeyResolver,

@@ -112,15 +112,15 @@ class DynamoDBReadJournalSpec
 
   private val serialization = SerializationExtension(system)
 
-  val asyncClient  = DynamoDbAsyncClient(underlyingAsync)
-  val taskClient   = DynamoDbMonixClient(asyncClient)
-  val streamClient = DynamoDbAkkaClient(asyncClient)
+  val dynamoDbAsyncClient = DynamoDbAsyncClient(underlyingAsync)
+  val taskClient          = DynamoDbMonixClient(dynamoDbAsyncClient)
+  val streamClient        = DynamoDbAkkaClient(dynamoDbAsyncClient)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, ",")
 
   val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+    new ReadJournalDaoImpl(dynamoDbAsyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
       ec,
       system
     )
@@ -130,7 +130,7 @@ class DynamoDBReadJournalSpec
 
   val writeJournalDao =
     new WriteJournalDaoImpl(
-      asyncClient,
+      dynamoDbAsyncClient,
       serialization,
       journalPluginConfig,
       partitionKeyResolver,

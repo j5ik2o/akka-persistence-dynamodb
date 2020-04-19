@@ -24,45 +24,41 @@ trait DynamoDBSpecSupport
 
   val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  def asyncClient: DynamoDbAsyncClient
+  val journalTableName  = "Journal"
+  val snapshotTableName = "Snapshot"
 
-  def deleteTable: Unit = {
-    deleteJournalTable
-    deleteSnapshotTable
+  def dynamoDbAsyncClient: DynamoDbAsyncClient
+
+  def deleteTable(): Unit = {
+    deleteJournalTable()
+    deleteSnapshotTable()
   }
 
-  private def deleteJournalTable: Unit = {
-    logger.debug("deleteJournalTable: start")
-    val tableName = "Journal"
-    asyncClient.deleteTable(tableName)
+  private def deleteJournalTable(): Unit = {
+    dynamoDbAsyncClient.deleteTable(journalTableName)
     eventually {
-      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
-      result.tableNamesAsScala.fold(true)(v => !v.contains(tableName)) shouldBe true
+      val result = dynamoDbAsyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
+      result.tableNamesAsScala.fold(true)(v => !v.contains(journalTableName)) shouldBe true
     }
-    logger.debug("deleteJournalTable: finish")
   }
 
-  private def deleteSnapshotTable: Unit = {
-    logger.debug("deleteSnapshotTable: start")
-    val tableName = "Snapshot"
-    asyncClient.deleteTable(tableName)
+  private def deleteSnapshotTable(): Unit = {
+    dynamoDbAsyncClient.deleteTable(snapshotTableName)
     eventually {
-      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
-      result.tableNamesAsScala.fold(true)(v => !v.contains(tableName)) shouldBe true
+      val result = dynamoDbAsyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
+      result.tableNamesAsScala.fold(true)(v => !v.contains(snapshotTableName)) shouldBe true
     }
-    logger.debug("deleteSnapshotTable: finish")
   }
 
-  def createTable: Unit = {
-    createJournalTable
-    createSnapshotTable
+  def createTable(): Unit = {
+    createJournalTable()
+    createSnapshotTable()
   }
 
-  def createSnapshotTable: Unit = {
-    logger.debug("createSnapshotTable: start")
-    val tableName = "Snapshot"
+  def createSnapshotTable(): Unit = {
     val createRequest = CreateTableRequest
       .builder()
+      .tableName(snapshotTableName)
       .attributeDefinitionsAsScala(
         Seq(
           AttributeDefinition
@@ -93,19 +89,16 @@ trait DynamoDBSpecSupport
           .readCapacityUnits(10L)
           .writeCapacityUnits(10L).build()
       )
-      .tableName(tableName).build()
-    val createResponse = asyncClient
+      .build()
+    val createResponse = dynamoDbAsyncClient
       .createTable(createRequest).futureValue
-    logger.debug("createSnapshotTable: finish")
     createResponse.sdkHttpResponse().isSuccessful shouldBe true
   }
 
-  private def createJournalTable: Unit = {
-    logger.debug("createJournalTable: start")
-    val tableName = "Journal"
+  private def createJournalTable(): Unit = {
     val createRequest = CreateTableRequest
       .builder()
-      .tableName(tableName)
+      .tableName(journalTableName)
       .attributeDefinitionsAsScala(
         Seq(
           AttributeDefinition
@@ -179,15 +172,14 @@ trait DynamoDBSpecSupport
                 .writeCapacityUnits(10L).build()
             ).build()
         )
-      ).build()
+      )
+      .streamSpecification(
+        StreamSpecification.builder().streamEnabled(true).streamViewType(StreamViewType.NEW_IMAGE).build()
+      )
+      .build()
 
-    val createResponse = asyncClient
+    val createResponse = dynamoDbAsyncClient
       .createTable(createRequest).futureValue
-    eventually {
-      val result = asyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
-      result.tableNames.fold(false)(_.contains(tableName)) shouldBe true
-    }
-    logger.debug("createJournalTable: finish")
     createResponse.sdkHttpResponse().isSuccessful shouldBe true
 
   }

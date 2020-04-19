@@ -89,7 +89,7 @@ object ConfigOps {
 
     def ?[A](key: String): Try[A] = as(key)
 
-    def ?:[A](key: String, default: A) = as(key, default)
+    def ?:[A](key: String, default: A): A = as(key, default)
 
     def withkey[A](key: String)(f: Config => A): A = f(config.getConfig(key))
   }

@@ -15,6 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
@@ -22,25 +23,35 @@ import scala.concurrent.duration._
 
 object QueryPluginConfig {
 
+  val DefaultTableName: String                = JournalPluginConfig.DefaultTableName
+  val DefaultTagsIndexName: String            = "TagsIndex"
+  val DefaultGetJournalRowsIndexName: String  = JournalPluginConfig.DefaultGetJournalRowsIndexName
+  val DefaultTagSeparator: String             = JournalPluginConfig.DefaultTagSeparator
+  val DefaultRefreshInterval: FiniteDuration  = 1 seconds
+  val DefaultMaxBufferSize                    = 500
+  val DefaultQueryBatchSize                   = 1024
+  val DefaultScanBatchSize                    = 1024
+  val DefaultConsistentRead: Boolean          = JournalPluginConfig.DefaultConsistentRead
+  val DefaultMetricsReporterClassName: String = classOf[NullMetricsReporter].getName
+
   def fromConfig(config: Config): QueryPluginConfig = {
     QueryPluginConfig(
-      tableName = config.asString("table-name", default = "Journal"),
+      tableName = config.asString("table-name", default = DefaultTableName),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      tagsIndexName = config.asString("tags-index-name", default = "TagsIndex"),
-      getJournalRowsIndexName = config.asString(key = "get-journal-rows-index-name", default = "GetJournalRowsIndex"),
-      tagSeparator = config.asString("tag-separator", default = ","),
+      tagsIndexName = config.asString("tags-index-name", default = DefaultTagsIndexName),
+      getJournalRowsIndexName =
+        config.asString(key = "get-journal-rows-index-name", default = DefaultGetJournalRowsIndexName),
+      tagSeparator = config.asString("tag-separator", default = DefaultTagSeparator),
       shardCount = config.asInt("shard-count", default = JournalPluginConfig.DefaultShardCount),
-      refreshInterval = config.asFiniteDuration("refresh-interval", default = 1 seconds),
-      maxBufferSize = config.asInt("max-buffer-size", default = 500),
-      queryBatchSize = config.asInt("query-batch-size", default = 1024),
-      scanBatchSize = config.asInt("scan-batch-size", default = 1024),
-      consistentRead = config.asBoolean("consistent-read", default = false),
+      refreshInterval = config.asFiniteDuration("refresh-interval", default = DefaultRefreshInterval),
+      maxBufferSize = config.asInt("max-buffer-size", default = DefaultMaxBufferSize),
+      queryBatchSize = config.asInt("query-batch-size", default = DefaultQueryBatchSize),
+      scanBatchSize = config.asInt("scan-batch-size", default = DefaultScanBatchSize),
+      consistentRead = config.asBoolean("consistent-read", default = DefaultConsistentRead),
       journalSequenceRetrievalConfig =
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
-      metricsReporterClassName = config.asString(
-        "metrics-reporter-class-name",
-        "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
-      ),
+      metricsReporterClassName =
+        config.asString("metrics-reporter-class-name", default = DefaultMetricsReporterClassName),
       clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
     )
   }

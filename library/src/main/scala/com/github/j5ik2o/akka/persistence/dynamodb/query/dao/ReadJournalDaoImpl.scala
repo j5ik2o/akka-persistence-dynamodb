@@ -65,64 +65,47 @@ class ReadJournalDaoImpl(
   override protected val scanBatchSize: Int               = pluginConfig.queryBatchSize
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
-    startTimeSource.flatMapConcat { callStart =>
-      logger.debug(s"allPersistenceIdsSource(max = $max): start")
-      def loop(
-          lastEvaluatedKey: Option[Map[String, AttributeValue]],
-          acc: Source[Map[String, AttributeValue], NotUsed],
-          count: Long,
-          index: Int
-      ): Source[Map[String, AttributeValue], NotUsed] = {
-        logger.debug(s"index = $index, count = $count")
-        val scanRequest = ScanRequest
-          .builder()
-          .tableName(tableName)
-          .select(Select.SPECIFIC_ATTRIBUTES)
-          .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
-          .limit(scanBatchSize)
-          .exclusiveStartKeyAsScala(lastEvaluatedKey)
-          .build()
-        Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
-          if (response.sdkHttpResponse().isSuccessful) {
-            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-              logger.debug(s"index = $index, next loop")
-              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.sdkHttpResponse().statusCode()
-            val statusText = response.sdkHttpResponse().statusText()
-            logger.debug(s"allPersistenceIdsSource(max = $max): finished")
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-          }
+    def loop(
+        lastEvaluatedKey: Option[Map[String, AttributeValue]],
+        acc: Source[Map[String, AttributeValue], NotUsed],
+        count: Long,
+        index: Int
+    ): Source[Map[String, AttributeValue], NotUsed] = {
+      val scanRequest = ScanRequest
+        .builder()
+        .tableName(tableName)
+        .select(Select.SPECIFIC_ATTRIBUTES)
+        .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
+        .limit(scanBatchSize)
+        .exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .consistentRead(consistentRead)
+        .build()
+      Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful) {
+          val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
+          val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+          if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
+            // logger.debug(s"index = $index, next loop")
+            loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+          } else
+            combinedSource
+        } else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
         }
       }
-
-      loop(None, Source.empty, 0L, 1)
-        .filterNot(_(columnsDefConfig.deletedColumnName).bool.get)
-        .map(_(columnsDefConfig.persistenceIdColumnName).s.get)
-        .fold(Set.empty[String])(_ + _)
-        .mapConcat(_.toVector)
-        .map(PersistenceId)
-        .take(max)
-        .map { response =>
-          metricsReporter.setAllPersistenceIdsCallDuration(System.nanoTime() - callStart)
-          metricsReporter.incrementAllPersistenceIdsCallCounter()
-          logger.debug(s"allPersistenceIdsSource(max = $max): finished")
-          response
-        }.recoverWithRetries(
-          attempts = 1, {
-            case t: Throwable =>
-              metricsReporter.setAllPersistenceIdsCallDuration(System.nanoTime() - callStart)
-              metricsReporter.incrementAllPersistenceIdsCallErrorCounter()
-              logger.debug(s"allPersistenceIdsSource(max = $max): finished")
-              Source.failed(t)
-          }
-        ).withAttributes(logLevels)
     }
+
+    loop(None, Source.empty, 0L, 1)
+      .filterNot(_(columnsDefConfig.deletedColumnName).bool.get)
+      .map(_(columnsDefConfig.persistenceIdColumnName).s.get)
+      .fold(Set.empty[String])(_ + _)
+      .mapConcat(_.toVector)
+      .map(PersistenceId)
+      .take(max)
+      .withAttributes(logLevels)
   }
 
   private def perfectlyMatchTag(tag: String, separator: String): Flow[JournalRow, JournalRow, NotUsed] =
@@ -145,120 +128,43 @@ class ReadJournalDaoImpl(
       maxOffset: Long,
       max: Long
   ): Source[JournalRow, NotUsed] = {
-    startTimeSource.flatMapConcat { callStart =>
-      logger.debug(s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): start")
+    def loop(
+        lastEvaluatedKey: Option[Map[String, AttributeValue]],
+        acc: Source[Map[String, AttributeValue], NotUsed],
+        count: Long,
+        index: Int
+    ): Source[Map[String, AttributeValue], NotUsed] =
       startTimeSource
         .flatMapConcat { itemStart =>
-          def loop(
-              lastEvaluatedKey: Option[Map[String, AttributeValue]],
-              acc: Source[Map[String, AttributeValue], NotUsed],
-              count: Long,
-              index: Int
-          ): Source[Map[String, AttributeValue], NotUsed] = {
-            logger.debug(s"index = $index, count = $count")
-            val scanRequest = ScanRequest
-              .builder()
-              .tableName(tableName)
-              .indexName(pluginConfig.tagsIndexName)
-              .filterExpression("contains(#tags, :tag)")
-              .expressionAttributeNamesAsScala(
-                Map("#tags" -> columnsDefConfig.tagsColumnName)
-              )
-              .expressionAttributeValuesAsScala(
-                Map(
-                  ":tag" -> AttributeValue.builder().s(tag).build()
-                )
-              )
-              .limit(scanBatchSize)
-              .exclusiveStartKeyAsScala(lastEvaluatedKey)
-              .build()
-            Source
-              .single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
-                metricsReporter.setEventsByTagItemDuration(System.nanoTime() - itemStart)
-                if (response.sdkHttpResponse().isSuccessful) {
-                  metricsReporter.incrementEventsByTagItemCallCounter()
-                  if (response.count() > 0)
-                    metricsReporter.addEventsByTagItemCounter(response.count().toLong)
-                  val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                  val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                  val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                  if (lastEvaluatedKey.nonEmpty) {
-                    logger.debug(s"index = $index, next loop")
-                    loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-                  } else
-                    combinedSource
-                } else {
-                  metricsReporter.incrementEventsByTagItemCallErrorCounter()
-                  val statusCode = response.sdkHttpResponse().statusCode()
-                  val statusText = response.sdkHttpResponse().statusText()
-                  logger.debug(
-                    s"eventsByTag(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
-                  )
-                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-                }
-              }
-          }
-
-          loop(None, Source.empty, 0L, 1)
-            .map(convertToJournalRow)
-            .fold(ArrayBuffer.empty[JournalRow])(_ += _)
-            .map(_.sortBy(v => (v.persistenceId.value, v.sequenceNumber.value)))
-            .mapConcat(_.toVector)
-            .statefulMapConcat { () =>
-              val index = new AtomicLong()
-              journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
-            }
-            .filter { row => row.ordering > offset && row.ordering <= maxOffset }
-            .take(max)
-            .map { response =>
-              metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
-              metricsReporter.incrementEventsByTagCallCounter()
-              logger.debug(
-                s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
-              )
-              response
-            }.recoverWithRetries(
-              attempts = 1, {
-                case t: Throwable =>
-                  metricsReporter.setEventsByTagCallDuration(System.nanoTime() - callStart)
-                  metricsReporter.incrementEventsByTagCallErrorCounter()
-                  logger
-                    .debug(
-                      s"eventsByTagAsJournalRow(tag = $tag, offset = $offset, maxOffset = $maxOffset, max = $max): finished"
-                    )
-                  Source.failed(t)
-              }
-            ).withAttributes(logLevels)
-        }
-    }
-  }
-
-  override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
-    startTimeSource.flatMapConcat { start =>
-      logger.debug(s"journalSequence(offset = $offset, limit = $limit): start")
-      startTimeSource.flatMapConcat { requestStart =>
-        def loop(
-            lastEvaluatedKey: Option[Map[String, AttributeValue]],
-            acc: Source[Map[String, AttributeValue], NotUsed],
-            count: Long,
-            index: Int
-        ): Source[Map[String, AttributeValue], NotUsed] = {
-          logger.debug(s"index = $index, count = $count")
+          // logger.debug(s"index = $index, count = $count")
           val scanRequest = ScanRequest
-            .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
-              columnsDefConfig.orderingColumnName
-            ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey).build()
+            .builder()
+            .tableName(tableName)
+            .indexName(pluginConfig.tagsIndexName)
+            .filterExpression("contains(#tags, :tag)")
+            .expressionAttributeNamesAsScala(
+              Map("#tags" -> columnsDefConfig.tagsColumnName)
+            )
+            .expressionAttributeValuesAsScala(
+              Map(
+                ":tag" -> AttributeValue.builder().s(tag).build()
+              )
+            )
+            .limit(scanBatchSize)
+            .exclusiveStartKeyAsScala(lastEvaluatedKey)
+            .build()
           Source
-            .single(scanRequest)
-            .via(streamClient.scanFlow(1)).flatMapConcat { response =>
-              metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
+            .single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
+              metricsReporter.setEventsByTagItemDuration(System.nanoTime() - itemStart)
               if (response.sdkHttpResponse().isSuccessful) {
-                metricsReporter.addJournalSequenceItemCounter(response.count().toLong)
+                metricsReporter.incrementEventsByTagItemCallCounter()
+                if (response.count() > 0)
+                  metricsReporter.addEventsByTagItemCounter(response.count().toLong)
                 val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                 if (lastEvaluatedKey.nonEmpty) {
-                  logger.debug(s"index = $index, next loop")
+                  // logger.debug(s"index = $index, next loop")
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource
@@ -266,32 +172,66 @@ class ReadJournalDaoImpl(
                 metricsReporter.incrementEventsByTagItemCallErrorCounter()
                 val statusCode = response.sdkHttpResponse().statusCode()
                 val statusText = response.sdkHttpResponse().statusText()
-                logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
                 Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
               }
             }
         }
-        loop(None, Source.empty, 0L, 1)
-          .map { result => result(columnsDefConfig.orderingColumnName).n.toLong }
-          .drop(offset)
-          .take(limit)
-          .withAttributes(logLevels).map { response =>
-            metricsReporter.setJournalSequenceCallDuration(System.nanoTime() - start)
-            metricsReporter.incrementJournalSequenceCallCounter()
-            logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
-            response
-          }.recoverWithRetries(
-            1, {
-              case t: Throwable =>
-                metricsReporter.setJournalSequenceCallDuration(System.nanoTime() - start)
-                metricsReporter.incrementJournalSequenceCallErrorCounter()
-                logger.debug(s"journalSequence(offset = $offset, limit = $limit): finished")
-                Source.failed(t)
-            }
-          )
 
+    loop(None, Source.empty, 0L, 1)
+      .map(convertToJournalRow)
+      .fold(ArrayBuffer.empty[JournalRow])(_ += _)
+      .map(_.sortBy(journalRow => (journalRow.persistenceId.asString, journalRow.sequenceNumber.value)))
+      .mapConcat(_.toVector)
+      .statefulMapConcat { () =>
+        val index = new AtomicLong()
+        journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
       }
+      .filter(journalRow => journalRow.ordering > offset && journalRow.ordering <= maxOffset)
+      .take(max)
+      .withAttributes(logLevels)
+
+  }
+
+  override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
+    def loop(
+        lastEvaluatedKey: Option[Map[String, AttributeValue]],
+        acc: Source[Map[String, AttributeValue], NotUsed],
+        count: Long,
+        index: Int
+    ): Source[Map[String, AttributeValue], NotUsed] = startTimeSource.flatMapConcat { requestStart =>
+      val scanRequest = ScanRequest
+        .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
+          columnsDefConfig.orderingColumnName
+        ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .consistentRead(consistentRead)
+        .build()
+      Source
+        .single(scanRequest)
+        .via(streamClient.scanFlow(1)).flatMapConcat { response =>
+          metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
+          if (response.sdkHttpResponse().isSuccessful) {
+            metricsReporter.addJournalSequenceItemCounter(response.count().toLong)
+            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
+            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+            if (lastEvaluatedKey.nonEmpty) {
+              // logger.debug(s"index = $index, next loop")
+              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+            } else
+              combinedSource
+          } else {
+            metricsReporter.incrementEventsByTagItemCallErrorCounter()
+            val statusCode = response.sdkHttpResponse().statusCode()
+            val statusText = response.sdkHttpResponse().statusText()
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          }
+        }
     }
+    loop(None, Source.empty, 0L, 1)
+      .map { result => result(columnsDefConfig.orderingColumnName).n.toLong }
+      .drop(offset)
+      .take(limit)
+
   }
 
   override def maxJournalSequence(): Source[Long, NotUsed] = {

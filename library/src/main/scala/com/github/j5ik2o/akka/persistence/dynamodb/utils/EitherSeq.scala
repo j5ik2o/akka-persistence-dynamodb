@@ -16,6 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
+import scala.collection.immutable._
+
 object EitherSeq {
 
   def sequence[A](seq: Seq[Either[Throwable, A]]): Either[Throwable, Seq[A]] = {

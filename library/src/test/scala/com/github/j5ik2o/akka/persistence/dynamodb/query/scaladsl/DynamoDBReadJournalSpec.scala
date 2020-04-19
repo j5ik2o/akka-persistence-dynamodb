@@ -29,8 +29,8 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
@@ -102,7 +102,7 @@ class DynamoDBReadJournalSpec
 
   implicit val ec = system.dispatcher
 
-  private val config = system.settings.config
+  private val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
   protected val journalPluginConfig: JournalPluginConfig =
     JournalPluginConfig.fromConfig(config)
@@ -125,8 +125,19 @@ class DynamoDBReadJournalSpec
       system
     )
 
+  val partitionKeyResolver = new PartitionKeyResolver.Default(config)
+  val sortKeyResolver      = new SortKeyResolver.Default(config)
+
   val writeJournalDao =
-    new WriteJournalDaoImpl(asyncClient, serialization, journalPluginConfig, serializer, new NullMetricsReporter)(
+    new WriteJournalDaoImpl(
+      asyncClient,
+      serialization,
+      journalPluginConfig,
+      partitionKeyResolver,
+      sortKeyResolver,
+      serializer,
+      new NullMetricsReporter
+    )(
       ec,
       system
     )

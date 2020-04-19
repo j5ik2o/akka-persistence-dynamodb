@@ -136,7 +136,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     Source.tick(pluginConfig.refreshInterval, 0.seconds, 0).take(1)
 
   override def currentPersistenceIds(): Source[String, NotUsed] =
-    readJournalDao.allPersistenceIds(Long.MaxValue).map(_.value)
+    readJournalDao.allPersistenceIds(Long.MaxValue).map(_.asString)
 
   override def persistenceIds(): Source[String, NotUsed] =
     Source

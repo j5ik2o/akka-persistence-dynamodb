@@ -16,15 +16,17 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
+import java.io.IOException
+
 import akka.NotUsed
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
+import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 
@@ -108,7 +110,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         )
-      ).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -128,7 +130,7 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -151,7 +153,7 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -178,7 +180,7 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).build()
+      ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
 
@@ -197,21 +199,35 @@ class SnapshotDaoImpl(
         )
       )
       .scanIndexForward(false)
-      .limit(1).build()
+      .limit(1)
+      .consistentRead(consistentRead)
+      .build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
-        rows =>
-          rows.map { row =>
-            serializer
-              .deserialize(
-                SnapshotRow(
-                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                  created = row(columnsDefConfig.createdColumnName).n.toLong
-                )
-              ).right.get
+      .single(queryRequest).via(streamClient.queryFlow(1))
+      .flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful)
+          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+        else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }.map { rows =>
+        rows.map { row =>
+          serializer
+            .deserialize(
+              SnapshotRow(
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
+              )
+            ) match {
+            case Right(value) =>
+              value
+            case Left(ex) => throw ex
           }
+        }
       }
   }
 
@@ -237,21 +253,34 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).scanIndexForward(false).build()
+      ).scanIndexForward(false)
+      .consistentRead(consistentRead)
+      .build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
-        rows =>
-          rows.map { row =>
-            serializer
-              .deserialize(
-                SnapshotRow(
-                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                  created = row(columnsDefConfig.createdColumnName).n.toLong
-                )
-              ).right.get
+      .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful)
+          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+        else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }.map { rows =>
+        rows.map { row =>
+          serializer
+            .deserialize(
+              SnapshotRow(
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
+              )
+            ) match {
+            case Right(value) =>
+              value
+            case Left(ex) => throw ex
           }
+        }
       }
   }
 
@@ -271,21 +300,34 @@ class SnapshotDaoImpl(
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         )
-      ).scanIndexForward(false).build()
+      ).scanIndexForward(false)
+      .consistentRead(consistentRead)
+      .build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
-        rows =>
-          rows.map { row =>
-            serializer
-              .deserialize(
-                SnapshotRow(
-                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                  created = row(columnsDefConfig.createdColumnName).n.toLong
-                )
-              ).right.get
+      .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful)
+          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+        else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }.map { rows =>
+        rows.map { row =>
+          serializer
+            .deserialize(
+              SnapshotRow(
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
+              )
+            ) match {
+            case Right(value) =>
+              value
+            case Left(ex) => throw ex
           }
+        }
       }
   }
 
@@ -312,21 +354,34 @@ class SnapshotDaoImpl(
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         )
-      ).scanIndexForward(false).build()
+      ).scanIndexForward(false)
+      .consistentRead(consistentRead)
+      .build()
     Source
-      .single(queryRequest).via(streamClient.queryFlow(1)).map { response => response.itemsAsScala.get.headOption }.map {
-        rows =>
-          rows.map { row =>
-            serializer
-              .deserialize(
-                SnapshotRow(
-                  persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                  sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                  snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                  created = row(columnsDefConfig.createdColumnName).n.toLong
-                )
-              ).right.get
+      .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful)
+          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+        else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }.map { rows =>
+        rows.map { row =>
+          serializer
+            .deserialize(
+              SnapshotRow(
+                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+                created = row(columnsDefConfig.createdColumnName).n.toLong
+              )
+            ) match {
+            case Right(value) =>
+              value
+            case Left(ex) => throw ex
           }
+        }
       }
   }
 

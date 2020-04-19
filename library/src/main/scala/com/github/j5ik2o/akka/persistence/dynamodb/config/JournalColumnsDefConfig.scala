@@ -23,7 +23,8 @@ object JournalColumnsDefConfig {
 
   def fromConfig(config: Config): JournalColumnsDefConfig = {
     JournalColumnsDefConfig(
-      partitionKeyColumnName = config.asString("partition-key-column-name", DefaultColumnsDef.PartitionKey),
+      partitionKeyColumnName = config.asString("partition-key-column-name", DefaultColumnsDef.PartitionKeyColumnName),
+      sortKeyColumnName = config.asString("sort-key-column-name", DefaultColumnsDef.SortKeyColumnName),
       persistenceIdColumnName =
         config.asString("persistence-id-column-name", DefaultColumnsDef.PersistenceIdColumnName),
       sequenceNrColumnName = config.asString("sequence-nr-column-name", DefaultColumnsDef.SequenceNrColumnName),
@@ -38,6 +39,7 @@ object JournalColumnsDefConfig {
 
 case class JournalColumnsDefConfig(
     partitionKeyColumnName: String,
+    sortKeyColumnName: String,
     persistenceIdColumnName: String,
     sequenceNrColumnName: String,
     deletedColumnName: String,

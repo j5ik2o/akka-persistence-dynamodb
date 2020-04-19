@@ -17,7 +17,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.Done
-import akka.actor.{ ActorLogging, ActorSystem }
+import akka.actor.{ ActorLogging, ActorSystem, ExtendedActorSystem }
 import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
@@ -42,6 +42,7 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClientBuilder => JavaDynamoDbAsyncClientBuilder
 }
 
+import scala.collection.immutable._
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -61,7 +62,31 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val scheduler: Scheduler   = Scheduler(ec)
 
+  private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+
   protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
+
+  private val partitionKeyResolver: PartitionKeyResolver = {
+    val className = pluginConfig.partitionKeyResolverClassName
+    val args =
+      Seq(classOf[Config] -> config)
+    dynamicAccess
+      .createInstanceFor[PartitionKeyResolver](
+        className,
+        args
+      ).getOrElse(throw new ClassNotFoundException(className))
+  }
+
+  private val sortKeyResolver: SortKeyResolver = {
+    val className = pluginConfig.sortKeyResolverClassName
+    val args =
+      Seq(classOf[Config] -> config)
+    dynamicAccess
+      .createInstanceFor[SortKeyResolver](
+        className,
+        args
+      ).getOrElse(throw new ClassNotFoundException(className))
+  }
 
   protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
     HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
@@ -80,25 +105,36 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
   protected val journalDao: JournalDaoWithUpdates =
-    new WriteJournalDaoImpl(asyncClient, serialization, pluginConfig, serializer, metricsReporter)
+    new WriteJournalDaoImpl(
+      asyncClient,
+      serialization,
+      pluginConfig,
+      partitionKeyResolver,
+      sortKeyResolver,
+      serializer,
+      metricsReporter
+    )
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    log.debug(s"asyncWriteMessages($atomicWrites): start")
-    val startTime = System.nanoTime()
-
+    val startTime                                                = System.nanoTime()
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
-      row          <- serializeTry.right.getOrElse(Seq.empty)
+      row <- serializeTry match {
+        case Right(value) => value
+        case Left(_)      => Seq.empty
+      }
     } yield row
 
     def resultWhenWriteComplete: Seq[Either[Throwable, Unit]] =
       if (serializedTries.forall(_.isRight)) Nil
       else
-        serializedTries
-          .map(_.right.map(_ => ()))
+        serializedTries.map {
+          case Right(_) => Right(())
+          case Left(ex) => Left(ex)
+        }
 
     val future: Future[immutable.Seq[Try[Unit]]] =
       journalDao
@@ -122,13 +158,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         metricsReporter.incrementAsyncWriteMessagesCallCounter()
       else
         metricsReporter.incrementAsyncWriteMessagesCallErrorCounter()
-      log.debug(s"asyncWriteMessages($atomicWrites): finished")
     }
     future
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    log.debug(s"asyncDeleteMessagesTo($persistenceId, $toSequenceNr): start")
     val startTime = System.nanoTime()
     val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
@@ -139,7 +173,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         metricsReporter.incrementAsyncDeleteMessagesToCallCounter()
       else
         metricsReporter.incrementAsyncDeleteMessagesToCallErrorCounter()
-      log.debug(s"asyncDeleteMessagesTo($persistenceId, $toSequenceNr): finished")
     }
     future
   }
@@ -147,7 +180,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
   ): Future[Unit] = {
-    log.debug(s"asyncReplayMessages($persistenceId, $fromSequenceNr, $toSequenceNr, $max): start")
     val startTime = System.nanoTime()
     val future = journalDao
       .getMessagesWithBatch(persistenceId, fromSequenceNr, toSequenceNr, pluginConfig.replayBatchSize, None)
@@ -161,13 +193,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         metricsReporter.incrementAsyncReplayMessagesCallCounter()
       else
         metricsReporter.incrementAsyncReplayMessagesCallErrorCounter()
-      log.debug(s"asyncReplayMessages($persistenceId, $fromSequenceNr, $toSequenceNr, $max): finished")
     }
     future
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
-    log.debug(s"asyncReadHighestSequenceNr($persistenceId, $fromSequenceNr): start")
     def fetchHighestSeqNr(): Future[Long] = {
       val startTime = System.nanoTime()
       val result =
@@ -178,7 +208,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
         else
           metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
-        log.debug(s"asyncReadHighestSequenceNr($persistenceId, $fromSequenceNr): finished")
       }
       result
     }
@@ -201,18 +230,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def receivePluginInternal: Receive = {
-    case msg @ WriteFinished(persistenceId, _) =>
-      log.debug(s"receivePluginInternal:$msg: start")
+    case WriteFinished(persistenceId, _) =>
       writeInProgress.remove(persistenceId)
-      log.debug(s"receivePluginInternal:$msg: finished")
-    case msg @ InPlaceUpdateEvent(pid, seq, message) =>
-      log.debug(s"receivePluginInternal:$msg: start")
+    case InPlaceUpdateEvent(pid, seq, message) =>
       asyncUpdateEvent(pid, seq, message).pipeTo(sender())
-      log.debug(s"receivePluginInternal:$msg: finished")
   }
 
   private def asyncUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef): Future[Done] = {
-    log.debug(s"asyncUpdateEvent($persistenceId, $sequenceNumber, $message): start")
     val write = PersistentRepr(message, sequenceNumber, persistenceId)
     val serializedRow: JournalRow = serializer.serialize(write) match {
       case Right(row) => row
@@ -221,8 +245,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNumber]"
         )
     }
-    val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
-    future.onComplete { _ => log.debug(s"asyncUpdateEvent($persistenceId, $sequenceNumber, $message): finished") }
-    future
+    journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
   }
 }

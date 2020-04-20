@@ -201,7 +201,8 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     def fetchHighestSeqNr(): Future[Long] = {
       val startTime = System.nanoTime()
       val result =
-        journalDao.highestSequenceNr(PersistenceId(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
+        journalDao
+          .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
       result.onComplete { result =>
         metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
         if (result.isSuccess)

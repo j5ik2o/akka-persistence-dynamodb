@@ -47,7 +47,7 @@ lazy val deploySettings = Seq(
 
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
-  scalaVersion := scala213Version,
+  scalaVersion := scala211Version,
   crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",

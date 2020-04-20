@@ -103,7 +103,7 @@ class ReadJournalDaoImpl(
       .map(_(columnsDefConfig.persistenceIdColumnName).s.get)
       .fold(Set.empty[String])(_ + _)
       .mapConcat(_.toVector)
-      .map(PersistenceId)
+      .map(PersistenceId.apply)
       .take(max)
       .withAttributes(logLevels)
   }

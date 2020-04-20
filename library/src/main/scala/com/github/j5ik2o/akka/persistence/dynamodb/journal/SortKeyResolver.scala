@@ -1,8 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import java.util.Base64
-
 import com.typesafe.config.Config
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 
 case class SortKey(value: String) {
   def asString: String = value
@@ -24,12 +23,14 @@ object SortKeyResolver {
 
   }
 
-  class PersistenceIdWithSeqNr(config: Config) extends SortKeyResolver {
+  class PersistenceIdWithSeqNr(config: Config) extends SortKeyResolver with ToPersistenceIdOps {
+
+    override def separator: String = config.asString("separator", PersistenceId.Separator)
 
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
-      val pidOpt = persistenceId.id
-      val seq    = sequenceNumber.value
-      val skey = pidOpt match {
+      val bodyOpt = persistenceId.body
+      val seq     = sequenceNumber.value
+      val skey = bodyOpt match {
         case Some(pid) =>
           "%s-%019d".format(pid, seq)
         case None =>
@@ -37,6 +38,7 @@ object SortKeyResolver {
       }
       SortKey(skey)
     }
+
   }
 
 }

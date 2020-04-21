@@ -91,7 +91,7 @@ object ConfigOps {
 
     def ?:[A](key: String, default: A): A = as(key, default)
 
-    def withkey[A](key: String)(f: Config => A): A = f(config.getConfig(key))
+    def withKey[A](key: String)(f: Config => A): A = f(config.getConfig(key))
   }
 
   implicit def TryToOption[A](t: Try[A]): Option[A] = t.toOption

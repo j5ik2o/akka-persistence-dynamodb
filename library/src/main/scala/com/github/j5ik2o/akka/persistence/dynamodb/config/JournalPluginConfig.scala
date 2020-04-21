@@ -21,6 +21,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
+import scala.concurrent.duration._
+
 object JournalPluginConfig {
 
   val DefaultTableName: String                     = "Journal"
@@ -52,10 +54,14 @@ object JournalPluginConfig {
         config.asString("partition-key-resolver-class-name", default = DefaultPartitionKeyResolverClassName),
       sortKeyResolverClassName =
         config.asString("sort-key-resolver-class-name", default = DefaultSortKeyResolverClassName),
+      queueEnable = config.asBoolean("queue-enable", false),
       queueBufferSize = config.asInt("queue-buffer-size", default = DefaultQueueBufferSize),
       queueOverflowStrategy = config.asString("queue-overflow-strategy", DefaultQueueOverflowStrategy),
       queueParallelism = config.asInt("queue-parallelism", default = DefaultQueueParallelism),
       writeParallelism = config.asInt("write-parallelism", default = DefaultWriteParallelism),
+      writeMinBackoff = config.asFiniteDuration("write-min-backoff", 3 seconds),
+      writeMaxBackoff = config.asFiniteDuration("write-max-backoff", 15 seconds),
+      writeBackoffRandomFactor = 0.8,
       queryBatchSize = config.asInt("query-batch-size", default = DefaultQueryBatchSize),
       scanBatchSize = config.asInt("scan-batch-size", default = DefaultScanBatchSize),
       replayBatchSize = config.asInt("replay-batch-size", default = DefaultReplayBatchSize),
@@ -76,10 +82,14 @@ case class JournalPluginConfig(
     partitionKeyResolverClassName: String,
     sortKeyResolverClassName: String,
     shardCount: Int,
+    queueEnable: Boolean,
     queueBufferSize: Int,
     queueOverflowStrategy: String,
     queueParallelism: Int,
     writeParallelism: Int,
+    writeMinBackoff: FiniteDuration,
+    writeMaxBackoff: FiniteDuration,
+    writeBackoffRandomFactor: Double,
     queryBatchSize: Int,
     scanBatchSize: Int,
     replayBatchSize: Int,

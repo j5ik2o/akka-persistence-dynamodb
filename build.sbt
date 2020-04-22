@@ -96,7 +96,7 @@ lazy val library = (project in file("library"))
           )
         case Some((2L, scalaMajor)) if scalaMajor == 12 =>
           Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.5",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6",
             "com.typesafe.akka"      %% "akka-slf4j"              % akka26Version,
             "com.typesafe.akka"      %% "akka-stream"             % akka26Version,
             "com.typesafe.akka"      %% "akka-persistence"        % akka26Version,
@@ -108,7 +108,7 @@ lazy val library = (project in file("library"))
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.5",
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.6",
             "com.typesafe.akka"      %% "akka-slf4j"              % akka25Version,
             "com.typesafe.akka"      %% "akka-stream"             % akka25Version,
             "com.typesafe.akka"      %% "akka-persistence"        % akka25Version,

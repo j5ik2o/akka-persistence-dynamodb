@@ -257,7 +257,7 @@ Assuming the default values are used (adjust as necessary if not):
 
 | type | name | partition key | sort key | comments |
 |:----:|:----:|:--------------|:---------|:---------|
-|table | Journal | `pkey` (String) | `sequence-nr` (Number) | Provision capacity as necessary for your application. |
+|table | Journal | `pkey` (String) | `skey` (String) | Provision capacity as necessary for your application. |
 |index | GetJournalRowsIndex (GSI) | `persistence-id` (String) | `sequence-nr` (Number) | Index on the Journal table. |
 |table | Snapshots | `persistence-id` (String) | `sequence-nr` (Number) | No indices necessary. |
 

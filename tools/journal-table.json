@@ -1,0 +1,81 @@
+{
+  "TableName": "Journal",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "pkey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "skey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "persistence-id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "sequence-nr",
+      "AttributeType": "N"
+    },
+    {
+      "AttributeName": "tags",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "KeyType": "HASH",
+      "AttributeName": "pkey"
+    },
+    {
+      "KeyType": "RANGE",
+      "AttributeName": "skey"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "WriteCapacityUnits": 10,
+    "ReadCapacityUnits": 10
+  },
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GetJournalRowsIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "persistence-id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "sequence-nr",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
+    },
+    {
+      "IndexName": "TagsIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "tags",
+          "KeyType": "HASH"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
+    }
+  ],
+  "StreamSpecification": {
+    "StreamEnabled": true,
+    "StreamViewType" : "NEW_IMAGE"
+  }
+}

@@ -65,7 +65,7 @@ class WriteJournalDaoImpl(
   override protected val getJournalRowsIndexName: String           = pluginConfig.getJournalRowsIndexName
   private val queueBufferSize: Int                                 = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int                                = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
-  private val writeParallelism: Int                                = if (pluginConfig.queueEnable) pluginConfig.writeParallelism else 0
+  private val writeParallelism: Int                                = pluginConfig.writeParallelism
   override protected val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
   override protected val queryBatchSize: Int                       = pluginConfig.queryBatchSize
   override protected val scanBatchSize: Int                        = pluginConfig.scanBatchSize
@@ -290,7 +290,7 @@ class WriteJournalDaoImpl(
 
   private def requestPutJournalRowsPassThrough: Flow[Seq[JournalRow], Long, NotUsed] = {
     Flow[Seq[JournalRow]]
-      .mapAsync(1) { messages =>
+      .mapAsync(writeParallelism) { messages =>
         val promise = Promise[Long]()
         internalPutStream(promise, messages).flatMap(_ => promise.future)
       }
@@ -426,13 +426,12 @@ class WriteJournalDaoImpl(
           .single(sequenceNrs.map(snr => PersistenceIdWithSeqNr(persistenceId, snr))).via(
             requestDeleteJournalRowsPassThrough
           )
-
     }
   }
 
   private def requestDeleteJournalRowsPassThrough: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] = {
     Flow[Seq[PersistenceIdWithSeqNr]]
-      .mapAsync(1) { messages =>
+      .mapAsync(writeParallelism) { messages =>
         val promise = Promise[Long]()
         internalDeleteStream(promise, messages).flatMap(_ => promise.future)
       }

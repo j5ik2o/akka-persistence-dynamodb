@@ -43,23 +43,23 @@ object DaoSupport {
 }
 
 trait DaoSupport {
-  protected val streamClient: DynamoDbAkkaClient
-  protected val shardCount: Int
-  protected val tableName: String
-  protected val getJournalRowsIndexName: String
-  protected val columnsDefConfig: JournalColumnsDefConfig
-  protected val queryBatchSize: Int
-  protected val scanBatchSize: Int
-  protected val consistentRead: Boolean
+  protected def streamClient: DynamoDbAkkaClient
+  protected def shardCount: Int
+  protected def tableName: String
+  protected def getJournalRowsIndexName: String
+  protected def columnsDefConfig: JournalColumnsDefConfig
+  protected def queryBatchSize: Int
+  protected def scanBatchSize: Int
+  protected def consistentRead: Boolean
 
-  protected val serializer: FlowPersistentReprSerializer[JournalRow]
+  protected def serializer: FlowPersistentReprSerializer[JournalRow]
 
-  protected val metricsReporter: MetricsReporter
+  protected def metricsReporter: MetricsReporter
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  implicit val ec: ExecutionContext
-  implicit val mat: Materializer
+  implicit def ec: ExecutionContext
+  implicit def mat: Materializer
 
   protected val logLevels: Attributes = Attributes.logLevels(
     onElement = Attributes.LogLevels.Debug,

@@ -133,7 +133,7 @@ j5ik2o.dynamo-db-journal {
     max-idle-connection-timeout = 3 s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
-    user-http2 = true
+    use-http2 = true
     max-http2-streams = 32
     batch-get-item-limit = 100
     batch-write-item-limit = 25
@@ -177,7 +177,7 @@ j5ik2o.dynamo-db-snapshot {
     max-idle-connection-timeout = 3 s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
-    user-http2 = true
+    use-http2 = true
     max-http2-streams = 32
     batch-get-item-limit = 100
     batch-write-item-limit = 25
@@ -232,7 +232,7 @@ j5ik2o.dynamo-db-read-journal {
     max-idle-connection-timeout = 3 s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
-    user-http2 = true
+    use-http2 = true
     max-http2-streams = 32
     batch-get-item-limit = 100
     batch-write-item-limit = 25

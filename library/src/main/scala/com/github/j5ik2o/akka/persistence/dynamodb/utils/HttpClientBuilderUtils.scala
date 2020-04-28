@@ -19,7 +19,7 @@ import java.time.{ Duration => JavaDuration }
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
 import software.amazon.awssdk.http.Protocol
-import software.amazon.awssdk.http.nio.netty.{ NettyNioAsyncHttpClient, SdkEventLoopGroup }
+import software.amazon.awssdk.http.nio.netty.{ Http2Configuration, NettyNioAsyncHttpClient, SdkEventLoopGroup }
 
 object HttpClientBuilderUtils {
 
@@ -36,8 +36,14 @@ object HttpClientBuilderUtils {
     clientConfig.connectionTimeToLive.foreach(v => result.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis)))
     clientConfig.maxIdleConnectionTimeout.foreach(v => result.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis)))
     clientConfig.useConnectionReaper.foreach(v => result.useIdleConnectionReaper(v))
-    clientConfig.userHttp2.foreach(v => if (v) result.protocol(Protocol.HTTP2) else result.protocol(Protocol.HTTP1_1))
-    clientConfig.maxHttp2Streams.foreach(v => result.maxHttp2Streams(v))
+    clientConfig.useHttp2.foreach(v => if (v) result.protocol(Protocol.HTTP2) else result.protocol(Protocol.HTTP1_1))
+    val http2Builder = Http2Configuration.builder()
+    clientConfig.http2MaxStreams.foreach(v => http2Builder.maxStreams(v))
+    clientConfig.http2InitialWindowSize.foreach(v => http2Builder.initialWindowSize(v))
+    clientConfig.http2HealthCheckPingPeriod.foreach(v =>
+      http2Builder.healthCheckPingPeriod(JavaDuration.ofMillis(v.toMillis))
+    )
+    result.http2Configuration(http2Builder.build())
     clientConfig.threadsOfEventLoopGroup.foreach(v =>
       result.eventLoopGroup(SdkEventLoopGroup.builder().numberOfThreads(v).build())
     )

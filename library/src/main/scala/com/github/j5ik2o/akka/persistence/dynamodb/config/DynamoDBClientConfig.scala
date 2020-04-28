@@ -38,8 +38,10 @@ object DynamoDBClientConfig {
       maxIdleConnectionTimeout = rootConfig.asFiniteDuration("max-idle-connection-timeout"),
       useConnectionReaper = rootConfig.asBoolean("use-connection-reaper"),
       threadsOfEventLoopGroup = rootConfig.asInt("threads-of-event-loop-group"),
-      userHttp2 = rootConfig.asBoolean("user-http2"),
-      maxHttp2Streams = rootConfig.asInt("max-http2-streams"),
+      useHttp2 = rootConfig.asBoolean("use-http2"),
+      http2MaxStreams = rootConfig.asLong("http2-max-streams"),
+      http2InitialWindowSize = rootConfig.asInt("http2-initial-window-size"),
+      http2HealthCheckPingPeriod = rootConfig.asFiniteDuration("http2-health-check-ping-period"),
       batchGetItemLimit = rootConfig.asInt("batch-get-item-limit", 100),
       batchWriteItemLimit = rootConfig.asInt("batch-write-item-limit", 25)
     )
@@ -63,8 +65,10 @@ case class DynamoDBClientConfig(
     maxIdleConnectionTimeout: Option[FiniteDuration],
     useConnectionReaper: Option[Boolean],
     threadsOfEventLoopGroup: Option[Int],
-    userHttp2: Option[Boolean],
-    maxHttp2Streams: Option[Int],
+    useHttp2: Option[Boolean],
+    http2MaxStreams: Option[Long],
+    http2InitialWindowSize: Option[Int],
+    http2HealthCheckPingPeriod: Option[FiniteDuration],
     batchGetItemLimit: Int,
     batchWriteItemLimit: Int
 ) {

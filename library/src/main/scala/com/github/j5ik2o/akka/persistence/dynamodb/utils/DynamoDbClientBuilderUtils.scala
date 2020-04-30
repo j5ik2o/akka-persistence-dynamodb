@@ -18,7 +18,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import java.net.URI
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
+import software.amazon.awssdk.auth.credentials.{
+  AwsBasicCredentials,
+  StaticCredentialsProvider,
+  WebIdentityTokenFileCredentialsProvider
+}
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbAsyncClientBuilder }
@@ -26,19 +30,19 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbA
 object DynamoDbClientBuilderUtils {
 
   def setup(clientConfig: DynamoDBClientConfig, httpClientBuilder: SdkAsyncHttpClient): DynamoDbAsyncClientBuilder = {
-    var dynamoDbAsyncClientBuilder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder)
-    (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
-      case (Some(a), Some(s)) =>
-        dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.credentialsProvider(
+    var builder = DynamoDbAsyncClient.builder().httpClient(httpClientBuilder)
+    (sys.env.get("AWS_ROLE_ARN"), clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
+      case (Some(_), _, _) =>
+        builder = builder.credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+      case (None, Some(a), Some(s)) =>
+        builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    clientConfig.endpoint.foreach { ep =>
-      dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.endpointOverride(URI.create(ep))
-    }
-    clientConfig.region.foreach { r => dynamoDbAsyncClientBuilder = dynamoDbAsyncClientBuilder.region(Region.of(r)) }
-    dynamoDbAsyncClientBuilder
+    clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
+    clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
+    builder
   }
 
 }

@@ -51,6 +51,9 @@ object ConfigOps {
     def asLong(key: String): Option[Long] =
       Try(config.getLong(key))
 
+    def asLong(key: String, default: Long): Long =
+      Try(config.getLong(key)).getOrElse(default)
+
     def asString(key: String, default: String): String =
       Try(config.getString(key))
         .getOrElse(default)

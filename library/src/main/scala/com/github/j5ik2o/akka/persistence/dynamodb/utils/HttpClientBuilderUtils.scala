@@ -21,25 +21,36 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
 import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.{ Http2Configuration, NettyNioAsyncHttpClient, SdkEventLoopGroup }
 
+import scala.concurrent.duration.Duration
+
 object HttpClientBuilderUtils {
 
   def setup(clientConfig: DynamoDBClientConfig): NettyNioAsyncHttpClient.Builder = {
     val result = NettyNioAsyncHttpClient.builder()
-    clientConfig.maxConcurrency.foreach(v => result.maxConcurrency(v))
-    clientConfig.maxPendingConnectionAcquires.foreach(v => result.maxPendingConnectionAcquires(v))
-    clientConfig.readTimeout.foreach(v => result.readTimeout(JavaDuration.ofMillis(v.toMillis)))
-    clientConfig.writeTimeout.foreach(v => result.writeTimeout(JavaDuration.ofMillis(v.toMillis)))
-    clientConfig.connectionTimeout.foreach(v => result.connectionTimeout(JavaDuration.ofMillis(v.toMillis)))
-    clientConfig.connectionAcquisitionTimeout.foreach(v =>
-      result.connectionAcquisitionTimeout(JavaDuration.ofMillis(v.toMillis))
-    )
-    clientConfig.connectionTimeToLive.foreach(v => result.connectionTimeToLive(JavaDuration.ofMillis(v.toMillis)))
-    clientConfig.maxIdleConnectionTimeout.foreach(v => result.connectionMaxIdleTime(JavaDuration.ofMillis(v.toMillis)))
-    clientConfig.useConnectionReaper.foreach(v => result.useIdleConnectionReaper(v))
-    clientConfig.useHttp2.foreach(v => if (v) result.protocol(Protocol.HTTP2) else result.protocol(Protocol.HTTP1_1))
+    result.maxConcurrency(clientConfig.maxConcurrency)
+    result.maxPendingConnectionAcquires(clientConfig.maxPendingConnectionAcquires)
+
+    if (clientConfig.readTimeout != Duration.Zero)
+      result.readTimeout(JavaDuration.ofMillis(clientConfig.readTimeout.toMillis))
+    if (clientConfig.writeTimeout != Duration.Zero)
+      result.writeTimeout(JavaDuration.ofMillis(clientConfig.writeTimeout.toMillis))
+    if (clientConfig.connectionTimeout != Duration.Zero)
+      result.connectionTimeout(JavaDuration.ofMillis(clientConfig.connectionTimeout.toMillis))
+    if (clientConfig.connectionAcquisitionTimeout != Duration.Zero)
+      result.connectionAcquisitionTimeout(JavaDuration.ofMillis(clientConfig.connectionAcquisitionTimeout.toMillis))
+    if (clientConfig.connectionTimeToLive != Duration.Zero)
+      result.connectionTimeToLive(JavaDuration.ofMillis(clientConfig.connectionTimeToLive.toMillis))
+    if (clientConfig.maxIdleConnectionTimeout != Duration.Zero)
+      result.connectionMaxIdleTime(JavaDuration.ofMillis(clientConfig.maxIdleConnectionTimeout.toMillis))
+
+    result.useIdleConnectionReaper(clientConfig.useConnectionReaper)
+    if (clientConfig.useHttp2)
+      result.protocol(Protocol.HTTP2)
+    else
+      result.protocol(Protocol.HTTP1_1)
     val http2Builder = Http2Configuration.builder()
-    clientConfig.http2MaxStreams.foreach(v => http2Builder.maxStreams(v))
-    clientConfig.http2InitialWindowSize.foreach(v => http2Builder.initialWindowSize(v))
+    http2Builder.maxStreams(clientConfig.http2MaxStreams)
+    http2Builder.initialWindowSize(clientConfig.http2InitialWindowSize)
     clientConfig.http2HealthCheckPingPeriod.foreach(v =>
       http2Builder.healthCheckPingPeriod(JavaDuration.ofMillis(v.toMillis))
     )

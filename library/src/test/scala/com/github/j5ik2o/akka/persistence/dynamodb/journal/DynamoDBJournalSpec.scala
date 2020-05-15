@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 object DynamoDBJournalSpec {
-  val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
+  val dynamoDBPort: Int          = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode: Boolean = true
 }
 
@@ -45,7 +45,7 @@ class DynamoDBJournalSpec
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
            |  columns-def {
-           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode)  "sequence-nr" else "skey"}
+           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode) "sequence-nr" else "skey"}
            |  }
            |}
            """.stripMargin

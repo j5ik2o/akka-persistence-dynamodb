@@ -161,11 +161,11 @@ trait DynamoDBSpecSupport
           GlobalSecondaryIndex
             .builder()
             .indexName("GetJournalRowsIndex").keySchemaAsScala(
-            Seq(
-              KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("persistence-id").build(),
-              KeySchemaElement.builder().keyType(KeyType.RANGE).attributeName("sequence-nr").build()
-            )
-          ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+              Seq(
+                KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("persistence-id").build(),
+                KeySchemaElement.builder().keyType(KeyType.RANGE).attributeName("sequence-nr").build()
+              )
+            ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
             .provisionedThroughput(
               ProvisionedThroughput
                 .builder()

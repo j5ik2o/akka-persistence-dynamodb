@@ -110,6 +110,7 @@ trait DaoSupport {
                 val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
                 val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
                 if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
+                  logger.debug("next loop: count = {}, response.count = {}", count, response.count())
                   loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
                 } else
                   combinedSource
@@ -175,8 +176,9 @@ trait DaoSupport {
           }
 
           control match {
-            case Stop     => Future.successful(None)
-            case Continue => retrieveNextBatch()
+            case Stop => Future.successful(None)
+            case Continue =>
+              retrieveNextBatch()
             case ContinueDelayed =>
               val (delay, scheduler) = refreshInterval.get
               akka.pattern.after(delay, scheduler)(retrieveNextBatch())

@@ -5,23 +5,21 @@ jobs:
       ignore:
         - master
     environment:
-      - JAVA_OPTS: "-XX:ReservedCodeCacheSize=256M -Xms1g -Xmx3g -Xss2m"
+      - JAVA_OPTS: "-XX:+UseContainerSupport -Dfile.encoding=UTF-8 -XX:ReservedCodeCacheSize=256M -Xms1g -Xmx3g -Xss2m"
       - AWS_REGION: "ap-northeast-1"
       - SBT_TEST_TIME_FACTOR: "2"
-    machine: true
+    docker:
+      - image: adoptopenjdk:hotspot
     steps:
       - run:
           command: |
-            sudo apt-get update -qq && sudo apt-get install -y libaio1 libevent-dev
-            sudo apt-get install -y software-properties-common
-            sudo apt-get install -y openjdk-8-jdk
-            sudo apt-get update -qq
-            sudo apt-get install -y maven git
-            echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
-            sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-            sudo apt-get update -qq
-            sudo apt-get install sbt
-          no_output_timeout: 30m
+            apt-get update -qq
+            apt-get install gpgv
+            echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+            apt-get update -qq
+            apt-get install sbt
+          no_output_timeout: 10m
       - checkout
       - restore_cache:
           key: scala-library-dependencies-{{ checksum "build.sbt" }}
@@ -32,5 +30,5 @@ jobs:
             sbt clean ++"2.13.1" test
           no_output_timeout: 1h
       - save_cache:
-          paths: [ "~/.sbt/boot", "~/.ivy2/cache", "~/.cache/coursier",  "~/.wixMySQL" ]
+          paths: [ "~/.sbt/boot", "~/.ivy2/cache", "~/.cache/coursier" ]
           key: scala-library-dependencies-{{ checksum "build.sbt" }}

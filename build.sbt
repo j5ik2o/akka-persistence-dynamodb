@@ -57,7 +57,9 @@ lazy val baseSettings = Seq(
       "UTF-8",
       "-language:_",
       "-Ydelambdafy:method",
-      "-target:jvm-1.8"
+      "-target:jvm-1.8",
+      "-Xmax-classfile-name",
+      "242"
     ) ++ crossScalacOptions(scalaVersion.value)),
   resolvers ++= Seq(
       Resolver.sonatypeRepo("snapshots"),

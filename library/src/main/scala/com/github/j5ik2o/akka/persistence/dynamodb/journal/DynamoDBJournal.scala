@@ -16,6 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import java.util.UUID
+
 import akka.Done
 import akka.actor.{ ActorLogging, ActorSystem, ExtendedActorSystem }
 import akka.pattern.pipe
@@ -57,10 +59,14 @@ object DynamoDBJournal {
 
 class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
 
+  private val id = UUID.randomUUID()
+
   implicit val ec: ExecutionContext   = context.dispatcher
   implicit val system: ActorSystem    = context.system
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val scheduler: Scheduler   = Scheduler(ec)
+
+  log.debug("dynamodb journal plugin: id = {}", id)
 
   private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
 
@@ -182,7 +188,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   ): Future[Unit] = {
     val startTime = System.nanoTime()
     val future = journalDao
-      .getMessagesWithBatch(persistenceId, fromSequenceNr, toSequenceNr, pluginConfig.replayBatchSize, None)
+      .getMessagesWithBatch(
+        persistenceId,
+        fromSequenceNr,
+        toSequenceNr,
+        pluginConfig.replayBatchSize,
+        pluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
+      )
       .take(max)
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)

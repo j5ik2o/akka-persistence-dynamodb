@@ -19,12 +19,13 @@ trait PartitionKeyResolver {
 
 object PartitionKeyResolver {
 
-  class Default(config: Config) extends Mod(config)
+  class Default(config: Config) extends SequenceNumberBased(config)
 
-  class Random(config: Config) extends PartitionKeyResolver {
+  class SequenceNumberBased(config: Config) extends PartitionKeyResolver {
 
     private val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
+    // ${persistenceId}-${sequenceNumber % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
       val pkey = s"${persistenceId.asString}-${sequenceNumber.value % pluginConfig.shardCount}"
       PartitionKey(pkey)
@@ -32,15 +33,16 @@ object PartitionKeyResolver {
 
   }
 
-  class Mod(config: Config) extends PartitionKeyResolver with ToPersistenceIdOps {
+  class PersistenceIdBased(config: Config) extends PartitionKeyResolver with ToPersistenceIdOps {
 
     private val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
     private val md5 = MessageDigest.getInstance("MD5")
     private val df  = new DecimalFormat("0000000000000000000000000000000000000000")
 
-    override def separator: String = config.asString("separator", PersistenceId.Separator)
+    override def separator: String = config.asString("persistence-id-separator", PersistenceId.Separator)
 
+    // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
       val bytes        = persistenceId.asString.reverse.getBytes(StandardCharsets.UTF_8)
       val hash         = BigInt(md5.digest(bytes))
@@ -49,10 +51,9 @@ object PartitionKeyResolver {
       val pkey = modelNameOpt match {
         case Some(modelName) =>
           "%s-%s".format(modelName, df.format(mod))
-        case None =>
+        case None => // fallback
           df.format(mod)
       }
-
       PartitionKey(pkey)
     }
 

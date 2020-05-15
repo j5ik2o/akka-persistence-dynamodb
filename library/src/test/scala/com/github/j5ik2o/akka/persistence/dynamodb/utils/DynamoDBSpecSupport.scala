@@ -50,8 +50,13 @@ trait DynamoDBSpecSupport
     }
   }
 
+  val legacyJournalTable = false
+
   def createTable(): Unit = {
-    createJournalTable()
+    if (legacyJournalTable)
+      createLegacyJournalTable()
+    else
+      createJournalTable()
     createSnapshotTable()
   }
 
@@ -93,6 +98,91 @@ trait DynamoDBSpecSupport
     val createResponse = dynamoDbAsyncClient
       .createTable(createRequest).futureValue
     createResponse.sdkHttpResponse().isSuccessful shouldBe true
+  }
+
+  private def createLegacyJournalTable(): Unit = {
+    val createRequest = CreateTableRequest
+      .builder()
+      .tableName(journalTableName)
+      .attributeDefinitionsAsScala(
+        Seq(
+          AttributeDefinition
+            .builder()
+            .attributeName("pkey")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("persistence-id")
+            .attributeType(ScalarAttributeType.S).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("sequence-nr")
+            .attributeType(ScalarAttributeType.N).build(),
+          AttributeDefinition
+            .builder()
+            .attributeName("tags")
+            .attributeType(ScalarAttributeType.S).build()
+        )
+      )
+      .keySchemaAsScala(
+        Seq(
+          KeySchemaElement
+            .builder()
+            .attributeName("pkey")
+            .keyType(KeyType.HASH).build(),
+          KeySchemaElement
+            .builder()
+            .attributeName("sequence-nr")
+            .keyType(KeyType.RANGE).build()
+        )
+      )
+      .provisionedThroughput(
+        ProvisionedThroughput
+          .builder()
+          .readCapacityUnits(10L)
+          .writeCapacityUnits(10L).build()
+      )
+      .globalSecondaryIndexesAsScala(
+        Seq(
+          GlobalSecondaryIndex
+            .builder()
+            .indexName("TagsIndex")
+            .keySchemaAsScala(
+              Seq(
+                KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("tags").build()
+              )
+            ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+            .provisionedThroughput(
+              ProvisionedThroughput
+                .builder()
+                .readCapacityUnits(10L)
+                .writeCapacityUnits(10L).build()
+            ).build(),
+          GlobalSecondaryIndex
+            .builder()
+            .indexName("GetJournalRowsIndex").keySchemaAsScala(
+            Seq(
+              KeySchemaElement.builder().keyType(KeyType.HASH).attributeName("persistence-id").build(),
+              KeySchemaElement.builder().keyType(KeyType.RANGE).attributeName("sequence-nr").build()
+            )
+          ).projection(Projection.builder().projectionType(ProjectionType.ALL).build())
+            .provisionedThroughput(
+              ProvisionedThroughput
+                .builder()
+                .readCapacityUnits(10L)
+                .writeCapacityUnits(10L).build()
+            ).build()
+        )
+      )
+      .streamSpecification(
+        StreamSpecification.builder().streamEnabled(true).streamViewType(StreamViewType.NEW_IMAGE).build()
+      )
+      .build()
+
+    val createResponse = dynamoDbAsyncClient
+      .createTable(createRequest).futureValue
+    createResponse.sdkHttpResponse().isSuccessful shouldBe true
+
   }
 
   private def createJournalTable(): Unit = {

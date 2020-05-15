@@ -17,6 +17,7 @@ object SortKeyResolver {
 
   class SeqNr(config: Config) extends SortKeyResolver {
 
+    // ${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
       SortKey(sequenceNumber.value.toString)
     }
@@ -27,13 +28,14 @@ object SortKeyResolver {
 
     override def separator: String = config.asString("separator", PersistenceId.Separator)
 
+    // ${persistenceId.body}-${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
       val bodyOpt = persistenceId.body
       val seq     = sequenceNumber.value
       val skey = bodyOpt match {
         case Some(pid) =>
           "%s-%019d".format(pid, seq)
-        case None =>
+        case None => // fallback
           "%019d".format(seq)
       }
       SortKey(skey)

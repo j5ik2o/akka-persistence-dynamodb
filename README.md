@@ -39,15 +39,29 @@ Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2).
 
 This plugin supports a simple sharding to avoid the throttle of write on DynamoDB.
 
-- Primary Index(for Writing)
-  - Partition Key = ${PersistenceId}-${SequenceNumber % ShardCount}
-  - Sort Key = ${SequenceNumber}
+- Primary Index(for Events writing, default is pattern-1)
+  - pattern-1 is `sequenceNumber` based write sharding (com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased)
+    - Partition Key = ${persistenceId}-${sequenceNumber % shardCount}
+    - Sort Key = ${sequenceNumber}
+  - pattern-2 is `persistenceId` based write sharding (com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased)
+    - Partition Key = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
+      - `persistenceId.prefix` is the first part of the `persistenceId` is delimiter-separated.
+    - Sort Key = ${persistenceId.body}-${sequenceNumber}
+      - `persistenceId.body` is the last part of the `persistenceId` is delimiter-separated.
+    
+If you want to load events chronologically in DynamoDB Streams, choose pattern-2.
 
-- GSI: GetJournalRows(for Reading)
-  - PartitionKey = ${PersistenceId}
-  - Sort Key = ${SequenceNumber}
+```hocon
+j5ik2o.dynamo-db-journal {
+  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$PersistenceIdBased"
+}
+```
 
-By the way, akka/akka-persistence-dynamodb maybe has a heavy maintenance cost because it provides complicated sharding.
+- GSI: GetJournalRows(for Actor replaying)
+  - PartitionKey = ${persistenceId}
+  - Sort Key = ${sequenceNumber}
+
+By the way, `akka/akka-persistence-dynamodb` maybe has a heavy maintenance cost because it provides complicated sharding.
 
 ### Non-blocking
 
@@ -103,18 +117,24 @@ j5ik2o.dynamo-db-journal {
   
   table-name = "Journal"
   get-journal-rows-index-name = "GetJournalRows"
+  persistence-id-separator = "-"
   tag-separator = ","
   shard-count = 2
+  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$Default"
+  sort-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$Default" 
+  queue-enable = true
   queue-buffer-size = 1024
   queue-overflow-strategy = "Fail"
   queue-parallelism = 32
   write-parallelism = 32
   soft-delete = true
   query-batch-size = 1024
+  replay-batch-size = 512
   consistent-read = false
   
   columns-def {
     partition-key-column-name = "pkey"
+    sort-key-column-name = "skey"
     persistence-id-column-name = "persistence-id"
     sequence-nr-column-name = "sequence-nr"
     deleted-column-name = "deleted"
@@ -123,22 +143,39 @@ j5ik2o.dynamo-db-journal {
     tags-column-name = "tags"
   }
   dynamo-db-client {
-    max-concurrency = 128
-    max-pending-connection-acquires = ?
-    read-timeout = 3 s
-    write-timeout = 3 s
-    connection-timeout = 3 s
-    connection-acquisition-timeout = 3 s
-    connection-time-to-live = 3 s
-    max-idle-connection-timeout = 3 s
+    max-concurrency = 50
+    max-pending-connection-acquires = 10000
+    read-timeout = 30s
+    write-timeout = 30s
+    connection-timeout = 2s
+    connection-acquisition-timeout = 3s
+    connection-time-to-live = 0s
+    max-idle-connection-timeout = 60s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
     use-http2 = true
-    max-http2-streams = 32
+    http2-max-streams = 4294967295
+    http2-initial-window-size = 1048576
     batch-get-item-limit = 100
     batch-write-item-limit = 25
   }
 
+}
+```
+
+### Important changes
+
+The sort-key(skey) column has been added to the journal table. In the default implementation, this column is set to sequenceNumber, but different implementations do not necessarily store sequence-number. You can flexibly design pkey and skey for write sharding.
+If you want to use a legacy column layout, you can configure the following. To create a table, please refer to `tools/legacy-journal-table.json`.
+**In legacy column layout, Never use `PartitionKeyResolver.PersistenceIdBased` because it is incompatible.**
+
+```hocon
+j5ik2o.dynamo-db-journal {
+  columns-def.sort-key-column-name = "sequence-nr" # override default 'skey'
+}
+
+j5ik2o.dynamo-db-read-journal {
+  columns-def.sort-key-column-name = "sequence-nr" # override default 'skey'
 }
 ```
 
@@ -159,6 +196,7 @@ j5ik2o.dynamo-db-snapshot {
   table-name = "Snapshot"
   columns-def {
     partition-key-column-name = "pkey"
+    sort-key-column-name = "skey"
     persistence-id-column-name = "persistence-id"
     sequence-nr-column-name = "sequence-nr"
     deleted-column-name = "deleted"
@@ -167,23 +205,25 @@ j5ik2o.dynamo-db-snapshot {
     tags-column-name = "tags"
   }
   dynamo-db-client {
-    max-concurrency = 128
-    max-pending-connection-acquires = ?
-    read-timeout = 3 s
-    write-timeout = 3 s
-    connection-timeout = 3 s
-    connection-acquisition-timeout = 3 s
-    connection-time-to-live = 3 s
-    max-idle-connection-timeout = 3 s
+    max-concurrency = 50
+    max-pending-connection-acquires = 10000
+    read-timeout = 30s
+    write-timeout = 30s
+    connection-timeout = 2s
+    connection-acquisition-timeout = 3s
+    connection-time-to-live = 0s
+    max-idle-connection-timeout = 60s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
     use-http2 = true
-    max-http2-streams = 32
+    http2-max-streams = 4294967295
+    http2-initial-window-size = 1048576
     batch-get-item-limit = 100
     batch-write-item-limit = 25
   }
 }
 ```
+
 
 ## akka-persistence query plugin
 
@@ -214,6 +254,7 @@ j5ik2o.dynamo-db-read-journal {
   
   columns-def {
     partition-key-column-name = "pkey"
+    sort-key-column-name = "skey"
     persistence-id-column-name = "persistence-id"
     sequence-nr-column-name = "sequence-nr"
     deleted-column-name = "deleted"
@@ -222,18 +263,19 @@ j5ik2o.dynamo-db-read-journal {
     tags-column-name = "tags"
   }
   dynamo-db-client {
-    max-concurrency = 128
-    max-pending-connection-acquires = ?
-    read-timeout = 3 s
-    write-timeout = 3 s
-    connection-timeout = 3 s
-    connection-acquisition-timeout = 3 s
-    connection-time-to-live = 3 s
-    max-idle-connection-timeout = 3 s
+    max-concurrency = 50
+    max-pending-connection-acquires = 10000
+    read-timeout = 30s
+    write-timeout = 30s
+    connection-timeout = 2s
+    connection-acquisition-timeout = 3s
+    connection-time-to-live = 0s
+    max-idle-connection-timeout = 60s
     use-connection-reaper = true
     threads-of-event-loop-group = 32
     use-http2 = true
-    max-http2-streams = 32
+    http2-max-streams = 4294967295
+    http2-initial-window-size = 1048576
     batch-get-item-limit = 100
     batch-write-item-limit = 25
   }

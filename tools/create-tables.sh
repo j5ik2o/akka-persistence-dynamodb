@@ -13,6 +13,10 @@ aws dynamodb create-table \
   --endpoint-url http://${DYNAMODB_HOST}:${DYNAMODB_PORT} \
   --cli-input-json file://./journal-table.json
 
+# aws dynamodb create-table \
+#  --endpoint-url http://${DYNAMODB_HOST}:${DYNAMODB_PORT} \
+#  --cli-input-json file://./legacy-journal-table.json
+
 aws dynamodb create-table \
   --endpoint-url http://${DYNAMODB_HOST}:${DYNAMODB_PORT} \
   --cli-input-json file://./snapshot-table.json

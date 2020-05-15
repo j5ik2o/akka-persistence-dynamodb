@@ -54,7 +54,7 @@ object JournalPluginConfig {
         config.asString("partition-key-resolver-class-name", default = DefaultPartitionKeyResolverClassName),
       sortKeyResolverClassName =
         config.asString("sort-key-resolver-class-name", default = DefaultSortKeyResolverClassName),
-      queueEnable = config.asBoolean("queue-enable", false),
+      queueEnable = config.asBoolean("queue-enable", true),
       queueBufferSize = config.asInt("queue-buffer-size", default = DefaultQueueBufferSize),
       queueOverflowStrategy = config.asString("queue-overflow-strategy", DefaultQueueOverflowStrategy),
       queueParallelism = config.asInt("queue-parallelism", default = DefaultQueueParallelism),

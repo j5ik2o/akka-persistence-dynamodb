@@ -14,7 +14,8 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 object DynamoDBJournalSpec {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
+  val legacyJournalMode: Boolean = true
 }
 
 class DynamoDBJournalSpec
@@ -26,6 +27,9 @@ class DynamoDBJournalSpec
            |  query-batch-size = 1
            |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
+           |  }
+           |  columns-def {
+           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode) "sequence-nr" else "skey"}
            |  }
            |}
            |
@@ -40,6 +44,9 @@ class DynamoDBJournalSpec
            |  dynamo-db-client {
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
+           |  columns-def {
+           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode)  "sequence-nr" else "skey"}
+           |  }
            |}
            """.stripMargin
         ).withFallback(ConfigFactory.load())
@@ -51,6 +58,8 @@ class DynamoDBJournalSpec
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBJournalSpec.dynamoDBPort
+
+  override val legacyJournalTable: Boolean = DynamoDBJournalSpec.legacyJournalMode
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

@@ -69,10 +69,19 @@ object JournalPluginConfig {
       consistentRead = config.asBoolean("consistent-read", default = DefaultConsistentRead),
       softDeleted = config.asBoolean("soft-delete", default = DefaultSoftDeleted),
       metricsReporterClassName = config.asString("metrics-reporter-class-name", DefaultMetricsReporterClassName),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
+      clientConfig = DynamoDBClientConfig
+        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
     )
   }
 
+}
+
+trait PluginConfig {
+  val tableName: String
+  val columnsDefConfig: JournalColumnsDefConfig
+  val getJournalRowsIndexName: String
+  val queryBatchSize: Int
+  val clientConfig: DynamoDBClientConfig
 }
 
 case class JournalPluginConfig(
@@ -99,6 +108,6 @@ case class JournalPluginConfig(
     softDeleted: Boolean,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
-) {
+) extends PluginConfig {
   require(shardCount > 1)
 }

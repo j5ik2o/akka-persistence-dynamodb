@@ -80,6 +80,8 @@ object ConfigOps {
       Try {
         config.getString(key).toLowerCase(Locale.ROOT) match {
           case "off" => Duration.Undefined
+          case "inf" => Duration.Inf
+          case "-1"  => Duration.MinusInf
           case _     => config.getMillisDuration(key) requiring (_ > Duration.Zero, key + " >0s, or off")
         }
       }.toOption

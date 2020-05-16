@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import com.typesafe.config.Config
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.typesafe.config.Config
 
 case class SortKey(value: String) {
   def asString: String = value

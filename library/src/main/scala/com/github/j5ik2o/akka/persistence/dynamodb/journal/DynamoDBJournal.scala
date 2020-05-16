@@ -26,22 +26,21 @@ import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ ClientSyncOrAsync, ClientVersion, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalDaoWithUpdates, WriteJournalDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.akka.persistence.dynamodb.utils._
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import com.typesafe.config.Config
 import monix.execution.Scheduler
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
-  DynamoDbAsyncClientBuilder => JavaDynamoDbAsyncClientBuilder
+  DynamoDbClient => JavaDynamoDbSyncClient
 }
 
 import scala.collection.immutable._
@@ -70,10 +69,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
 
-  protected val pluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
+  protected val jounalPluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
   private val partitionKeyResolver: PartitionKeyResolver = {
-    val className = pluginConfig.partitionKeyResolverClassName
+    val className = jounalPluginConfig.partitionKeyResolverClassName
     val args =
       Seq(classOf[Config] -> config)
     dynamicAccess
@@ -84,7 +83,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   private val sortKeyResolver: SortKeyResolver = {
-    val className = pluginConfig.sortKeyResolverClassName
+    val className = jounalPluginConfig.sortKeyResolverClassName
     val args =
       Seq(classOf[Config] -> config)
     dynamicAccess
@@ -94,29 +93,86 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       ).getOrElse(throw new ClassNotFoundException(className))
   }
 
-  protected val httpClientBuilder: NettyNioAsyncHttpClient.Builder =
-    HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
-
-  protected val dynamoDbAsyncClientBuilder: JavaDynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, httpClientBuilder.build())
-
-  protected val javaClient: JavaDynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
-  protected val asyncClient: DynamoDbAsyncClient    = DynamoDbAsyncClient(javaClient)
-
   protected val serialization: Serialization = SerializationExtension(system)
 
-  protected val metricsReporter: MetricsReporter = MetricsReporter.create(pluginConfig.metricsReporterClassName)
+  protected val metricsReporter: MetricsReporter = MetricsReporter.create(jounalPluginConfig.metricsReporterClassName)
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, jounalPluginConfig.tagSeparator)
+  private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _
+  private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
+
+  private val journalRowWriteDriver: JournalRowWriteDriver = {
+    jounalPluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V2 =>
+        val clientOverrideConfiguration = V2ClientOverrideConfigurationUtils.setup(jounalPluginConfig.clientConfig)
+        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientSyncOrAsync match {
+          case ClientSyncOrAsync.Sync =>
+            val httpSyncClient =
+              V2HttpClientBuilderUtils.setupSync(jounalPluginConfig.clientConfig)
+            javaSyncClientV2 = V2DynamoDbClientBuilderUtils.setupSync(
+              jounalPluginConfig.clientConfig,
+              httpSyncClient,
+              clientOverrideConfiguration
+            )
+            val syncClient: DynamoDbSyncClient = DynamoDbSyncClient(javaSyncClientV2)
+            (Some(syncClient), None)
+          case ClientSyncOrAsync.Async =>
+            val httpAsyncClient =
+              V2HttpClientBuilderUtils.setupAsync(jounalPluginConfig.clientConfig)
+            javaAsyncClientV2 = V2DynamoDbClientBuilderUtils.setupAsync(
+              jounalPluginConfig.clientConfig,
+              httpAsyncClient,
+              clientOverrideConfiguration
+            )
+            val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaAsyncClientV2)
+            (None, Some(asyncClient))
+        }
+        new V2JournalRowWriteDriver(
+          maybeAsyncClient,
+          maybeSyncClient,
+          jounalPluginConfig,
+          partitionKeyResolver,
+          sortKeyResolver,
+          metricsReporter
+        )
+      case ClientVersion.V1 =>
+        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientSyncOrAsync match {
+          case ClientSyncOrAsync.Sync =>
+            (Some(V1DynamoDBClientBuilderUtils.setupSync(dynamicAccess, jounalPluginConfig.clientConfig)), None)
+          case ClientSyncOrAsync.Async =>
+            (None, Some(V1DynamoDBClientBuilderUtils.setupAsync(dynamicAccess, jounalPluginConfig.clientConfig)))
+        }
+        new V1JournalRowWriteDriver(
+          maybeAsyncClient,
+          maybeSyncClient,
+          jounalPluginConfig,
+          partitionKeyResolver,
+          sortKeyResolver,
+          metricsReporter
+        )
+      case ClientVersion.V1Dax =>
+        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientSyncOrAsync match {
+          case ClientSyncOrAsync.Sync =>
+            (Some(V1DaxClientBuilderUtils.setupSync(jounalPluginConfig)), None)
+          case ClientSyncOrAsync.Async =>
+            (None, Some(V1DaxClientBuilderUtils.setupAsync(jounalPluginConfig)))
+        }
+        new V1JournalRowWriteDriver(
+          maybeAsyncClient,
+          maybeSyncClient,
+          jounalPluginConfig,
+          partitionKeyResolver,
+          sortKeyResolver,
+          metricsReporter
+        )
+    }
+  }
 
   protected val journalDao: JournalDaoWithUpdates =
     new WriteJournalDaoImpl(
-      asyncClient,
-      serialization,
-      pluginConfig,
-      partitionKeyResolver,
-      sortKeyResolver,
+      jounalPluginConfig,
+      journalRowWriteDriver,
       serializer,
       metricsReporter
     )
@@ -188,12 +244,12 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   ): Future[Unit] = {
     val startTime = System.nanoTime()
     val future = journalDao
-      .getMessagesWithBatch(
+      .getMessagesAsPersistentReprWithBatch(
         persistenceId,
         fromSequenceNr,
         toSequenceNr,
-        pluginConfig.replayBatchSize,
-        pluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
+        jounalPluginConfig.replayBatchSize,
+        jounalPluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
       )
       .take(max)
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
@@ -237,7 +293,8 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def postStop(): Unit = {
-    javaClient.close()
+    if (javaAsyncClientV2 != null)
+      javaAsyncClientV2.close()
     writeInProgress.clear()
     super.postStop()
   }

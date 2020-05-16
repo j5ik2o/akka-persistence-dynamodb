@@ -16,38 +16,46 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
-import scala.concurrent.duration._
+object DynamoDBClientConfig extends LoggingSupport {
 
-object DynamoDBClientConfig {
-
-  def fromConfig(rootConfig: Config): DynamoDBClientConfig = {
+  def fromConfig(config: Config, legacy: Boolean): DynamoDBClientConfig = {
     val result = DynamoDBClientConfig(
-      accessKeyId = rootConfig.asString("access-key-id"),
-      secretAccessKey = rootConfig.asString("secret-access-key"),
-      endpoint = rootConfig.asString("endpoint"),
-      region = rootConfig.asString("region"),
-      maxConcurrency = rootConfig.asInt("max-concurrency"),
-      maxPendingConnectionAcquires = rootConfig.asInt("max-pending-connection-acquires"),
-      readTimeout = rootConfig.asFiniteDuration("read-timeout"),
-      writeTimeout = rootConfig.asFiniteDuration("write-timeout"),
-      connectionTimeout = rootConfig.asFiniteDuration("connection-timeout"),
-      connectionAcquisitionTimeout = rootConfig.asFiniteDuration("connection-acquisition-timeout"),
-      connectionTimeToLive = rootConfig.asFiniteDuration("connection-time-to-live"),
-      maxIdleConnectionTimeout = rootConfig.asFiniteDuration("max-idle-connection-timeout"),
-      useConnectionReaper = rootConfig.asBoolean("use-connection-reaper"),
-      threadsOfEventLoopGroup = rootConfig.asInt("threads-of-event-loop-group"),
-      useHttp2 = rootConfig.asBoolean("use-http2"),
-      http2MaxStreams = rootConfig.asLong("http2-max-streams"),
-      http2InitialWindowSize = rootConfig.asInt("http2-initial-window-size"),
-      http2HealthCheckPingPeriod = rootConfig.asFiniteDuration("http2-health-check-ping-period"),
-      batchGetItemLimit = rootConfig.asInt("batch-get-item-limit", 100),
-      batchWriteItemLimit = rootConfig.asInt("batch-write-item-limit", 25)
+      accessKeyId = config.asString("access-key-id"),
+      secretAccessKey = config.asString("secret-access-key"),
+      endpoint = config.asString("endpoint"),
+      region = config.asString("region"),
+      clientVersion = config.asString("client-version").map(s => ClientVersion.withName(s)).getOrElse(ClientVersion.V2),
+      clientSyncOrAsync =
+        config.asString("sync-or-async").map(s => ClientSyncOrAsync.withName(s)).getOrElse(ClientSyncOrAsync.Async),
+      DynamoDBClientV1Config.from(config.asConfig("v1")),
+      DynamoDBClientV1DaxConfig.from(config.asConfig("v1-dax")), {
+        if (legacy) {
+          logger.warn("[[Please migration to the new config format.]]")
+          DynamoDBClientV2Config.from(config, legacy)
+        } else
+          DynamoDBClientV2Config.from(config.asConfig("v2"), legacy)
+      },
+      batchGetItemLimit = config.asInt("batch-get-item-limit", 100),
+      batchWriteItemLimit = config.asInt("batch-write-item-limit", 25)
     )
+    logger.debug("config = {}", result)
     result
   }
 
+}
+
+object ClientVersion extends Enumeration {
+  val V1: ClientVersion.Value    = Value("v1")
+  val V1Dax: ClientVersion.Value = Value("v1-dax")
+  val V2: ClientVersion.Value    = Value("v2")
+}
+
+object ClientSyncOrAsync extends Enumeration {
+  val Sync: ClientSyncOrAsync.Value  = Value("sync")
+  val Async: ClientSyncOrAsync.Value = Value("async")
 }
 
 case class DynamoDBClientConfig(
@@ -55,21 +63,12 @@ case class DynamoDBClientConfig(
     secretAccessKey: Option[String],
     endpoint: Option[String],
     region: Option[String],
-    maxConcurrency: Option[Int],
-    maxPendingConnectionAcquires: Option[Int],
-    readTimeout: Option[FiniteDuration],
-    writeTimeout: Option[FiniteDuration],
-    connectionTimeout: Option[FiniteDuration],
-    connectionAcquisitionTimeout: Option[FiniteDuration],
-    connectionTimeToLive: Option[FiniteDuration],
-    maxIdleConnectionTimeout: Option[FiniteDuration],
-    useConnectionReaper: Option[Boolean],
-    threadsOfEventLoopGroup: Option[Int],
-    useHttp2: Option[Boolean],
-    http2MaxStreams: Option[Long],
-    http2InitialWindowSize: Option[Int],
-    http2HealthCheckPingPeriod: Option[FiniteDuration],
-    batchGetItemLimit: Int,
+    clientVersion: ClientVersion.Value,
+    clientSyncOrAsync: ClientSyncOrAsync.Value,
+    v1ClientConfig: DynamoDBClientV1Config,
+    v1DaxClientConfig: DynamoDBClientV1DaxConfig,
+    v2ClientConfig: DynamoDBClientV2Config,
+    batchGetItemLimit: Int, // Currently unused
     batchWriteItemLimit: Int
 ) {
   require(batchGetItemLimit >= 1 && batchGetItemLimit <= 100)

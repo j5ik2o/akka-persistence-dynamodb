@@ -31,7 +31,7 @@ trait JournalDaoWithUpdates extends WriteJournalDao {
 
 trait JournalDaoWithReadMessages {
 
-  def getMessages(
+  def getMessagesAsPersistentRepr(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
@@ -39,7 +39,7 @@ trait JournalDaoWithReadMessages {
       deleted: Option[Boolean] = Some(false)
   ): Source[Try[PersistentRepr], NotUsed]
 
-  def getMessagesWithBatch(
+  def getMessagesAsPersistentReprWithBatch(
       persistenceId: String,
       fromSequenceNr: Long,
       toSequenceNr: Long,

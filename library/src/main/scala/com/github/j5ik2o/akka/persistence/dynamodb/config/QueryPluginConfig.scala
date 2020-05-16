@@ -52,7 +52,8 @@ object QueryPluginConfig {
         JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
       metricsReporterClassName =
         config.asString("metrics-reporter-class-name", default = DefaultMetricsReporterClassName),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
+      clientConfig = DynamoDBClientConfig
+        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
     )
   }
 
@@ -73,6 +74,6 @@ case class QueryPluginConfig(
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig
-) {
+) extends PluginConfig {
   require(shardCount > 1)
 }

@@ -18,8 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
-import scala.concurrent.duration.{ FiniteDuration, _ }
-
 object SnapshotPluginConfig {
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
@@ -31,7 +29,8 @@ object SnapshotPluginConfig {
         "metrics-reporter-class-name",
         "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
       ),
-      clientConfig = DynamoDBClientConfig.fromConfig(config.asConfig("dynamo-db-client"))
+      clientConfig = DynamoDBClientConfig
+        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
     )
   }
 

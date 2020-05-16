@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 object DynamoDBJournalSpec {
-  val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
+  val dynamoDBPort: Int          = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode: Boolean = true
 }
 
@@ -23,10 +23,23 @@ class DynamoDBJournalSpec
       ConfigFactory
         .parseString(
           s"""
+           |blocking-dispatcher {
+           |  type = Dispatcher
+           |  executor = "thread-pool-executor"
+           |  thread-pool-executor {
+           |    fixed-pool-size = 32
+           |  }
+           |  throughput = 1
+           |}
+           |
            |j5ik2o.dynamo-db-journal {
+           |  legacy-config-layout = true
            |  query-batch-size = 1
            |  dynamo-db-client {
+           |    region = "ap-northeast-1"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
+           |    client-version = "v2"
+           |    v1.dispatcher-name = "blocking-dispatcher"
            |  }
            |  columns-def {
            |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode) "sequence-nr" else "skey"}
@@ -35,6 +48,7 @@ class DynamoDBJournalSpec
            |
            |j5ik2o.dynamo-db-snapshot {
            |  dynamo-db-client {
+           |    region = "ap-northeast-1"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
            |}
@@ -42,10 +56,11 @@ class DynamoDBJournalSpec
            |j5ik2o.dynamo-db-read-journal {
            |  query-batch-size = 1
            |  dynamo-db-client {
+           |    region = "ap-northeast-1"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
            |  }
            |  columns-def {
-           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode)  "sequence-nr" else "skey"}
+           |    sort-key-column-name = ${if (DynamoDBJournalSpec.legacyJournalMode) "sequence-nr" else "skey"}
            |  }
            |}
            """.stripMargin

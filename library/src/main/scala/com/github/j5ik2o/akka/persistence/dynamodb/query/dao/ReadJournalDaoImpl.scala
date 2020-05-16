@@ -22,12 +22,11 @@ import java.util.concurrent.atomic.AtomicLong
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.PersistentRepr
-import akka.serialization.Serialization
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Concat, Flow, Source }
+import akka.stream.scaladsl.{ Concat, Flow, Source, SourceUtils }
+import akka.stream.{ ActorMaterializer, Attributes }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ DaoSupport, V2JournalRowReadDriver }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
@@ -43,7 +42,6 @@ import scala.util.Try
 
 class ReadJournalDaoImpl(
     asyncClient: DynamoDbAsyncClient,
-    serialization: Serialization,
     pluginConfig: QueryPluginConfig,
     override val serializer: FlowPersistentReprSerializer[JournalRow],
     override protected val metricsReporter: MetricsReporter
@@ -51,18 +49,29 @@ class ReadJournalDaoImpl(
     extends ReadJournalDao
     with DaoSupport {
 
+  private val startTimeSource: Source[Long, NotUsed] =
+    SourceUtils
+      .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
+
+  private val logLevels: Attributes = Attributes.logLevels(
+    onElement = Attributes.LogLevels.Debug,
+    onFailure = Attributes.LogLevels.Error,
+    onFinish = Attributes.LogLevels.Debug
+  )
+
   implicit val mat = ActorMaterializer()
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  override protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
-  protected val shardCount: Int                           = pluginConfig.shardCount
-  override val tableName: String                          = pluginConfig.tableName
-  override val getJournalRowsIndexName: String            = pluginConfig.getJournalRowsIndexName
-  override val columnsDefConfig: JournalColumnsDefConfig  = pluginConfig.columnsDefConfig
-  override protected val consistentRead                   = pluginConfig.consistentRead
-  override protected val queryBatchSize: Int              = pluginConfig.queryBatchSize
-  override protected val scanBatchSize: Int               = pluginConfig.queryBatchSize
+  override val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+  private val streamClient                               = DynamoDbAkkaClient(asyncClient)
+
+  override protected def journalRowDriver: V2JournalRowReadDriver = new V2JournalRowReadDriver(
+    Some(asyncClient),
+    None,
+    pluginConfig,
+    metricsReporter
+  )
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     def loop(
@@ -73,12 +82,12 @@ class ReadJournalDaoImpl(
     ): Source[Map[String, AttributeValue], NotUsed] = {
       val scanRequest = ScanRequest
         .builder()
-        .tableName(tableName)
+        .tableName(pluginConfig.tableName)
         .select(Select.SPECIFIC_ATTRIBUTES)
         .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
-        .limit(scanBatchSize)
+        .limit(pluginConfig.scanBatchSize)
         .exclusiveStartKeyAsScala(lastEvaluatedKey)
-        .consistentRead(consistentRead)
+        .consistentRead(pluginConfig.consistentRead)
         .build()
       Source.single(scanRequest).via(streamClient.scanFlow(1)).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
@@ -139,7 +148,7 @@ class ReadJournalDaoImpl(
           // logger.debug(s"index = $index, count = $count")
           val scanRequest = ScanRequest
             .builder()
-            .tableName(tableName)
+            .tableName(pluginConfig.tableName)
             .indexName(pluginConfig.tagsIndexName)
             .filterExpression("contains(#tags, :tag)")
             .expressionAttributeNamesAsScala(
@@ -150,7 +159,7 @@ class ReadJournalDaoImpl(
                 ":tag" -> AttributeValue.builder().s(tag).build()
               )
             )
-            .limit(scanBatchSize)
+            .limit(pluginConfig.scanBatchSize)
             .exclusiveStartKeyAsScala(lastEvaluatedKey)
             .build()
           Source
@@ -200,10 +209,10 @@ class ReadJournalDaoImpl(
         index: Int
     ): Source[Map[String, AttributeValue], NotUsed] = startTimeSource.flatMapConcat { requestStart =>
       val scanRequest = ScanRequest
-        .builder().tableName(tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
+        .builder().tableName(pluginConfig.tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
           columnsDefConfig.orderingColumnName
-        ).limit(scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey)
-        .consistentRead(consistentRead)
+        ).limit(pluginConfig.scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .consistentRead(pluginConfig.consistentRead)
         .build()
       Source
         .single(scanRequest)
@@ -233,6 +242,15 @@ class ReadJournalDaoImpl(
       .take(limit)
 
   }
+
+  override def getMessagesAsJournalRow(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      max: Long,
+      deleted: Option[Boolean]
+  ): Source[JournalRow, NotUsed] =
+    journalRowDriver.getJournalRows(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
 
   override def maxJournalSequence(): Source[Long, NotUsed] = {
     Source.single(Long.MaxValue)

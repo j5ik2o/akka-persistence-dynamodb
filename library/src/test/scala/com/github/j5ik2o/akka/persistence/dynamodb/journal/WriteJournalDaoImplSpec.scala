@@ -8,21 +8,22 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.V2JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import com.typesafe.config.ConfigFactory
 import monix.execution.Scheduler
-import org.scalatest.{ FreeSpecLike, Matchers }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -78,7 +79,7 @@ class WriteJournalDaoImplSpec
     new ByteArrayJournalSerializer(serialization, ",")
 
   val readJournalDao =
-    new ReadJournalDaoImpl(dynamoDbAsyncClient, serialization, queryPluginConfig, serializer, new NullMetricsReporter)(
+    new ReadJournalDaoImpl(dynamoDbAsyncClient, queryPluginConfig, serializer, new NullMetricsReporter)(
       ec,
       system
     )
@@ -87,13 +88,19 @@ class WriteJournalDaoImplSpec
   val partitionKeyResolver = new PartitionKeyResolver.Default(config)
   val sortKeyResolver      = new SortKeyResolver.Default(config)
 
+  val journalRowWriteDriver = new V2JournalRowWriteDriver(
+    Some(dynamoDbAsyncClient),
+    None,
+    journalPluginConfig,
+    partitionKeyResolver,
+    sortKeyResolver,
+    new NullMetricsReporter
+  )
+
   val writeJournalDao =
     new WriteJournalDaoImpl(
-      dynamoDbAsyncClient,
-      serialization,
       journalPluginConfig,
-      partitionKeyResolver,
-      sortKeyResolver,
+      journalRowWriteDriver,
       serializer,
       new NullMetricsReporter
     )(

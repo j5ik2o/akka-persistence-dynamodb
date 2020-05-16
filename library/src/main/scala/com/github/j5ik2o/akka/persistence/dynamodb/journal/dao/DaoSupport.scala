@@ -1,10 +1,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
-import java.io.IOException
-
 import akka.persistence.PersistentRepr
-import akka.stream.scaladsl.{ Concat, Sink, Source, SourceUtils }
-import akka.stream.{ Attributes, Materializer }
+import akka.stream.Materializer
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ actor, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
@@ -16,12 +14,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 
-import scala.collection.immutable._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -43,43 +38,26 @@ object DaoSupport {
 }
 
 trait DaoSupport {
-  protected def streamClient: DynamoDbAkkaClient
-  protected def shardCount: Int
-  protected def tableName: String
-  protected def getJournalRowsIndexName: String
+
   protected def columnsDefConfig: JournalColumnsDefConfig
-  protected def queryBatchSize: Int
-  protected def scanBatchSize: Int
-  protected def consistentRead: Boolean
 
   protected def serializer: FlowPersistentReprSerializer[JournalRow]
-
   protected def metricsReporter: MetricsReporter
 
-  private val logger = LoggerFactory.getLogger(getClass)
+  protected def journalRowDriver: JournalRowReadDriver
 
   implicit def ec: ExecutionContext
   implicit def mat: Materializer
 
-  protected val logLevels: Attributes = Attributes.logLevels(
-    onElement = Attributes.LogLevels.Debug,
-    onFailure = Attributes.LogLevels.Error,
-    onFinish = Attributes.LogLevels.Debug
-  )
-
-  protected val startTimeSource: Source[Long, NotUsed] =
-    SourceUtils
-      .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
-
-  def getMessages(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      max: Long,
-      deleted: Option[Boolean] = Some(false)
-  ): Source[Try[PersistentRepr], NotUsed] = {
-    getMessagesAsJournalRow(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
-      .via(serializer.deserializeFlowWithoutTagsAsTry)
+  protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
+    JournalRow(
+      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).s),
+      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).n.toLong),
+      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+      message = map.get(columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
+      ordering = map(columnsDefConfig.orderingColumnName).n.toLong,
+      tags = map.get(columnsDefConfig.tagsColumnName).map(_.s)
+    )
   }
 
   def getMessagesAsJournalRow(
@@ -88,52 +66,22 @@ trait DaoSupport {
       toSequenceNr: SequenceNumber,
       max: Long,
       deleted: Option[Boolean] = Some(false)
-  ): Source[JournalRow, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      startTimeSource
-        .flatMapConcat { itemStart =>
-          val queryRequest =
-            createGSIRequest(lastEvaluatedKey, queryBatchSize, persistenceId, fromSequenceNr, toSequenceNr, deleted)
-          Source
-            .single(queryRequest).via(streamClient.queryFlow(1)).flatMapConcat { response =>
-              metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)
-              if (response.sdkHttpResponse().isSuccessful) {
-                metricsReporter.incrementGetMessagesItemCallCounter()
-                if (response.count() > 0)
-                  metricsReporter.addGetMessagesItemCounter(response.count().toLong)
-                val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-                  logger.debug("next loop: count = {}, response.count = {}", count, response.count())
-                  loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-                } else
-                  combinedSource
-              } else {
-                metricsReporter.incrementGetMessagesItemCallErrorCounter()
-                val statusCode = response.sdkHttpResponse().statusCode()
-                val statusText = response.sdkHttpResponse().statusText()
-                Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-              }
-            }
-        }
-    }
-    if (max == 0L || fromSequenceNr > toSequenceNr)
-      Source.empty
-    else {
-      loop(None, Source.empty, 0L, 1)
-        .map(convertToJournalRow)
-        .take(max)
-        .withAttributes(logLevels)
-    }
+  ): Source[JournalRow, NotUsed] =
+    journalRowDriver.getJournalRows(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
+
+  def getMessagesAsPersistentRepr(
+      persistenceId: PersistenceId,
+      fromSequenceNr: SequenceNumber,
+      toSequenceNr: SequenceNumber,
+      max: Long,
+      deleted: Option[Boolean] = Some(false)
+  ): Source[Try[PersistentRepr], NotUsed] = {
+    journalRowDriver
+      .getJournalRows(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
+      .via(serializer.deserializeFlowWithoutTagsAsTry)
   }
 
-  def getMessagesWithBatch(
+  def getMessagesAsPersistentReprWithBatch(
       persistenceId: String,
       fromSequenceNr: Long,
       toSequenceNr: Long,
@@ -141,11 +89,14 @@ trait DaoSupport {
       refreshInterval: Option[(FiniteDuration, actor.Scheduler)]
   ): Source[Try[PersistentRepr], NotUsed] = {
     Source
-      .unfoldAsync[(Long, FlowControl), Seq[Try[PersistentRepr]]]((Math.max(1, fromSequenceNr), Continue)) {
+      .unfoldAsync[(Long, FlowControl), scala.collection.immutable.Seq[Try[PersistentRepr]]](
+        (Math.max(1, fromSequenceNr), Continue)
+      ) {
         case (from, control) =>
-          def retrieveNextBatch(): Future[Option[((Long, FlowControl), Seq[Try[PersistentRepr]])]] = {
+          def retrieveNextBatch()
+              : Future[Option[((Long, FlowControl), scala.collection.immutable.Seq[Try[PersistentRepr]])]] = {
             for {
-              xs <- getMessages(
+              xs <- getMessagesAsPersistentRepr(
                 PersistenceId(persistenceId),
                 SequenceNumber(from),
                 SequenceNumber(toSequenceNr),
@@ -174,7 +125,6 @@ trait DaoSupport {
               Some((nextFrom, nextControl), xs)
             }
           }
-
           control match {
             case Stop => Future.successful(None)
             case Continue =>
@@ -185,52 +135,6 @@ trait DaoSupport {
           }
       }
       .mapConcat(identity)
-
-  }
-
-  protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    JournalRow(
-      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).s),
-      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).n.toLong),
-      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-      message = map.get(columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
-      ordering = map(columnsDefConfig.orderingColumnName).n.toLong,
-      tags = map.get(columnsDefConfig.tagsColumnName).map(_.s)
-    )
-  }
-
-  private def createGSIRequest(
-      lastEvaluatedKey: Option[Map[String, AttributeValue]],
-      limit: Int,
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      deleted: Option[Boolean]
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(tableName)
-      .indexName(getJournalRowsIndexName)
-      .keyConditionExpression(
-        "#pid = :pid and #snr between :min and :max"
-      )
-      .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> columnsDefConfig.sequenceNrColumnName
-        ) ++ deleted.map(_ => Map("#flg" -> columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-      ).expressionAttributeValuesAsScala(
-        Map(
-          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-          ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-          ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-      )
-      .limit(limit)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .build()
-
   }
 
 }

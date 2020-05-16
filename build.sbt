@@ -47,7 +47,7 @@ lazy val deploySettings = Seq(
 
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
-  scalaVersion := scala211Version,
+  scalaVersion := scala213Version,
   crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",
@@ -78,6 +78,8 @@ lazy val library = (project in file("library"))
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-test"  % reactiveAwsDynamoDB % Test,
+        "com.amazonaws"     % "aws-java-sdk-dynamodb"        % "1.11.783",
+        "com.amazonaws"     % "amazon-dax-client"            % "1.0.205917.0",
         "ch.qos.logback"    % "logback-classic"              % "1.2.3" % Test,
         "org.slf4j"         % "jul-to-slf4j"                 % "1.7.30" % Test
       ),

@@ -3,8 +3,9 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.DecimalFormat
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
 
 case class PartitionKey(private val value: String) {

@@ -26,6 +26,7 @@ import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.{ Config, ConfigFactory }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
+
 import scala.concurrent.duration._
 
 abstract class CurrentEventsByPersistenceId2Test(config: Config) extends QueryJournalSpec(config) {

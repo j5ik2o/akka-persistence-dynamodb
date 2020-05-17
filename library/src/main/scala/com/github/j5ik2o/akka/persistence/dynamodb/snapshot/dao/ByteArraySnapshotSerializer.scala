@@ -19,10 +19,9 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 import akka.persistence.SnapshotMetadata
 import akka.persistence.serialization.Snapshot
 import akka.serialization.Serialization
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 
 import scala.util.{ Failure, Success }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.SequenceNumber
 
 trait SnapshotSerializer[T] {
   def serialize(metadata: SnapshotMetadata, snapshot: Any): Either[Throwable, T]

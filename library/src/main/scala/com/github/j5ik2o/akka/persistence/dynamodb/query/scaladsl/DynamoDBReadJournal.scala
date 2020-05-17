@@ -35,7 +35,11 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDbClientBuilderUtils, HttpClientBuilderUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  V2ClientOverrideConfigurationUtils,
+  V2DynamoDbClientBuilderUtils,
+  V2HttpClientBuilderUtils
+}
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.typesafe.config.Config
@@ -97,12 +101,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   protected val journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig =
     pluginConfig.journalSequenceRetrievalConfig
 
-  private val asyncHttpClientBuilder = HttpClientBuilderUtils.setup(pluginConfig.clientConfig)
+  private val asyncHttpClient             = V2HttpClientBuilderUtils.setupAsync(pluginConfig.clientConfig)
+  private val clientOverrideConfiguration = V2ClientOverrideConfigurationUtils.setup(pluginConfig.clientConfig)
 
-  private val dynamoDbAsyncClientBuilder =
-    DynamoDbClientBuilderUtils.setup(pluginConfig.clientConfig, asyncHttpClientBuilder.build())
-
-  protected val javaAsyncClient: JavaDynamoDbAsyncClient = dynamoDbAsyncClientBuilder.build()
+  protected val javaAsyncClient: JavaDynamoDbAsyncClient =
+    V2DynamoDbClientBuilderUtils.setupAsync(pluginConfig.clientConfig, asyncHttpClient, clientOverrideConfiguration)
 
   protected val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaAsyncClient)
   protected val streamClient: DynamoDbAkkaClient = DynamoDbAkkaClient(asyncClient)
@@ -114,7 +117,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     new ByteArrayJournalSerializer(serialization, pluginConfig.tagSeparator)
 
   private val readJournalDao =
-    new ReadJournalDaoImpl(asyncClient, serialization, pluginConfig, serializer, metricsReporter)
+    new ReadJournalDaoImpl(asyncClient, pluginConfig, serializer, metricsReporter)
 
   private val writePluginId = config.getString("write-plugin")
   private val eventAdapters = Persistence(system).adaptersFor(writePluginId)
@@ -179,7 +182,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   ): Source[EventEnvelope, NotUsed] = {
     val batchSize = pluginConfig.maxBufferSize
     readJournalDao
-      .getMessagesWithBatch(persistenceId, fromSequenceNr, toSequenceNr, batchSize, refreshInterval)
+      .getMessagesAsPersistentReprWithBatch(persistenceId, fromSequenceNr, toSequenceNr, batchSize, refreshInterval)
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .mapConcat(adaptEvents)
       .map(repr =>

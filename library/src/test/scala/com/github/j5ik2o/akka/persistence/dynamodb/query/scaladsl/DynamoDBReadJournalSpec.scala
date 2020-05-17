@@ -29,11 +29,12 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ V2JournalRowWriteDriver, WriteJournalDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
-import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{ ReadJournalDaoImpl, V2QueryProcessor }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
@@ -119,8 +120,24 @@ class DynamoDBReadJournalSpec
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, ",")
 
+  val queryProcessor =
+    new V2QueryProcessor(Some(dynamoDbAsyncClient), None, queryPluginConfig, new NullMetricsReporter)
+
+  val journalRowReadDriver = new V2JournalRowReadDriver(
+    Some(dynamoDbAsyncClient),
+    None,
+    journalPluginConfig,
+    new NullMetricsReporter
+  )
+
   val readJournalDao =
-    new ReadJournalDaoImpl(dynamoDbAsyncClient, queryPluginConfig, serializer, new NullMetricsReporter)(
+    new ReadJournalDaoImpl(
+      queryProcessor,
+      journalRowReadDriver,
+      queryPluginConfig,
+      serializer,
+      new NullMetricsReporter
+    )(
       ec,
       system
     )

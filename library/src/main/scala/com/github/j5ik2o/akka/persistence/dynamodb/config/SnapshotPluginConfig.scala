@@ -15,28 +15,45 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.typesafe.config.Config
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
+import com.typesafe.config.{ Config, ConfigFactory }
+import net.ceedubs.ficus.Ficus._
 
-object SnapshotPluginConfig {
+object SnapshotPluginConfig extends LoggingSupport {
+
+  val legacyConfigLayoutKey       = "legacy-config-layout"
+  val tableNameKey                = "table-name"
+  val columnsDefKey               = "columns-def"
+  val consistentReadKey           = "consistent-read"
+  val metricsReporterClassNameKey = "metrics-reporter-class-name"
+  val dynamoDbClientKey           = "dynamo-db-client"
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
-    SnapshotPluginConfig(
-      tableName = config.asString("table-name", default = "Snapshot"),
-      columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      consistentRead = config.asBoolean("consistent-read", default = false),
-      metricsReporterClassName = config.asString(
-        "metrics-reporter-class-name",
-        "com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter"
+    logger.debug("config = {}", config)
+    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigLayoutKey, default = false)
+    val result = SnapshotPluginConfig(
+      legacyConfigFormat,
+      tableName = config.getOrElse[String](tableNameKey, default = "Snapshot"),
+      columnsDefConfig =
+        SnapshotColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
+      consistentRead = config.getOrElse[Boolean](consistentReadKey, default = false),
+      metricsReporterClassName = config.getOrElse[String](
+        metricsReporterClassNameKey,
+        classOf[NullMetricsReporter].getName
       ),
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
+        .fromConfig(config.getOrElse[Config](dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
+    logger.debug("result = {}", result)
+    result
   }
 
 }
 
 final case class SnapshotPluginConfig(
+    legacyConfigFormat: Boolean,
     tableName: String,
     columnsDefConfig: SnapshotColumnsDefConfig,
     consistentRead: Boolean,

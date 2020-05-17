@@ -24,12 +24,12 @@ import com.amazonaws.services.dynamodbv2.{
   AmazonDynamoDBAsyncClientBuilder,
   AmazonDynamoDBClientBuilder
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
 object V1DynamoDBClientBuilderUtils {
 
   def setupSync(dynamicAccess: DynamicAccess, clientConfig: DynamoDBClientConfig): AmazonDynamoDB = {
-    val cc      = clientConfig.v1ClientConfig.toAWS(dynamicAccess)
+    val cc      = V1ClientConfigurationUtils.setup(dynamicAccess, clientConfig)
     val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
     (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
@@ -49,7 +49,7 @@ object V1DynamoDBClientBuilderUtils {
   }
 
   def setupAsync(dynamicAccess: DynamicAccess, clientConfig: DynamoDBClientConfig): AmazonDynamoDBAsync = {
-    val cc      = clientConfig.v1ClientConfig.toAWS(dynamicAccess)
+    val cc      = V1ClientConfigurationUtils.setup(dynamicAccess, clientConfig)
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
     (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>

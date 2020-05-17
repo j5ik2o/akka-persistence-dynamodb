@@ -1,15 +1,21 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
+package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
 import java.io.IOException
 import java.nio.ByteBuffer
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ Concat, Flow, Source, SourceUtils }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source, SourceUtils }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{
+  JournalRowReadDriver,
+  JournalRowWriteDriver,
+  PersistenceIdWithSeqNr
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
 import org.slf4j.LoggerFactory
 
@@ -20,7 +26,7 @@ import scala.jdk.CollectionConverters._
 final class V1JournalRowReadDriver(
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
-    val journalPluginConfig: JournalPluginConfig,
+    val pluginConfig: PluginConfig,
     val metricsReporter: MetricsReporter
 )(implicit ec: ExecutionContext)
     extends JournalRowReadDriver {
@@ -110,7 +116,7 @@ final class V1JournalRowReadDriver(
               fromSequenceNr,
               toSequenceNr,
               deleted,
-              journalPluginConfig.queryBatchSize,
+              pluginConfig.queryBatchSize,
               lastEvaluatedKey
             )
           Source
@@ -168,7 +174,7 @@ final class V1JournalRowReadDriver(
                 val result = Option(response.getItems)
                   .map(_.asScala).map(_.map(_.asScala))
                   .getOrElse(Seq.empty).toVector.headOption.map { head =>
-                    head(journalPluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong
+                    head(pluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong
                   }.getOrElse(0L)
                 Source.single(result)
               } else {
@@ -203,19 +209,19 @@ final class V1JournalRowReadDriver(
       deleted: Option[Boolean] = None
   ): QueryRequest = {
     new QueryRequest()
-      .withTableName(journalPluginConfig.tableName)
-      .withIndexName(journalPluginConfig.getJournalRowsIndexName)
+      .withTableName(pluginConfig.tableName)
+      .withIndexName(pluginConfig.getJournalRowsIndexName)
       .withKeyConditionExpression(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id")).orNull
       )
       .withFilterExpression(deleted.map(_ => "#d = :flg").orNull)
       .withExpressionAttributeNames(
         (Map(
-          "#pid" -> journalPluginConfig.columnsDefConfig.persistenceIdColumnName
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
         ) ++ deleted
-          .map(_ => Map("#d" -> journalPluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
+          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
         fromSequenceNr
-          .map(_ => Map("#snr" -> journalPluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
+          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
       )
       .withExpressionAttributeValues(
         (Map(
@@ -228,17 +234,28 @@ final class V1JournalRowReadDriver(
   }
 
   private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {
-    (syncClient, asyncClient) match {
-      case (Some(c), None) =>
-        val flow = Flow[QueryRequest]
-          .map { request => c.query(request) }
-        applyV1Dispatcher(journalPluginConfig, flow)
-      case (None, Some(c)) =>
-        Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }
-  }.log("query")
+    val flow = (
+      (syncClient, asyncClient) match {
+        case (Some(c), None) =>
+          val flow = Flow[QueryRequest]
+            .map { request => c.query(request) }
+          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+        case (None, Some(c)) =>
+          Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }
+    ).log("query")
+    if (pluginConfig.readBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   private def createGSIRequest(
       persistenceId: PersistenceId,
@@ -247,15 +264,15 @@ final class V1JournalRowReadDriver(
       lastEvaluatedKey: Option[Map[String, AttributeValue]]
   ): QueryRequest = {
     new QueryRequest()
-      .withTableName(journalPluginConfig.tableName)
-      .withIndexName(journalPluginConfig.getJournalRowsIndexName)
+      .withTableName(pluginConfig.tableName)
+      .withIndexName(pluginConfig.getJournalRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr <= :snr")
       .withFilterExpression("#d = :flg")
       .withExpressionAttributeNames(
         Map(
-          "#pid" -> journalPluginConfig.columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> journalPluginConfig.columnsDefConfig.sequenceNrColumnName,
-          "#d"   -> journalPluginConfig.columnsDefConfig.deletedColumnName
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName,
+          "#d"   -> pluginConfig.columnsDefConfig.deletedColumnName
         ).asJava
       )
       .withExpressionAttributeValues(
@@ -265,7 +282,7 @@ final class V1JournalRowReadDriver(
           ":flg" -> new AttributeValue().withBOOL(deleted)
         ).asJava
       )
-      .withLimit(journalPluginConfig.queryBatchSize)
+      .withLimit(pluginConfig.queryBatchSize)
       .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
   }
 
@@ -278,15 +295,15 @@ final class V1JournalRowReadDriver(
       lastEvaluatedKey: Option[Map[String, AttributeValue]]
   ): QueryRequest = {
     new QueryRequest()
-      .withTableName(journalPluginConfig.tableName).withIndexName(journalPluginConfig.getJournalRowsIndexName).withKeyConditionExpression(
+      .withTableName(pluginConfig.tableName).withIndexName(pluginConfig.getJournalRowsIndexName).withKeyConditionExpression(
         "#pid = :pid and #snr between :min and :max"
       ).withFilterExpression(deleted.map { _ => s"#flg = :flg" }.orNull)
       .withExpressionAttributeNames(
         (Map(
-          "#pid" -> journalPluginConfig.columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> journalPluginConfig.columnsDefConfig.sequenceNrColumnName
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
         ) ++ deleted
-          .map(_ => Map("#flg" -> journalPluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
+          .map(_ => Map("#flg" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
       )
       .withExpressionAttributeValues(
         (Map(
@@ -300,12 +317,12 @@ final class V1JournalRowReadDriver(
 
   protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
     JournalRow(
-      persistenceId = PersistenceId(map(journalPluginConfig.columnsDefConfig.persistenceIdColumnName).getS),
-      sequenceNumber = SequenceNumber(map(journalPluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong),
-      deleted = map(journalPluginConfig.columnsDefConfig.deletedColumnName).getBOOL,
-      message = map.get(journalPluginConfig.columnsDefConfig.messageColumnName).map(_.getB.array()).get,
-      ordering = map(journalPluginConfig.columnsDefConfig.orderingColumnName).getN.toLong,
-      tags = map.get(journalPluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
+      persistenceId = PersistenceId(map(pluginConfig.columnsDefConfig.persistenceIdColumnName).getS),
+      sequenceNumber = SequenceNumber(map(pluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong),
+      deleted = map(pluginConfig.columnsDefConfig.deletedColumnName).getBOOL,
+      message = map.get(pluginConfig.columnsDefConfig.messageColumnName).map(_.getB.array()).get,
+      ordering = map(pluginConfig.columnsDefConfig.orderingColumnName).getN.toLong,
+      tags = map.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
     )
   }
 
@@ -314,7 +331,7 @@ final class V1JournalRowReadDriver(
 final class V1JournalRowWriteDriver(
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
-    val journalPluginConfig: JournalPluginConfig,
+    val pluginConfig: JournalPluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
     val metricsReporter: MetricsReporter
@@ -330,7 +347,7 @@ final class V1JournalRowWriteDriver(
   private val readDriver = new V1JournalRowReadDriver(
     asyncClient,
     syncClient,
-    journalPluginConfig,
+    pluginConfig,
     metricsReporter
   )
 
@@ -361,27 +378,25 @@ final class V1JournalRowWriteDriver(
         val pkey = partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
         val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
         val request = new PutItemRequest()
-          .withTableName(journalPluginConfig.tableName)
+          .withTableName(pluginConfig.tableName)
           .withItem(
             (Map(
-              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
                 .withS(pkey),
-              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
                 .withS(skey),
-              journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                 .withS(journalRow.persistenceId.asString),
-              journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
                 .withN(journalRow.sequenceNumber.asString),
-              journalPluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
                 .withN(journalRow.ordering.toString),
-              journalPluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
                 .withBOOL(journalRow.deleted),
-              journalPluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
                 .withB(ByteBuffer.wrap(journalRow.message))
             ) ++ journalRow.tags
-              .map { tag =>
-                Map(journalPluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue().withS(tag))
-              }.getOrElse(
+              .map { tag => Map(pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue().withS(tag)) }.getOrElse(
                 Map.empty
               )).asJava
           )
@@ -414,7 +429,7 @@ final class V1JournalRowWriteDriver(
                   Source
                     .single(requestItems).map { requests =>
                       new BatchWriteItemRequest()
-                        .withRequestItems(Map(journalPluginConfig.tableName -> requests.asJava).asJava)
+                        .withRequestItems(Map(pluginConfig.tableName -> requests.asJava).asJava)
                     }.via(batchWriteItemFlow).map((_, itemStart))
                 }
                 .flatMapConcat {
@@ -423,11 +438,11 @@ final class V1JournalRowWriteDriver(
                     if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
                       metricsReporter.addPutJournalRowsItemCallCounter()
                       if (response.getUnprocessedItems.asScala.nonEmpty) {
-                        val n = requestItems.size - response.getUnprocessedItems.get(journalPluginConfig.tableName).size
+                        val n = requestItems.size - response.getUnprocessedItems.get(pluginConfig.tableName).size
                         metricsReporter.addPutJournalRowsItemCounter(n)
                         val s = response.getUnprocessedItems.asScala
                           .map { case (k, v) => (k, v.asScala.toVector) }
-                        val ss = s(journalPluginConfig.tableName)
+                        val ss = s(pluginConfig.tableName)
                         Source
                           .single(ss).via(loopFlow).map(
                             _ + n
@@ -477,24 +492,24 @@ final class V1JournalRowWriteDriver(
                         new PutRequest()
                           .withItem(
                             (Map(
-                              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
                                 .withS(pkey),
-                              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
                                 .withS(skey),
-                              journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                                 .withS(pid),
-                              journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
                                 .withN(seqNr),
-                              journalPluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
                                 .withN(ordering),
-                              journalPluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
                                 .withBOOL(deleted),
-                              journalPluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
+                              pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
                                 .withB(message)
                             ) ++ tagsOpt
                               .map { tags =>
                                 Map(
-                                  journalPluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
+                                  pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
                                     .withS(tags)
                                 )
                               }.getOrElse(Map.empty)).asJava
@@ -528,9 +543,9 @@ final class V1JournalRowWriteDriver(
               val deleteRequest = new DeleteItemRequest()
                 .withKey(
                   Map(
-                    journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                    pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                       .withS(persistenceIdWithSeqNr.persistenceId.asString),
-                    journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
+                    pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
                       persistenceIdWithSeqNr.sequenceNumber.asString
                     )
                   ).asJava
@@ -576,7 +591,7 @@ final class V1JournalRowWriteDriver(
                     Source
                       .single(requestItems).map { requests =>
                         new BatchWriteItemRequest().withRequestItems(
-                          Map(journalPluginConfig.tableName -> requests.asJava).asJava
+                          Map(pluginConfig.tableName -> requests.asJava).asJava
                         )
                       }.via(batchWriteItemFlow).flatMapConcat { response =>
                         metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
@@ -584,10 +599,10 @@ final class V1JournalRowWriteDriver(
                           metricsReporter.incrementDeleteJournalRowsItemCallCounter()
                           if (response.getUnprocessedItems.asScala.nonEmpty) {
                             val n =
-                              requestItems.size - response.getUnprocessedItems.get(journalPluginConfig.tableName).size
+                              requestItems.size - response.getUnprocessedItems.get(pluginConfig.tableName).size
                             metricsReporter.addDeleteJournalRowsItemCounter(n)
                             val s  = response.getUnprocessedItems.asScala.map { case (k, v) => (k, v.asScala.toVector) }
-                            val ss = s(journalPluginConfig.tableName)
+                            val ss = s(pluginConfig.tableName)
                             Source.single(ss).via(loopFlow).map(_ + n)
                           } else {
                             metricsReporter.addDeleteJournalRowsItemCounter(requestItems.size)
@@ -610,9 +625,9 @@ final class V1JournalRowWriteDriver(
                     new WriteRequest().withDeleteRequest(
                       new DeleteRequest().withKey(
                         Map(
-                          journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                          pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                             .withS(persistenceIdWithSeqNr.persistenceId.asString),
-                          journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
+                          pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
                             persistenceIdWithSeqNr.sequenceNumber.asString
                           )
                         ).asJava
@@ -643,32 +658,32 @@ final class V1JournalRowWriteDriver(
         val pkey = journalRow.partitionKey(partitionKeyResolver).asString
         val skey = journalRow.sortKey(sortKeyResolver).asString
         val updateRequest = new UpdateItemRequest()
-          .withTableName(journalPluginConfig.tableName).withKey(
+          .withTableName(pluginConfig.tableName).withKey(
             Map(
-              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
                 .withS(pkey),
-              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+              pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
                 .withS(skey)
             ).asJava
           ).withAttributeUpdates(
             (Map(
-              journalPluginConfig.columnsDefConfig.messageColumnName -> new AttributeValueUpdate()
+              pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValueUpdate()
                 .withAction(AttributeAction.PUT).withValue(
                   new AttributeValue().withB(ByteBuffer.wrap(journalRow.message))
                 ),
-              journalPluginConfig.columnsDefConfig.orderingColumnName ->
+              pluginConfig.columnsDefConfig.orderingColumnName ->
               new AttributeValueUpdate()
                 .withAction(AttributeAction.PUT).withValue(
                   new AttributeValue().withN(journalRow.ordering.toString)
                 ),
-              journalPluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValueUpdate()
+              pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValueUpdate()
                 .withAction(AttributeAction.PUT).withValue(
                   new AttributeValue().withBOOL(journalRow.deleted)
                 )
             ) ++ journalRow.tags
               .map { tag =>
                 Map(
-                  journalPluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValueUpdate()
+                  pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValueUpdate()
                     .withAction(AttributeAction.PUT).withValue(new AttributeValue().withS(tag))
                 )
               }.getOrElse(Map.empty)).asJava
@@ -702,55 +717,95 @@ final class V1JournalRowWriteDriver(
   }
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResult, NotUsed] = {
-    (syncClient, asyncClient) match {
+    val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[PutItemRequest]
           .map { request => c.putItem(request) }
-        applyV1Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
         Flow[PutItemRequest].mapAsync(1) { request => c.putItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("putItem")
+    }).log("putItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] = {
-    (syncClient, asyncClient) match {
+    val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[BatchWriteItemRequest]
           .map { request => c.batchWriteItem(request) }
-        applyV1Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
         Flow[BatchWriteItemRequest].mapAsync(1) { request => c.batchWriteItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("batchWriteItem")
+    }).log("batchWriteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   private def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResult, NotUsed] = {
-    (syncClient, asyncClient) match {
-      case (Some(c), None) =>
-        val flow = Flow[UpdateItemRequest]
-          .map { request => c.updateItem(request) }
-        applyV1Dispatcher(journalPluginConfig, flow)
-      case (None, Some(c)) =>
-        Flow[UpdateItemRequest].mapAsync(1) { request => c.updateItemAsync(request).toScala }
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }
-  }.log("updateItem")
+    val flow = (
+      (syncClient, asyncClient) match {
+        case (Some(c), None) =>
+          val flow = Flow[UpdateItemRequest]
+            .map { request => c.updateItem(request) }
+          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+        case (None, Some(c)) =>
+          Flow[UpdateItemRequest].mapAsync(1) { request => c.updateItemAsync(request).toScala }
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }
+    ).log("updateItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResult, NotUsed] = {
-    (syncClient, asyncClient) match {
-      case (Some(c), None) =>
-        val flow = Flow[DeleteItemRequest]
-          .map { request => c.deleteItem(request) }.log("deleteItem")
-        applyV1Dispatcher(journalPluginConfig, flow)
-      case (None, Some(c)) =>
-        Flow[DeleteItemRequest].mapAsync(1) { request => c.deleteItemAsync(request).toScala }
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }
+    val flow = (
+      (syncClient, asyncClient) match {
+        case (Some(c), None) =>
+          val flow = Flow[DeleteItemRequest]
+            .map { request => c.deleteItem(request) }
+          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+        case (None, Some(c)) =>
+          Flow[DeleteItemRequest].mapAsync(1) { request => c.deleteItemAsync(request).toScala }
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }
+    ).log("deleteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
   }
 
 }

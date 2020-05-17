@@ -38,7 +38,7 @@ class DynamoDBJournalSpec
            |  dynamo-db-client {
            |    region = "ap-northeast-1"
            |    endpoint = "http://127.0.0.1:${DynamoDBJournalSpec.dynamoDBPort}/"
-           |    client-version = "v2"
+           |    client-version = "v1"
            |    v1.dispatcher-name = "blocking-dispatcher"
            |  }
            |  columns-def {

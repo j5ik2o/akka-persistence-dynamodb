@@ -1,12 +1,18 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
+package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import java.io.IOException
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ Concat, Flow, Source, SourceUtils }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source, SourceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{
+  JournalRowReadDriver,
+  JournalRowWriteDriver,
+  PersistenceIdWithSeqNr
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
@@ -33,7 +39,7 @@ final class V2JournalRowReadDriver(
   private val logger = LoggerFactory.getLogger(getClass)
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    (streamClient, syncClient) match {
+    val flow = ((streamClient, syncClient) match {
       case (None, Some(c)) =>
         val flow = Flow[QueryRequest].map { request =>
           c.query(request) match {
@@ -41,13 +47,22 @@ final class V2JournalRowReadDriver(
             case Left(ex) => throw ex
           }
         }
-        applyV2Dispatcher(pluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case (Some(c), None) =>
         c.queryFlow(1)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("query")
+    }).log("query")
+    if (pluginConfig.readBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   override def getJournalRows(
       persistenceId: PersistenceId,
@@ -331,7 +346,7 @@ final class V2JournalRowReadDriver(
 final class V2JournalRowWriteDriver(
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbSyncClient],
-    val journalPluginConfig: JournalPluginConfig,
+    val pluginConfig: PluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
     val metricsReporter: MetricsReporter
@@ -348,7 +363,7 @@ final class V2JournalRowWriteDriver(
   private val readDriver = new V2JournalRowReadDriver(
     asyncClient,
     syncClient,
-    journalPluginConfig,
+    pluginConfig,
     metricsReporter
   )
 
@@ -385,10 +400,10 @@ final class V2JournalRowWriteDriver(
               val deleteRequest = DeleteItemRequest
                 .builder().keyAsScala(
                   Map(
-                    journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                    pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
                       .builder()
                       .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
-                    journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                    pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
                       .builder().n(
                         persistenceIdWithSeqNr.sequenceNumber.asString
                       ).build()
@@ -436,17 +451,17 @@ final class V2JournalRowWriteDriver(
                     Source
                       .single(requestItems).map { requests =>
                         BatchWriteItemRequest
-                          .builder().requestItemsAsScala(Map(journalPluginConfig.tableName -> requests)).build()
+                          .builder().requestItemsAsScala(Map(pluginConfig.tableName -> requests)).build()
                       }.via(batchWriteItemFlow).flatMapConcat { response =>
                         metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
                         if (response.sdkHttpResponse().isSuccessful) {
                           metricsReporter.incrementDeleteJournalRowsItemCallCounter()
                           if (response.unprocessedItemsAsScala.get.nonEmpty) {
                             val n =
-                              requestItems.size - response.unprocessedItems.get(journalPluginConfig.tableName).size
+                              requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
                             metricsReporter.addDeleteJournalRowsItemCounter(n)
                             Source
-                              .single(response.unprocessedItemsAsScala.get(journalPluginConfig.tableName)).via(loopFlow).map(
+                              .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
                                 _ + n
                               )
                           } else {
@@ -473,10 +488,10 @@ final class V2JournalRowWriteDriver(
                         DeleteRequest
                           .builder().keyAsScala(
                             Map(
-                              journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
                                 .builder()
                                 .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
-                              journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
                                 .builder().n(
                                   persistenceIdWithSeqNr.sequenceNumber.asString
                                 ).build()
@@ -509,29 +524,29 @@ final class V2JournalRowWriteDriver(
         val skey = journalRow.sortKey(sortKeyResolver).asString
         val updateRequest = UpdateItemRequest
           .builder()
-          .tableName(journalPluginConfig.tableName).keyAsScala(
+          .tableName(pluginConfig.tableName).keyAsScala(
             Map(
-              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
                 .builder()
                 .s(pkey).build(),
-              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
                 .builder()
                 .s(skey).build()
             )
           ).attributeUpdatesAsScala(
             Map(
-              journalPluginConfig.columnsDefConfig.messageColumnName -> AttributeValueUpdate
+              pluginConfig.columnsDefConfig.messageColumnName -> AttributeValueUpdate
                 .builder()
                 .action(AttributeAction.PUT).value(
                   AttributeValue.builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
                 ).build(),
-              journalPluginConfig.columnsDefConfig.orderingColumnName ->
+              pluginConfig.columnsDefConfig.orderingColumnName ->
               AttributeValueUpdate
                 .builder()
                 .action(AttributeAction.PUT).value(
                   AttributeValue.builder().n(journalRow.ordering.toString).build()
                 ).build(),
-              journalPluginConfig.columnsDefConfig.deletedColumnName -> AttributeValueUpdate
+              pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValueUpdate
                 .builder()
                 .action(AttributeAction.PUT).value(
                   AttributeValue.builder().bool(journalRow.deleted).build()
@@ -539,7 +554,7 @@ final class V2JournalRowWriteDriver(
             ) ++ journalRow.tags
               .map { tag =>
                 Map(
-                  journalPluginConfig.columnsDefConfig.tagsColumnName -> AttributeValueUpdate
+                  pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValueUpdate
                     .builder()
                     .action(AttributeAction.PUT).value(AttributeValue.builder().s(tag).build()).build()
                 )
@@ -580,31 +595,31 @@ final class V2JournalRowWriteDriver(
         val pkey = partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
         val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
         val request = PutItemRequest
-          .builder().tableName(journalPluginConfig.tableName)
+          .builder().tableName(pluginConfig.tableName)
           .itemAsScala(
             Map(
-              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
                 .builder()
                 .s(pkey).build(),
-              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
                 .builder()
                 .s(skey).build(),
-              journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
                 .builder()
                 .s(journalRow.persistenceId.asString).build(),
-              journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
                 .builder()
                 .n(journalRow.sequenceNumber.asString).build(),
-              journalPluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
                 .builder()
                 .n(journalRow.ordering.toString).build(),
-              journalPluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
                 .builder().bool(journalRow.deleted).build(),
-              journalPluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
+              pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
                 .builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
             ) ++ journalRow.tags
               .map { tag =>
-                Map(journalPluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build())
+                Map(pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build())
               }.getOrElse(
                 Map.empty
               )
@@ -639,7 +654,7 @@ final class V2JournalRowWriteDriver(
                   Source
                     .single(requestItems).map { requests =>
                       BatchWriteItemRequest
-                        .builder().requestItemsAsScala(Map(journalPluginConfig.tableName -> requests)).build
+                        .builder().requestItemsAsScala(Map(pluginConfig.tableName -> requests)).build
                     }.via(batchWriteItemFlow).map((_, itemStart))
                 }
                 .flatMapConcat {
@@ -648,10 +663,10 @@ final class V2JournalRowWriteDriver(
                     if (response.sdkHttpResponse().isSuccessful) {
                       metricsReporter.addPutJournalRowsItemCallCounter()
                       if (response.unprocessedItemsAsScala.get.nonEmpty) {
-                        val n = requestItems.size - response.unprocessedItems.get(journalPluginConfig.tableName).size
+                        val n = requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
                         metricsReporter.addPutJournalRowsItemCounter(n)
                         Source
-                          .single(response.unprocessedItemsAsScala.get(journalPluginConfig.tableName)).via(loopFlow).map(
+                          .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
                             _ + n
                           )
                       } else {
@@ -701,29 +716,29 @@ final class V2JournalRowWriteDriver(
                           .builder()
                           .itemAsScala(
                             Map(
-                              journalPluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
                                 .builder()
                                 .s(pkey).build(),
-                              journalPluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
                                 .builder()
                                 .s(skey).build(),
-                              journalPluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
                                 .builder()
                                 .s(pid).build(),
-                              journalPluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
                                 .builder()
                                 .n(seqNr).build(),
-                              journalPluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
                                 .builder()
                                 .n(ordering).build(),
-                              journalPluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
                                 .builder().bool(deleted).build(),
-                              journalPluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
+                              pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
                                 .builder().b(message).build()
                             ) ++ tagsOpt
                               .map { tags =>
                                 Map(
-                                  journalPluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
+                                  pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
                                     .builder().s(tags).build()
                                 )
                               }.getOrElse(Map.empty)
@@ -759,7 +774,7 @@ final class V2JournalRowWriteDriver(
             case Left(ex) => throw ex
           }
         }
-        applyV2Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
     }
@@ -776,7 +791,7 @@ final class V2JournalRowWriteDriver(
             case Left(ex) => throw ex
           }
         }
-        applyV2Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
     }
@@ -793,7 +808,7 @@ final class V2JournalRowWriteDriver(
             case Left(ex) => throw ex
           }
         }
-        applyV2Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
     }
@@ -810,7 +825,7 @@ final class V2JournalRowWriteDriver(
             case Left(ex) => throw ex
           }
         }
-        applyV2Dispatcher(journalPluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
     }

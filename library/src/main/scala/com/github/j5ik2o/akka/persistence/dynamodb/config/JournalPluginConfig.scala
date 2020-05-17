@@ -16,14 +16,16 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import akka.stream.OverflowStrategy
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.typesafe.config.Config
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
+import com.typesafe.config.{ Config, ConfigFactory }
+import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
-object JournalPluginConfig {
+object JournalPluginConfig extends LoggingSupport {
 
   val DefaultTableName: String                     = "Journal"
   val DefaultShardCount: Int                       = 2
@@ -38,40 +40,68 @@ object JournalPluginConfig {
   val DefaultQueryBatchSize                        = 512
   val DefaultScanBatchSize                         = 512
   val DefaultReplayBatchSize                       = 512
-  val DefaultConsistentRead                        = false
   val DefaultSoftDeleted                           = true
   val DefaultMetricsReporterClassName: String      = classOf[NullMetricsReporter].getName
 
+  val legacyConfigFormatKey = "legacy-config-format"
+
+  val tableNameKey                     = "table-name"
+  val columnsDefKey                    = "columns-def"
+  val getJournalRowsIndexNameKey       = "get-journal-rows-index-name"
+  val tagSeparatorKey                  = "tag-separator"
+  val shardCountKey                    = "shard-count"
+  val partitionKeyResolverClassNameKey = "partition-key-resolver-class-name"
+  val sortKeyResolverClassNameKey      = "sort-key-resolver-class-name"
+  val queueEnableKey                   = "queue-enable"
+  val queueBufferSizeKey               = "queue-buffer-size"
+  val queueOverflowStrategyKey         = "queue-overflow-strategy"
+  val queueParallelismKey              = "queue-parallelism"
+  val writeParallelismKey              = "write-parallelism"
+  val writeBackoffKey                  = "write-backoff"
+  val queryBatchSizeKey                = "query-batch-size"
+  val replayBatchSizeKey               = "replay-batch-size"
+  val replayBatchRefreshIntervalKey    = "replay-batch-refresh-interval"
+  val readBackoffKey                   = "read-backoff"
+
   def fromConfig(config: Config): JournalPluginConfig = {
-    JournalPluginConfig(
-      tableName = config.asString("table-name", default = DefaultTableName),
-      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      getJournalRowsIndexName =
-        config.asString("get-journal-rows-index-name", default = DefaultGetJournalRowsIndexName),
-      tagSeparator = config.asString("tag-separator", default = DefaultTagSeparator),
-      shardCount = config.asInt("shard-count", default = DefaultShardCount),
+    logger.debug("config = {}", config)
+    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigFormatKey, default = false)
+    logger.debug("legacy-config-format = {}", legacyConfigFormat)
+    val result = JournalPluginConfig(
+      legacyConfigFormat,
+      tableName = config.getOrElse[String](tableNameKey, DefaultTableName),
+      columnsDefConfig =
+        JournalColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
+      getJournalRowsIndexName = config.getOrElse[String](getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
+      // ---
+      tagSeparator = config.getOrElse[String](tagSeparatorKey, DefaultTagSeparator),
+      shardCount = config.getOrElse[Int](shardCountKey, DefaultShardCount),
+      // ---
       partitionKeyResolverClassName =
-        config.asString("partition-key-resolver-class-name", default = DefaultPartitionKeyResolverClassName),
-      sortKeyResolverClassName =
-        config.asString("sort-key-resolver-class-name", default = DefaultSortKeyResolverClassName),
-      queueEnable = config.asBoolean("queue-enable", true),
-      queueBufferSize = config.asInt("queue-buffer-size", default = DefaultQueueBufferSize),
-      queueOverflowStrategy = config.asString("queue-overflow-strategy", DefaultQueueOverflowStrategy),
-      queueParallelism = config.asInt("queue-parallelism", default = DefaultQueueParallelism),
-      writeParallelism = config.asInt("write-parallelism", default = DefaultWriteParallelism),
-      writeMinBackoff = config.asFiniteDuration("write-min-backoff", 3 seconds),
-      writeMaxBackoff = config.asFiniteDuration("write-max-backoff", 15 seconds),
-      writeBackoffRandomFactor = 0.8,
-      queryBatchSize = config.asInt("query-batch-size", default = DefaultQueryBatchSize),
-      scanBatchSize = config.asInt("scan-batch-size", default = DefaultScanBatchSize),
-      replayBatchSize = config.asInt("replay-batch-size", default = DefaultReplayBatchSize),
-      replayBatchRefreshInterval = config.asFiniteDuration("replay-batch-refresh-interval"),
-      consistentRead = config.asBoolean("consistent-read", default = DefaultConsistentRead),
-      softDeleted = config.asBoolean("soft-delete", default = DefaultSoftDeleted),
-      metricsReporterClassName = config.asString("metrics-reporter-class-name", DefaultMetricsReporterClassName),
+        config.getOrElse[String](partitionKeyResolverClassNameKey, DefaultPartitionKeyResolverClassName),
+      sortKeyResolverClassName = config.getOrElse[String](sortKeyResolverClassNameKey, DefaultSortKeyResolverClassName),
+      // ---
+      queueEnable = config.getOrElse[Boolean](queueEnableKey, default = true),
+      queueBufferSize = config.getOrElse[Int](queueBufferSizeKey, DefaultQueueBufferSize),
+      queueOverflowStrategy = config.getOrElse[String](queueOverflowStrategyKey, DefaultQueueOverflowStrategy),
+      queueParallelism = config.getOrElse[Int](queueParallelismKey, DefaultQueueParallelism),
+      // ---
+      writeParallelism = config.getOrElse[Int](writeParallelismKey, DefaultWriteParallelism),
+      writeBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](writeBackoffKey, ConfigFactory.empty())),
+      // ---
+      queryBatchSize = config.getOrElse[Int](queryBatchSizeKey, DefaultQueryBatchSize),
+      replayBatchSize = config.getOrElse[Int](replayBatchSizeKey, DefaultReplayBatchSize),
+      replayBatchRefreshInterval = config.getAs[FiniteDuration](replayBatchRefreshIntervalKey),
+      readBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](readBackoffKey, ConfigFactory.empty())),
+      // ---
+      softDeleted = config.getOrElse[Boolean]("soft-delete", DefaultSoftDeleted),
+      metricsReporterClassName =
+        config.getOrElse[String]("metrics-reporter-class-name", DefaultMetricsReporterClassName),
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
+        .fromConfig(config.getOrElse[Config]("dynamo-db-client", ConfigFactory.empty()), legacyConfigFormat)
     )
+    logger.debug("result = {}", result)
+    result
   }
 
 }
@@ -82,9 +112,11 @@ trait PluginConfig {
   val getJournalRowsIndexName: String
   val queryBatchSize: Int
   val clientConfig: DynamoDBClientConfig
+  val readBackoffConfig: BackoffConfig
 }
 
 case class JournalPluginConfig(
+    legacyConfigFormat: Boolean,
     tableName: String,
     columnsDefConfig: JournalColumnsDefConfig,
     getJournalRowsIndexName: String,
@@ -97,14 +129,11 @@ case class JournalPluginConfig(
     queueOverflowStrategy: String,
     queueParallelism: Int,
     writeParallelism: Int,
-    writeMinBackoff: FiniteDuration,
-    writeMaxBackoff: FiniteDuration,
-    writeBackoffRandomFactor: Double,
+    writeBackoffConfig: BackoffConfig,
     queryBatchSize: Int,
-    scanBatchSize: Int,
     replayBatchSize: Int,
     replayBatchRefreshInterval: Option[FiniteDuration],
-    consistentRead: Boolean,
+    readBackoffConfig: BackoffConfig,
     softDeleted: Boolean,
     metricsReporterClassName: String,
     clientConfig: DynamoDBClientConfig

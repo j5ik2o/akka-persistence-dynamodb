@@ -15,51 +15,78 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.typesafe.config.Config
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
+import com.typesafe.config.{ Config, ConfigFactory }
+import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
-object QueryPluginConfig {
+object QueryPluginConfig extends LoggingSupport {
 
   val DefaultTableName: String                = JournalPluginConfig.DefaultTableName
   val DefaultTagsIndexName: String            = "TagsIndex"
   val DefaultGetJournalRowsIndexName: String  = JournalPluginConfig.DefaultGetJournalRowsIndexName
   val DefaultTagSeparator: String             = JournalPluginConfig.DefaultTagSeparator
+  val DefaultShardCount                       = JournalPluginConfig.DefaultShardCount
   val DefaultRefreshInterval: FiniteDuration  = 1 seconds
   val DefaultMaxBufferSize                    = 500
   val DefaultQueryBatchSize                   = 1024
   val DefaultScanBatchSize                    = 1024
-  val DefaultConsistentRead: Boolean          = JournalPluginConfig.DefaultConsistentRead
+  val DefaultConsistentRead: Boolean          = false
   val DefaultMetricsReporterClassName: String = classOf[NullMetricsReporter].getName
 
+  val legacyConfigLayoutKey       = "legacy-config-layout"
+  val tableNameKey                = "table-name"
+  val columnsDefKey               = "columns-def"
+  val tagsIndexNameKey            = "tags-index-name"
+  val getJournalRowsIndexNameKey  = "get-journal-rows-index-name"
+  val tagSeparatorKey             = "tag-separator"
+  val shardCountKey               = "shard-count"
+  val refreshIntervalKey          = "refresh-interval"
+  val maxBufferSizeKey            = "max-buffer-size"
+  val queryBatchSizeKey           = "query-batch-size"
+  val scanBatchSizeKey            = "scan-batch-size"
+  val readBackoffKey              = "read-backoff"
+  val consistentReadKey           = "consistent-read"
+  val journalSequenceRetrievalKey = "journal-sequence-retrieval"
+  val metricsReporterClassNameKey = "metrics-reporter-class-name"
+  val dynamoDbClientKey           = "dynamo-db-client"
+
   def fromConfig(config: Config): QueryPluginConfig = {
-    QueryPluginConfig(
-      tableName = config.asString("table-name", default = DefaultTableName),
-      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.asConfig("columns-def")),
-      tagsIndexName = config.asString("tags-index-name", default = DefaultTagsIndexName),
-      getJournalRowsIndexName =
-        config.asString(key = "get-journal-rows-index-name", default = DefaultGetJournalRowsIndexName),
-      tagSeparator = config.asString("tag-separator", default = DefaultTagSeparator),
-      shardCount = config.asInt("shard-count", default = JournalPluginConfig.DefaultShardCount),
-      refreshInterval = config.asFiniteDuration("refresh-interval", default = DefaultRefreshInterval),
-      maxBufferSize = config.asInt("max-buffer-size", default = DefaultMaxBufferSize),
-      queryBatchSize = config.asInt("query-batch-size", default = DefaultQueryBatchSize),
-      scanBatchSize = config.asInt("scan-batch-size", default = DefaultScanBatchSize),
-      consistentRead = config.asBoolean("consistent-read", default = DefaultConsistentRead),
-      journalSequenceRetrievalConfig =
-        JournalSequenceRetrievalConfig.fromConfig(config.asConfig("journal-sequence-retrieval")),
-      metricsReporterClassName =
-        config.asString("metrics-reporter-class-name", default = DefaultMetricsReporterClassName),
+    logger.debug("config = {}", config)
+    val legacyConfigFormat = config.getOrElse(legacyConfigLayoutKey, default = false)
+    val result = QueryPluginConfig(
+      legacyConfigFormat,
+      tableName = config.getOrElse(tableNameKey, DefaultTableName),
+      columnsDefConfig =
+        JournalColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
+      tagsIndexName = config.getOrElse(tagsIndexNameKey, DefaultTagsIndexName),
+      getJournalRowsIndexName = config.getOrElse(getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
+      tagSeparator = config.getOrElse(tagSeparatorKey, DefaultTagSeparator),
+      shardCount = config.getOrElse(shardCountKey, DefaultShardCount),
+      refreshInterval = config.getOrElse(refreshIntervalKey, DefaultRefreshInterval),
+      maxBufferSize = config.getOrElse(maxBufferSizeKey, DefaultMaxBufferSize),
+      queryBatchSize = config.getOrElse(queryBatchSizeKey, DefaultQueryBatchSize),
+      scanBatchSize = config.getOrElse(scanBatchSizeKey, DefaultScanBatchSize),
+      readBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](readBackoffKey, ConfigFactory.empty())),
+      consistentRead = config.getOrElse(consistentReadKey, DefaultConsistentRead),
+      journalSequenceRetrievalConfig = JournalSequenceRetrievalConfig.fromConfig(
+        config.getOrElse[Config](journalSequenceRetrievalKey, ConfigFactory.empty())
+      ),
+      metricsReporterClassName = config.getOrElse(metricsReporterClassNameKey, DefaultMetricsReporterClassName),
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.asConfig("dynamo-db-client"), config.asBoolean("legacy-config-layout", false))
+        .fromConfig(config.getOrElse[Config](dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
+    logger.debug("result = {}", result)
+    result
   }
 
 }
 
 case class QueryPluginConfig(
+    legacyConfigFormat: Boolean,
     tableName: String,
     columnsDefConfig: JournalColumnsDefConfig,
     tagsIndexName: String,
@@ -70,6 +97,7 @@ case class QueryPluginConfig(
     maxBufferSize: Int,
     queryBatchSize: Int,
     scanBatchSize: Int,
+    override val readBackoffConfig: BackoffConfig,
     consistentRead: Boolean,
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterClassName: String,

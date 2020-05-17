@@ -39,8 +39,6 @@ object DaoSupport {
 
 trait DaoSupport {
 
-  protected def columnsDefConfig: JournalColumnsDefConfig
-
   protected def serializer: FlowPersistentReprSerializer[JournalRow]
   protected def metricsReporter: MetricsReporter
 
@@ -48,17 +46,6 @@ trait DaoSupport {
 
   implicit def ec: ExecutionContext
   implicit def mat: Materializer
-
-  protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    JournalRow(
-      persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).s),
-      sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).n.toLong),
-      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
-      message = map.get(columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
-      ordering = map(columnsDefConfig.orderingColumnName).n.toLong,
-      tags = map.get(columnsDefConfig.tagsColumnName).map(_.s)
-    )
-  }
 
   def getMessagesAsJournalRow(
       persistenceId: PersistenceId,

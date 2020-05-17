@@ -49,8 +49,6 @@ class WriteJournalDaoImpl(
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  override protected val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
   private val writeParallelism: Int = pluginConfig.writeParallelism

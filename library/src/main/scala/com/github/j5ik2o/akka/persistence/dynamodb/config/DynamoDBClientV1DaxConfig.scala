@@ -12,6 +12,7 @@ object DynamoDBClientV1DaxConfig {
 
   def from(config: Config): DynamoDBClientV1DaxConfig = {
     DynamoDBClientV1DaxConfig(
+      dispatcherName = config.asString("dispatcher-name"),
       connectionTimeout = config.asFiniteDuration("connection-timeout", 1000 milliseconds),
       requestTimeout = config.asFiniteDuration("request-timeout", 60000 milliseconds),
       healthCheckTimeout = config.asFiniteDuration("health-check-timeout", 1000 milliseconds),
@@ -31,6 +32,7 @@ object DynamoDBClientV1DaxConfig {
 }
 
 case class DynamoDBClientV1DaxConfig(
+    dispatcherName: Option[String],
     connectionTimeout: FiniteDuration,
     requestTimeout: FiniteDuration,
     healthCheckTimeout: FiniteDuration,

@@ -5,7 +5,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 import software.amazon.awssdk.core.retry.RetryMode
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{ FiniteDuration, _ }
 
 object DynamoDBClientV2Config extends LoggingSupport {
 
@@ -29,73 +29,83 @@ object DynamoDBClientV2Config extends LoggingSupport {
   }
 }
 
+case class DynamoDBClientV2Config(
+    dispatcherName: Option[String],
+    asyncClientConfig: AsyncClientConfig,
+    syncClientConfig: SyncClientConfig,
+    retryMode: Option[RetryMode],
+    apiCallTimeout: Option[FiniteDuration],
+    apiCallAttemptTimeout: Option[FiniteDuration]
+)
+
 object AsyncClientConfig extends LoggingSupport {
 
   def from(config: Config): AsyncClientConfig = {
-    AsyncClientConfig(
-      maxConcurrency = config.asInt("max-concurrency"),
-      maxPendingConnectionAcquires = config.asInt("max-pending-connection-acquires"),
-      readTimeout = config.asFiniteDuration("read-timeout"),
-      writeTimeout = config.asFiniteDuration("write-timeout"),
-      connectionTimeout = config.asFiniteDuration("connection-timeout"),
-      connectionAcquisitionTimeout = config.asFiniteDuration("connection-acquisition-timeout"),
-      connectionTimeToLive = config.asFiniteDuration("connection-time-to-live"),
-      maxIdleConnectionTimeout = config.asFiniteDuration("max-idle-connection-timeout"),
-      useConnectionReaper = config.asBoolean("use-connection-reaper"),
+    val result = AsyncClientConfig(
+      maxConcurrency = config.asInt("max-concurrency", 50),
+      maxPendingConnectionAcquires = config.asInt("max-pending-connection-acquires", 10000),
+      readTimeout = config.asFiniteDuration("read-timeout", 30 seconds),
+      writeTimeout = config.asFiniteDuration("write-timeout", 30 seconds),
+      connectionTimeout = config.asFiniteDuration("connection-timeout", 2 seconds),
+      connectionAcquisitionTimeout = config.asFiniteDuration("connection-acquisition-timeout", 10 seconds),
+      connectionTimeToLive = config.asFiniteDuration("connection-time-to-live", Duration.Zero),
+      maxIdleConnectionTimeout = config.asFiniteDuration("max-idle-connection-timeout", 60 seconds),
+      useConnectionReaper = config.asBoolean("use-connection-reaper", true),
       threadsOfEventLoopGroup = config.asInt("threads-of-event-loop-group"),
-      useHttp2 = config.asBoolean("use-http2"),
-      http2MaxStreams = config.asLong("http2-max-streams"),
-      http2InitialWindowSize = config.asInt("http2-initial-window-size"),
+      useHttp2 = config.asBoolean("use-http2", false),
+      http2MaxStreams = config.asLong("http2-max-streams", 4294967295L),
+      http2InitialWindowSize = config.asInt("http2-initial-window-size", 1048576),
       http2HealthCheckPingPeriod = config.asFiniteDuration("http2-health-check-ping-period")
     )
+    logger.debug("config = {}", result)
+    result
   }
 }
 
 case class AsyncClientConfig(
-    maxConcurrency: Option[Int],
-    maxPendingConnectionAcquires: Option[Int],
-    readTimeout: Option[FiniteDuration],
-    writeTimeout: Option[FiniteDuration],
-    connectionTimeout: Option[FiniteDuration],
-    connectionAcquisitionTimeout: Option[FiniteDuration],
-    connectionTimeToLive: Option[FiniteDuration],
-    maxIdleConnectionTimeout: Option[FiniteDuration],
-    useConnectionReaper: Option[Boolean],
+    maxConcurrency: Int,
+    maxPendingConnectionAcquires: Int,
+    readTimeout: FiniteDuration,
+    writeTimeout: FiniteDuration,
+    connectionTimeout: FiniteDuration,
+    connectionAcquisitionTimeout: FiniteDuration,
+    connectionTimeToLive: FiniteDuration,
+    maxIdleConnectionTimeout: FiniteDuration,
+    useConnectionReaper: Boolean,
     threadsOfEventLoopGroup: Option[Int],
-    useHttp2: Option[Boolean],
-    http2MaxStreams: Option[Long],
-    http2InitialWindowSize: Option[Int],
+    useHttp2: Boolean,
+    http2MaxStreams: Long,
+    http2InitialWindowSize: Int,
     http2HealthCheckPingPeriod: Option[FiniteDuration]
 )
 
-object SyncClientConfig {
+object SyncClientConfig extends LoggingSupport {
 
   def from(config: Config): SyncClientConfig = {
-    SyncClientConfig(
+    val result = SyncClientConfig(
+      socketTimeout = config.asFiniteDuration("socket-timeout", 50 seconds),
+      connectionTimeout = config.asFiniteDuration("connection-timeout", 2 seconds),
+      connectionAcquisitionTimeout = config.asFiniteDuration("connection-acquisition-timeout", 10 seconds),
       maxConnections = config.asInt("max-connections", 50),
       localAddress = config.asString("local-address"),
       expectContinueEnabled = config.asBoolean("expect-continue-enabled"),
-      connectionTimeToLive = config.asFiniteDuration("connection-time-to-live"),
-      maxIdleConnectionTimeout = config.asFiniteDuration("max-idle-connection-timeout"),
-      useConnectionReaper = config.asBoolean("use-connection-reaper")
+      connectionTimeToLive = config.asFiniteDuration("connection-time-to-live", Duration.Zero),
+      maxIdleConnectionTimeout = config.asFiniteDuration("max-idle-connection-timeout", 60 seconds),
+      useConnectionReaper = config.asBoolean("use-connection-reaper", true)
     )
+    logger.debug("result = {}", result)
+    result
   }
 }
 
 case class SyncClientConfig(
+    socketTimeout: FiniteDuration,
+    connectionTimeout: FiniteDuration,
+    connectionAcquisitionTimeout: FiniteDuration,
     maxConnections: Int,
     localAddress: Option[String],
     expectContinueEnabled: Option[Boolean],
-    connectionTimeToLive: Option[FiniteDuration],
-    maxIdleConnectionTimeout: Option[FiniteDuration],
-    useConnectionReaper: Option[Boolean]
-)
-
-case class DynamoDBClientV2Config(
-    dispatcherName: Option[String],
-    retryMode: Option[RetryMode],
-    asyncClientConfig: AsyncClientConfig,
-    syncClientConfig: SyncClientConfig,
-    apiCallTimeout: Option[FiniteDuration],
-    apiCallAttemptTimeout: Option[FiniteDuration]
+    connectionTimeToLive: FiniteDuration,
+    maxIdleConnectionTimeout: FiniteDuration,
+    useConnectionReaper: Boolean
 )

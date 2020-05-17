@@ -50,7 +50,8 @@ object DynamoDBClientV1Config extends LoggingSupport {
         config.asInt("response-metadata-cache-size", ClientConfiguration.DEFAULT_RESPONSE_METADATA_CACHE_SIZE),
       dnsResolverClassName = config.asString("dns-resolver-class-name"),
       useExpectContinue = config.asBoolean("use-expect-contine", ClientConfiguration.DEFAULT_USE_EXPECT_CONTINUE),
-      cacheResponseMetadata = config.asBoolean("", ClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA),
+      cacheResponseMetadata =
+        config.asBoolean("cache-response-metadata", ClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA),
       connectionTtl = config.asDuration("connection-ttl"),
       connectionMaxIdle = config
         .asFiniteDuration(

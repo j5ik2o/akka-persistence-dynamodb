@@ -28,8 +28,7 @@ object DynamoDBClientConfig extends LoggingSupport {
       endpoint = config.asString("endpoint"),
       region = config.asString("region"),
       clientVersion = config.asString("client-version").map(s => ClientVersion.withName(s)).getOrElse(ClientVersion.V2),
-      clientSyncOrAsync =
-        config.asString("sync-or-async").map(s => ClientSyncOrAsync.withName(s)).getOrElse(ClientSyncOrAsync.Async),
+      clientType = config.asString("client-type").map(s => ClientType.withName(s)).getOrElse(ClientType.Async),
       DynamoDBClientV1Config.from(config.asConfig("v1")),
       DynamoDBClientV1DaxConfig.from(config.asConfig("v1-dax")), {
         if (legacy) {
@@ -53,9 +52,9 @@ object ClientVersion extends Enumeration {
   val V2: ClientVersion.Value    = Value("v2")
 }
 
-object ClientSyncOrAsync extends Enumeration {
-  val Sync: ClientSyncOrAsync.Value  = Value("sync")
-  val Async: ClientSyncOrAsync.Value = Value("async")
+object ClientType extends Enumeration {
+  val Sync: ClientType.Value  = Value("sync")
+  val Async: ClientType.Value = Value("async")
 }
 
 case class DynamoDBClientConfig(
@@ -64,7 +63,7 @@ case class DynamoDBClientConfig(
     endpoint: Option[String],
     region: Option[String],
     clientVersion: ClientVersion.Value,
-    clientSyncOrAsync: ClientSyncOrAsync.Value,
+    clientType: ClientType.Value,
     v1ClientConfig: DynamoDBClientV1Config,
     v1DaxClientConfig: DynamoDBClientV1DaxConfig,
     v2ClientConfig: DynamoDBClientV2Config,

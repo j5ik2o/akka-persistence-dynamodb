@@ -17,7 +17,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.net.URI
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.DynamoDBClientConfig
+import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.http.SdkHttpClient
@@ -28,42 +29,46 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbC
 object V2DynamoDbClientBuilderUtils {
 
   def setupSync(
-      clientConfig: DynamoDBClientConfig,
-      httpClient: SdkHttpClient,
-      clientOverrideConfiguration: ClientOverrideConfiguration
+      dynamicAccess: DynamicAccess,
+      dynamoDBClientConfig: DynamoDBClientConfig
   ): DynamoDbClient = {
+    val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(dynamoDBClientConfig)
+    val clientOverrideConfiguration: ClientOverrideConfiguration =
+      V2ClientOverrideConfigurationUtils.setup(dynamicAccess, dynamoDBClientConfig)
     var builder =
       DynamoDbClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
-    (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
+    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
-    clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
+    dynamoDBClientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
+    dynamoDBClientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
     builder.build()
   }
 
   def setupAsync(
-      clientConfig: DynamoDBClientConfig,
-      httpClient: SdkAsyncHttpClient,
-      clientOverrideConfiguration: ClientOverrideConfiguration
+      dynamicAccess: DynamicAccess,
+      dynamoDBClientConfig: DynamoDBClientConfig
   ): DynamoDbAsyncClient = {
+    val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(dynamoDBClientConfig)
+    val clientOverrideConfiguration: ClientOverrideConfiguration =
+      V2ClientOverrideConfigurationUtils.setup(dynamicAccess, dynamoDBClientConfig)
     var builder =
       DynamoDbAsyncClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
-    (clientConfig.accessKeyId, clientConfig.secretAccessKey) match {
+    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
-    clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
+    dynamoDBClientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
+    dynamoDBClientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
     builder.build()
   }
 

@@ -26,9 +26,12 @@ import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ ClientType, ClientVersion, JournalPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournal.{ InPlaceUpdateEvent, WriteFinished }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriver
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -69,10 +72,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
 
-  protected val jounalPluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
+  protected val journalPluginConfig: JournalPluginConfig = JournalPluginConfig.fromConfig(config)
 
   private val partitionKeyResolver: PartitionKeyResolver = {
-    val className = jounalPluginConfig.partitionKeyResolverClassName
+    val className = journalPluginConfig.partitionKeyResolverClassName
     val args =
       Seq(classOf[Config] -> config)
     dynamicAccess
@@ -83,7 +86,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   private val sortKeyResolver: SortKeyResolver = {
-    val className = jounalPluginConfig.sortKeyResolverClassName
+    val className = journalPluginConfig.sortKeyResolverClassName
     val args =
       Seq(classOf[Config] -> config)
     dynamicAccess
@@ -95,35 +98,28 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   protected val serialization: Serialization = SerializationExtension(system)
 
-  protected val metricsReporter: MetricsReporter = MetricsReporter.create(jounalPluginConfig.metricsReporterClassName)
+  protected val metricsReporter: MetricsReporter = MetricsReporter.create(journalPluginConfig.metricsReporterClassName)
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, jounalPluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator)
   private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
 
   private val journalRowWriteDriver: JournalRowWriteDriver = {
-    jounalPluginConfig.clientConfig.clientVersion match {
+    journalPluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
-        val clientOverrideConfiguration = V2ClientOverrideConfigurationUtils.setup(jounalPluginConfig.clientConfig)
-        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientType match {
+        val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            val httpSyncClient =
-              V2HttpClientBuilderUtils.setupSync(jounalPluginConfig.clientConfig)
             javaSyncClientV2 = V2DynamoDbClientBuilderUtils.setupSync(
-              jounalPluginConfig.clientConfig,
-              httpSyncClient,
-              clientOverrideConfiguration
+              dynamicAccess,
+              journalPluginConfig.clientConfig
             )
             val syncClient: DynamoDbSyncClient = DynamoDbSyncClient(javaSyncClientV2)
             (Some(syncClient), None)
           case ClientType.Async =>
-            val httpAsyncClient =
-              V2HttpClientBuilderUtils.setupAsync(jounalPluginConfig.clientConfig)
             javaAsyncClientV2 = V2DynamoDbClientBuilderUtils.setupAsync(
-              jounalPluginConfig.clientConfig,
-              httpAsyncClient,
-              clientOverrideConfiguration
+              dynamicAccess,
+              journalPluginConfig.clientConfig
             )
             val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaAsyncClientV2)
             (None, Some(asyncClient))
@@ -131,37 +127,37 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         new V2JournalRowWriteDriver(
           maybeAsyncClient,
           maybeSyncClient,
-          jounalPluginConfig,
+          journalPluginConfig,
           partitionKeyResolver,
           sortKeyResolver,
           metricsReporter
         )
       case ClientVersion.V1 =>
-        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientType match {
+        val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            (Some(V1DynamoDBClientBuilderUtils.setupSync(dynamicAccess, jounalPluginConfig.clientConfig)), None)
+            (Some(V1DynamoDBClientBuilderUtils.setupSync(dynamicAccess, journalPluginConfig.clientConfig)), None)
           case ClientType.Async =>
-            (None, Some(V1DynamoDBClientBuilderUtils.setupAsync(dynamicAccess, jounalPluginConfig.clientConfig)))
+            (None, Some(V1DynamoDBClientBuilderUtils.setupAsync(dynamicAccess, journalPluginConfig.clientConfig)))
         }
         new V1JournalRowWriteDriver(
           maybeAsyncClient,
           maybeSyncClient,
-          jounalPluginConfig,
+          journalPluginConfig,
           partitionKeyResolver,
           sortKeyResolver,
           metricsReporter
         )
       case ClientVersion.V1Dax =>
-        val (maybeSyncClient, maybeAsyncClient) = jounalPluginConfig.clientConfig.clientType match {
+        val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            (Some(V1DaxClientBuilderUtils.setupSync(jounalPluginConfig)), None)
+            (Some(V1DaxClientBuilderUtils.setupSync(journalPluginConfig)), None)
           case ClientType.Async =>
-            (None, Some(V1DaxClientBuilderUtils.setupAsync(jounalPluginConfig)))
+            (None, Some(V1DaxClientBuilderUtils.setupAsync(journalPluginConfig)))
         }
         new V1JournalRowWriteDriver(
           maybeAsyncClient,
           maybeSyncClient,
-          jounalPluginConfig,
+          journalPluginConfig,
           partitionKeyResolver,
           sortKeyResolver,
           metricsReporter
@@ -169,13 +165,12 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     }
   }
 
-  protected val journalDao: JournalDaoWithUpdates =
-    new WriteJournalDaoImpl(
-      jounalPluginConfig,
-      journalRowWriteDriver,
-      serializer,
-      metricsReporter
-    )
+  protected val journalDao: JournalDaoWithUpdates = new WriteJournalDaoImpl(
+    journalPluginConfig,
+    journalRowWriteDriver,
+    serializer,
+    metricsReporter
+  )
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
@@ -213,14 +208,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
 
-    future.onComplete { result =>
-      self ! WriteFinished(persistenceId, future)
-      metricsReporter.setAsyncWriteMessagesCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncWriteMessagesCallCounter()
-      else
-        metricsReporter.incrementAsyncWriteMessagesCallErrorCounter()
-    }
+    future.onComplete { result => self ! WriteFinished(persistenceId, future) }
     future
   }
 
@@ -229,13 +217,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
-    future.onComplete { result =>
-      metricsReporter.setAsyncDeleteMessagesToCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncDeleteMessagesToCallCounter()
-      else
-        metricsReporter.incrementAsyncDeleteMessagesToCallErrorCounter()
-    }
     future
   }
 
@@ -248,20 +229,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         persistenceId,
         fromSequenceNr,
         toSequenceNr,
-        jounalPluginConfig.replayBatchSize,
-        jounalPluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
+        journalPluginConfig.replayBatchSize,
+        journalPluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
       )
       .take(max)
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
-    future.onComplete { result =>
-      metricsReporter.setAsyncReplayMessagesCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncReplayMessagesCallCounter()
-      else
-        metricsReporter.incrementAsyncReplayMessagesCallErrorCounter()
-    }
     future
   }
 
@@ -271,13 +245,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       val result =
         journalDao
           .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
-      result.onComplete { result =>
-        metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
-        if (result.isSuccess)
-          metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
-        else
-          metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
-      }
       result
     }
 

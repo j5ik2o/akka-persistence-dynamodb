@@ -16,7 +16,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import akka.actor.ActorSystem
+import akka.actor.ExtendedActorSystem
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
 import akka.serialization.SerializationExtension
@@ -25,11 +25,7 @@ import akka.stream.scaladsl.{ Sink, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  V2ClientOverrideConfigurationUtils,
-  V2DynamoDbClientBuilderUtils,
-  V2HttpClientBuilderUtils
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DynamoDbClientBuilderUtils
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
@@ -46,18 +42,15 @@ object DynamoDBSnapshotStore {
 class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   import DynamoDBSnapshotStore._
 
-  implicit val ec: ExecutionContext = context.dispatcher
-  implicit val system: ActorSystem  = context.system
-  implicit val mat                  = ActorMaterializer()
+  implicit val ec: ExecutionContext        = context.dispatcher
+  implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
+  implicit val mat                         = ActorMaterializer()
 
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  private val httpClient                  = V2HttpClientBuilderUtils.setupAsync(pluginConfig.clientConfig)
-  private val clientOverrideConfiguration = V2ClientOverrideConfigurationUtils.setup(pluginConfig.clientConfig)
-
   protected val javaClient: JavaDynamoDbAsyncClient =
-    V2DynamoDbClientBuilderUtils.setupAsync(pluginConfig.clientConfig, httpClient, clientOverrideConfiguration)
+    V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig.clientConfig)
   protected val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaClient)
 
   protected val snapshotDao: SnapshotDao =

@@ -17,10 +17,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete, SourceUtils }
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy, QueueOfferResult }
 import akka.{ Done, NotUsed }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, JournalPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
@@ -28,7 +28,6 @@ import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.Success
 
 case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
 
@@ -49,15 +48,9 @@ class WriteJournalDaoImpl(
 
   private implicit val scheduler: Scheduler = Scheduler(ec)
 
-  override protected val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
   private val writeParallelism: Int = pluginConfig.writeParallelism
-
-  private val startTimeSource: Source[Long, NotUsed] =
-    SourceUtils
-      .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
 
   private val logLevels: Attributes = Attributes.logLevels(
     onElement = Attributes.LogLevels.Debug,
@@ -158,54 +151,37 @@ class WriteJournalDaoImpl(
       persistenceId: PersistenceId,
       toSequenceNr: SequenceNumber
   ): Source[Long, NotUsed] = {
-    startTimeSource
-      .flatMapConcat { callStart =>
-        journalRowDriver
-          .getJournalRows(persistenceId, toSequenceNr, deleted = false)
-          .flatMapConcat { journalRows =>
-            putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-          }.flatMapConcat {
-            case (result, journalRows) =>
-              if (!pluginConfig.softDeleted) {
+    journalRowDriver
+      .getJournalRows(persistenceId, toSequenceNr, deleted = false)
+      .flatMapConcat { journalRows => putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows)) }.flatMapConcat {
+        case (result, journalRows) =>
+          if (!pluginConfig.softDeleted) {
+            journalRowDriver
+              .highestSequenceNr(persistenceId, deleted = Some(true))
+              .flatMapConcat { highestMarkedSequenceNr =>
                 journalRowDriver
-                  .highestSequenceNr(persistenceId, deleted = Some(true))
-                  .flatMapConcat { highestMarkedSequenceNr =>
-                    journalRowDriver
-                      .getJournalRows(
-                        persistenceId,
-                        SequenceNumber(highestMarkedSequenceNr - 1),
-                        deleted = false
-                      ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
-                  }
-              } else
-                Source.single(result)
-          }.map { n =>
-            metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementDeleteMessagesCallCounter()
-            n
-          }.recoverWithRetries(
-            attempts = 1, {
-              case t: Throwable =>
-                metricsReporter.setDeleteMessagesCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementDeleteMessagesCallErrorCounter()
-                Source.failed(t)
-            }
-          )
+                  .getJournalRows(
+                    persistenceId,
+                    SequenceNumber(highestMarkedSequenceNr - 1),
+                    deleted = false
+                  ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+              }
+          } else
+            Source.single(result)
       }.withAttributes(logLevels)
   }
 
-  override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] =
-    startTimeSource.flatMapConcat { callStart =>
-      if (messages.isEmpty)
-        Source.single(0L)
-      else {
-        if (pluginConfig.queueEnable)
-          Source.single(messages).via(requestPutJournalRows)
-        else
-          Source
-            .single(messages).via(requestPutJournalRowsPassThrough)
-      }
+  override def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed] = {
+    if (messages.isEmpty)
+      Source.single(0L)
+    else {
+      if (pluginConfig.queueEnable)
+        Source.single(messages).via(requestPutJournalRows)
+      else
+        Source
+          .single(messages).via(requestPutJournalRowsPassThrough)
     }
+  }
 
   override def highestSequenceNr(
       persistenceId: PersistenceId,
@@ -228,13 +204,7 @@ class WriteJournalDaoImpl(
         val promise = Promise[Long]()
         selectPutQueue(messages.head.persistenceId).offer(promise -> messages).flatMap {
           case QueueOfferResult.Enqueued =>
-            metricsReporter.addPutMessagesEnqueueCounter(messages.size.toLong)
             val future = promise.future
-            future.onComplete {
-              case Success(result) =>
-                metricsReporter.addPutMessagesDequeueCounter(result)
-              case _ =>
-            }
             future
           case QueueOfferResult.Failure(t) =>
             Future.failed(new Exception("Failed to write journal row batch", t))
@@ -278,13 +248,7 @@ class WriteJournalDaoImpl(
         val promise = Promise[Long]()
         selectDeleteQueue(messages.head.persistenceId).offer(promise -> messages).flatMap {
           case QueueOfferResult.Enqueued =>
-            metricsReporter.addDeleteMessagesEnqueueCounter(messages.size.toLong)
             val future = promise.future
-            future.onComplete {
-              case Success(result) =>
-                metricsReporter.addDeleteMessagesDequeueCounter(result)
-              case _ =>
-            }
             future
           case QueueOfferResult.Failure(t) =>
             Future.failed(new Exception("Failed to write journal row batch", t))

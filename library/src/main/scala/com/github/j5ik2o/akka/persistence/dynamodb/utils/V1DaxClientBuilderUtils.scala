@@ -18,12 +18,12 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import com.amazon.dax.client.dynamodbv2.{ AmazonDaxAsyncClientBuilder, AmazonDaxClientBuilder }
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
 object V1DaxClientBuilderUtils {
 
-  def setupSync(pluginConfig: JournalPluginConfig): AmazonDynamoDB = {
-    val cc      = pluginConfig.clientConfig.v1DaxClientConfig.toAWS
+  def setupSync(pluginConfig: PluginConfig): AmazonDynamoDB = {
+    val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
     val builder = AmazonDaxClientBuilder.standard().withClientConfiguration(cc)
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
@@ -37,8 +37,8 @@ object V1DaxClientBuilderUtils {
     builder.build()
   }
 
-  def setupAsync(pluginConfig: JournalPluginConfig): AmazonDynamoDBAsync = {
-    val cc      = pluginConfig.clientConfig.v1DaxClientConfig.toAWS
+  def setupAsync(pluginConfig: PluginConfig): AmazonDynamoDBAsync = {
+    val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
     val builder = AmazonDaxAsyncClientBuilder.standard().withClientConfiguration(cc)
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>

@@ -16,23 +16,37 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
-object JournalColumnsDefConfig {
+object JournalColumnsDefConfig extends LoggingSupport {
+
+  val partitionKeyColumnNameKey  = "partition-key-column-name"
+  val sortKeyColumnNameKey       = "sort-key-column-name"
+  val persistenceIdColumnNameKey = "persistence-id-column-name"
+  val sequenceNrColumnNameKey    = "sequence-nr-column-name"
+  val deletedColumnNameKey       = "deleted-column-name"
+  val messageColumnNameKey       = "message-column-name"
+  val orderingColumnNameKey      = "ordering-column-name"
+  val tagsColumnNameKey          = "tags-column-name"
 
   def fromConfig(config: Config): JournalColumnsDefConfig = {
-    JournalColumnsDefConfig(
-      partitionKeyColumnName = config.asString("partition-key-column-name", DefaultColumnsDef.PartitionKeyColumnName),
-      sortKeyColumnName = config.asString("sort-key-column-name", DefaultColumnsDef.SortKeyColumnName),
+    logger.debug("config = {}", config)
+    val result = JournalColumnsDefConfig(
+      partitionKeyColumnName =
+        config.getOrElse[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
+      sortKeyColumnName = config.getOrElse[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
       persistenceIdColumnName =
-        config.asString("persistence-id-column-name", DefaultColumnsDef.PersistenceIdColumnName),
-      sequenceNrColumnName = config.asString("sequence-nr-column-name", DefaultColumnsDef.SequenceNrColumnName),
-      deletedColumnName = config.asString("deleted-column-name", DefaultColumnsDef.DeletedColumnName),
-      messageColumnName = config.asString("message-column-name", DefaultColumnsDef.MessageColumnName),
-      orderingColumnName = config.asString("ordering-column-name", DefaultColumnsDef.OrderingColumnName),
-      tagsColumnName = config.asString("tags-column-name", DefaultColumnsDef.TagsColumnName)
+        config.getOrElse[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
+      sequenceNrColumnName = config.getOrElse[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
+      deletedColumnName = config.getOrElse[String](deletedColumnNameKey, DefaultColumnsDef.DeletedColumnName),
+      messageColumnName = config.getOrElse[String](messageColumnNameKey, DefaultColumnsDef.MessageColumnName),
+      orderingColumnName = config.getOrElse[String](orderingColumnNameKey, DefaultColumnsDef.OrderingColumnName),
+      tagsColumnName = config.getOrElse[String](tagsColumnNameKey, DefaultColumnsDef.TagsColumnName)
     )
+    logger.debug("result = {}", result)
+    result
   }
 
 }

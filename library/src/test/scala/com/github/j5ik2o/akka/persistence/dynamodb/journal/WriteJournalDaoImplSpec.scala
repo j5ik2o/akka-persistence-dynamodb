@@ -8,20 +8,20 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.V2JournalRowWriteDriver
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDaoImpl
+import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{ ReadJournalDaoImpl, V2QueryProcessor }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ Config, ConfigFactory }
 import monix.execution.Scheduler
+import net.ceedubs.ficus.Ficus._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
@@ -68,18 +68,38 @@ class WriteJournalDaoImplSpec
   private val serialization = SerializationExtension(system)
 
   private val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config.asConfig("j5ik2o.dynamo-db-journal"))
+    JournalPluginConfig.fromConfig(
+      system.settings.config.getOrElse[Config]("j5ik2o.dynamo-db-journal", ConfigFactory.empty())
+    )
 
   private val queryPluginConfig: QueryPluginConfig =
-    QueryPluginConfig.fromConfig(system.settings.config.asConfig("j5ik2o.dynamo-db-read-journal"))
+    QueryPluginConfig.fromConfig(
+      system.settings.config.getOrElse[Config]("j5ik2o.dynamo-db-read-journal", ConfigFactory.empty())
+    )
 
   implicit val ec = system.dispatcher
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, ",")
 
+  val queryProcessor =
+    new V2QueryProcessor(Some(dynamoDbAsyncClient), None, queryPluginConfig, new NullMetricsReporter)
+
+  val journalRowReadDriver = new V2JournalRowReadDriver(
+    Some(dynamoDbAsyncClient),
+    None,
+    journalPluginConfig,
+    new NullMetricsReporter
+  )
+
   val readJournalDao =
-    new ReadJournalDaoImpl(dynamoDbAsyncClient, queryPluginConfig, serializer, new NullMetricsReporter)(
+    new ReadJournalDaoImpl(
+      queryProcessor,
+      journalRowReadDriver,
+      queryPluginConfig,
+      serializer,
+      new NullMetricsReporter
+    )(
       ec,
       system
     )

@@ -5,8 +5,8 @@ import java.security.MessageDigest
 import java.text.DecimalFormat
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 case class PartitionKey(private val value: String) {
   def asString: String = value
@@ -41,7 +41,7 @@ object PartitionKeyResolver {
     private val md5 = MessageDigest.getInstance("MD5")
     private val df  = new DecimalFormat("0000000000000000000000000000000000000000")
 
-    override def separator: String = config.asString("persistence-id-separator", PersistenceId.Separator)
+    override def separator: String = config.getOrElse[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {

@@ -4,7 +4,6 @@ import akka.persistence.PersistentRepr
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ actor, NotUsed }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
   Continue,
   ContinueDelayed,
@@ -14,8 +13,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }

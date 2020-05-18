@@ -22,11 +22,11 @@ import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, Sequence, _ }
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
-import akka.stream.{ ActorMaterializer, Attributes }
 import akka.util.Timeout
+import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalSequenceRetrievalConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowReadDriver
@@ -47,15 +47,11 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
   V1DaxClientBuilderUtils,
   V1DynamoDBClientBuilderUtils,
-  V2ClientOverrideConfigurationUtils,
-  V2DynamoDbClientBuilderUtils,
-  V2HttpClientBuilderUtils
+  V2DynamoDbClientBuilderUtils
 }
 import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.collection.immutable._
 import scala.concurrent.duration._

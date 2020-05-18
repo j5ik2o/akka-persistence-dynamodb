@@ -4,10 +4,11 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{ Concat, Flow, GraphDSL, RestartFlow, Source, Unzip, Zip }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
@@ -35,14 +36,31 @@ class V2QueryProcessor(
     val flow = ((streamClient, syncClient) match {
       case (None, Some(c)) =>
         val flow = Flow[ScanRequest].map { request =>
-          c.scan(request) match {
+          val sw     = Stopwatch.start()
+          val result = c.scan(request)
+          metricsReporter.setScanDuration(sw.elapsed())
+          result match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
         }
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case (Some(c), None) =>
-        c.scanFlow(1)
+        Flow[ScanRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[ScanRequest, Stopwatch]())
+              val zip   = b.add(Zip[ScanResponse, Stopwatch]())
+              unzip.out0 ~> c.scanFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.setScanDuration(sw.elapsed())
+                response
+            }
+        }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("scan")
@@ -79,7 +97,6 @@ class V2QueryProcessor(
           val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
           val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
           if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-            // logger.debug(s"index = $index, next loop")
             loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
           } else
             combinedSource
@@ -112,49 +129,40 @@ class V2QueryProcessor(
         acc: Source[Map[String, AttributeValue], NotUsed],
         count: Long,
         index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] =
-      startTimeSource
-        .flatMapConcat { itemStart =>
-          // logger.debug(s"index = $index, count = $count")
-          val scanRequest = ScanRequest
-            .builder()
-            .tableName(pluginConfig.tableName)
-            .indexName(pluginConfig.tagsIndexName)
-            .filterExpression("contains(#tags, :tag)")
-            .expressionAttributeNamesAsScala(
-              Map("#tags" -> columnsDefConfig.tagsColumnName)
-            )
-            .expressionAttributeValuesAsScala(
-              Map(
-                ":tag" -> AttributeValue.builder().s(tag).build()
-              )
-            )
-            .limit(pluginConfig.scanBatchSize)
-            .exclusiveStartKeyAsScala(lastEvaluatedKey)
-            .build()
-          Source
-            .single(scanRequest).via(scanFlow).flatMapConcat { response =>
-              metricsReporter.setEventsByTagItemDuration(System.nanoTime() - itemStart)
-              if (response.sdkHttpResponse().isSuccessful) {
-                metricsReporter.incrementEventsByTagItemCallCounter()
-                if (response.count() > 0)
-                  metricsReporter.addEventsByTagItemCounter(response.count().toLong)
-                val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (lastEvaluatedKey.nonEmpty) {
-                  // logger.debug(s"index = $index, next loop")
-                  loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-                } else
-                  combinedSource
-              } else {
-                metricsReporter.incrementEventsByTagItemCallErrorCounter()
-                val statusCode = response.sdkHttpResponse().statusCode()
-                val statusText = response.sdkHttpResponse().statusText()
-                Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-              }
-            }
+    ): Source[Map[String, AttributeValue], NotUsed] = {
+      val scanRequest = ScanRequest
+        .builder()
+        .tableName(pluginConfig.tableName)
+        .indexName(pluginConfig.tagsIndexName)
+        .filterExpression("contains(#tags, :tag)")
+        .expressionAttributeNamesAsScala(
+          Map("#tags" -> columnsDefConfig.tagsColumnName)
+        )
+        .expressionAttributeValuesAsScala(
+          Map(
+            ":tag" -> AttributeValue.builder().s(tag).build()
+          )
+        )
+        .limit(pluginConfig.scanBatchSize)
+        .exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .build()
+      Source
+        .single(scanRequest).via(scanFlow).flatMapConcat { response =>
+          if (response.sdkHttpResponse().isSuccessful) {
+            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
+            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+            if (lastEvaluatedKey.nonEmpty) {
+              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+            } else
+              combinedSource
+          } else {
+            val statusCode = response.sdkHttpResponse().statusCode()
+            val statusText = response.sdkHttpResponse().statusText()
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          }
         }
+    }
 
     loop(None, Source.empty, 0L, 1)
       .map(convertToJournalRow)
@@ -177,7 +185,7 @@ class V2QueryProcessor(
         acc: Source[Map[String, AttributeValue], NotUsed],
         count: Long,
         index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = startTimeSource.flatMapConcat { requestStart =>
+    ): Source[Map[String, AttributeValue], NotUsed] = {
       val scanRequest = ScanRequest
         .builder().tableName(pluginConfig.tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
           columnsDefConfig.orderingColumnName
@@ -187,19 +195,15 @@ class V2QueryProcessor(
       Source
         .single(scanRequest)
         .via(scanFlow).flatMapConcat { response =>
-          metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
           if (response.sdkHttpResponse().isSuccessful) {
-            metricsReporter.addJournalSequenceItemCounter(response.count().toLong)
             val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
             val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
             if (lastEvaluatedKey.nonEmpty) {
-              // logger.debug(s"index = $index, next loop")
               loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
             } else
               combinedSource
           } else {
-            metricsReporter.incrementEventsByTagItemCallErrorCounter()
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))

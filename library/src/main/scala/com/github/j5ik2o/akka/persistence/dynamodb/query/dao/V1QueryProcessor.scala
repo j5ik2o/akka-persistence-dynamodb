@@ -121,11 +121,7 @@ class V1QueryProcessor(
             .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
           Source
             .single(scanRequest).via(scanFlow).flatMapConcat { response =>
-              metricsReporter.setEventsByTagItemDuration(System.nanoTime() - itemStart)
               if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-                metricsReporter.incrementEventsByTagItemCallCounter()
-                if (response.getCount > 0)
-                  metricsReporter.addEventsByTagItemCounter(response.getCount.toLong)
                 val items =
                   Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
                 val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
@@ -136,7 +132,6 @@ class V1QueryProcessor(
                 } else
                   combinedSource
               } else {
-                metricsReporter.incrementEventsByTagItemCallErrorCounter()
                 val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
                 Source.failed(new IOException(s"statusCode: $statusCode"))
               }
@@ -173,9 +168,7 @@ class V1QueryProcessor(
       Source
         .single(scanRequest)
         .via(scanFlow).flatMapConcat { response =>
-          metricsReporter.setJournalSequenceItemDuration(System.nanoTime() - requestStart)
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            metricsReporter.addJournalSequenceItemCounter(response.getCount.toLong)
             val items =
               Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
             val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
@@ -186,7 +179,6 @@ class V1QueryProcessor(
             } else
               combinedSource
           } else {
-            metricsReporter.incrementEventsByTagItemCallErrorCounter()
             val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
             Source.failed(new IOException(s"statusCode: $statusCode"))
           }

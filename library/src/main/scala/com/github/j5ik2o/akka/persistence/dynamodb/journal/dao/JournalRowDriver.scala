@@ -1,10 +1,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.NotUsed
+import akka.stream.Attributes
 import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
-import akka.stream.{ ActorAttributes, Attributes }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 
 trait JournalRowDriver {

@@ -1,11 +1,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
-import java.net.InetAddress
-
-import akka.actor.DynamicAccess
 import com.amazonaws.retry.RetryMode
-import com.amazonaws.{ ClientConfiguration, DnsResolver, Protocol }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.{ V1RetryPolicyProvider, V1SecureRandomProvider }
+import com.amazonaws.{ ClientConfiguration, Protocol }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1RetryPolicyProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._

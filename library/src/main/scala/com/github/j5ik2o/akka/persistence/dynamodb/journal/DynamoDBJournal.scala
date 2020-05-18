@@ -208,14 +208,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
 
-    future.onComplete { result =>
-      self ! WriteFinished(persistenceId, future)
-      metricsReporter.setAsyncWriteMessagesCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncWriteMessagesCallCounter()
-      else
-        metricsReporter.incrementAsyncWriteMessagesCallErrorCounter()
-    }
+    future.onComplete { result => self ! WriteFinished(persistenceId, future) }
     future
   }
 
@@ -224,13 +217,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
-    future.onComplete { result =>
-      metricsReporter.setAsyncDeleteMessagesToCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncDeleteMessagesToCallCounter()
-      else
-        metricsReporter.incrementAsyncDeleteMessagesToCallErrorCounter()
-    }
     future
   }
 
@@ -250,13 +236,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
-    future.onComplete { result =>
-      metricsReporter.setAsyncReplayMessagesCallDuration(System.nanoTime() - startTime)
-      if (result.isSuccess)
-        metricsReporter.incrementAsyncReplayMessagesCallCounter()
-      else
-        metricsReporter.incrementAsyncReplayMessagesCallErrorCounter()
-    }
     future
   }
 
@@ -266,13 +245,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       val result =
         journalDao
           .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
-      result.onComplete { result =>
-        metricsReporter.setAsyncReadHighestSequenceNrCallDuration(System.nanoTime() - startTime)
-        if (result.isSuccess)
-          metricsReporter.incrementAsyncReadHighestSequenceNrCallCounter()
-        else
-          metricsReporter.incrementAsyncReadHighestSequenceNrCallErrorCounter()
-      }
       result
     }
 

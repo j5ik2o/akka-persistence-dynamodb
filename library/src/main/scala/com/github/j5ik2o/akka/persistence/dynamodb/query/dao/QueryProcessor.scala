@@ -3,9 +3,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.{ Source, SourceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalColumnsDefConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
 
 trait QueryProcessor {
   def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed]

@@ -25,11 +25,7 @@ import akka.stream.scaladsl.{ Sink, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  V2ClientOverrideConfigurationUtils,
-  V2DynamoDbClientBuilderUtils,
-  V2HttpClientBuilderUtils
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DynamoDbClientBuilderUtils
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }

@@ -3,15 +3,12 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 import java.io.IOException
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source, SourceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, PluginConfig }
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{ Flow, GraphDSL, RestartFlow, Source, SourceUtils, Unzip, Zip }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{
-  JournalRowReadDriver,
-  JournalRowWriteDriver,
-  PersistenceIdWithSeqNr
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalRowWriteDriver, PersistenceIdWithSeqNr }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
@@ -20,333 +17,10 @@ import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 
-import scala.collection.mutable.ArrayBuffer
-
-final class V2JournalRowReadDriver(
-    val asyncClient: Option[DynamoDbAsyncClient],
-    val syncClient: Option[DynamoDbSyncClient],
-    val pluginConfig: PluginConfig,
-    val metricsReporter: MetricsReporter
-) extends JournalRowReadDriver {
-  (asyncClient, syncClient) match {
-    case (None, None) =>
-      throw new IllegalArgumentException("aws clients is both None")
-    case _ =>
-  }
-
-  val streamClient: Option[DynamoDbAkkaClient] = asyncClient.map { c => DynamoDbAkkaClient(c) }
-
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (None, Some(c)) =>
-        val flow = Flow[QueryRequest].map { request =>
-          c.query(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        c.queryFlow(1)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("query")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  override def getJournalRows(
-      persistenceId: PersistenceId,
-      toSequenceNr: SequenceNumber,
-      deleted: Boolean
-  ): Source[Seq[JournalRow], NotUsed] = {
-    startTimeSource
-      .flatMapConcat { callStart =>
-        def loop(
-            lastEvaluatedKey: Option[Map[String, AttributeValue]],
-            acc: Source[Map[String, AttributeValue], NotUsed],
-            count: Long,
-            index: Int
-        ): Source[Map[String, AttributeValue], NotUsed] =
-          startTimeSource
-            .flatMapConcat { itemStart =>
-              val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted, lastEvaluatedKey)
-              Source
-                .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-                  metricsReporter.setGetJournalRowsItemDuration(System.nanoTime() - itemStart)
-                  if (response.sdkHttpResponse().isSuccessful) {
-                    metricsReporter.incrementGetJournalRowsItemCallCounter()
-                    if (response.count() > 0)
-                      metricsReporter.addGetJournalRowsItemCounter(response.count().toLong)
-                    val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                    val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                    val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                    if (lastEvaluatedKey.nonEmpty) {
-                      loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-                    } else
-                      combinedSource
-                  } else {
-                    metricsReporter.incrementGetJournalRowsItemCallErrorCounter()
-                    val statusCode = response.sdkHttpResponse().statusCode()
-                    val statusText = response.sdkHttpResponse().statusText()
-                    Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-                  }
-                }
-            }
-        loop(None, Source.empty, 0, 1)
-          .map(convertToJournalRow)
-          .fold(ArrayBuffer.empty[JournalRow])(_ += _)
-          .map(_.toList)
-          .map { journalRows =>
-            metricsReporter.setGetJournalRowsCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementGetJournalRowsCallCounter()
-            journalRows
-          }.recoverWithRetries(
-            attempts = 1, {
-              case t: Throwable =>
-                metricsReporter.setGetJournalRowsCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementGetJournalRowsCallErrorCounter()
-                Source.failed(t)
-            }
-          )
-          .withAttributes(logLevels)
-      }
-  }
-
-  override def getJournalRows(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      max: Long,
-      deleted: Option[Boolean] = Some(false)
-  ): Source[JournalRow, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      startTimeSource
-        .flatMapConcat { itemStart =>
-          val queryRequest =
-            createGSIRequest(
-              persistenceId,
-              fromSequenceNr,
-              toSequenceNr,
-              deleted,
-              pluginConfig.queryBatchSize,
-              lastEvaluatedKey
-            )
-          Source
-            .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-              metricsReporter.setGetMessagesItemDuration(System.nanoTime() - itemStart)
-              if (response.sdkHttpResponse().isSuccessful) {
-                metricsReporter.incrementGetMessagesItemCallCounter()
-                if (response.count() > 0)
-                  metricsReporter.addGetMessagesItemCounter(response.count().toLong)
-                val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-                val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-                val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-                  logger.debug("next loop: count = {}, response.count = {}", count, response.count())
-                  loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-                } else
-                  combinedSource
-              } else {
-                metricsReporter.incrementGetMessagesItemCallErrorCounter()
-                val statusCode = response.sdkHttpResponse().statusCode()
-                val statusText = response.sdkHttpResponse().statusText()
-                Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-              }
-            }
-        }
-    }
-    if (max == 0L || fromSequenceNr > toSequenceNr)
-      Source.empty
-    else {
-      loop(None, Source.empty, 0L, 1)
-        .map(convertToJournalRow)
-        .take(max)
-        .withAttributes(logLevels)
-    }
-  }
-
-  private def createGSIRequest(
-      persistenceId: PersistenceId,
-      toSequenceNr: SequenceNumber,
-      deleted: Boolean,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(pluginConfig.tableName)
-      .indexName(pluginConfig.getJournalRowsIndexName)
-      .keyConditionExpression("#pid = :pid and #snr <= :snr")
-      .filterExpression("#d = :flg")
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName,
-          "#d"   -> pluginConfig.columnsDefConfig.deletedColumnName
-        )
-      )
-      .expressionAttributeValuesAsScala(
-        Some(
-          Map(
-            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-            ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
-            ":flg" -> AttributeValue.builder().bool(deleted).build()
-          )
-        )
-      )
-      .limit(pluginConfig.queryBatchSize)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .build()
-  }
-
-  def highestSequenceNr(
-      persistenceId: PersistenceId,
-      fromSequenceNr: Option[SequenceNumber] = None,
-      deleted: Option[Boolean] = None
-  ): Source[Long, NotUsed] = {
-    startTimeSource.flatMapConcat { callStat =>
-      startTimeSource
-        .flatMapConcat { itemStart =>
-          val queryRequest = createHighestSequenceNrRequest(persistenceId, fromSequenceNr, deleted)
-          Source
-            .single(queryRequest)
-            .via(queryFlow)
-            .flatMapConcat { response =>
-              metricsReporter
-                .setHighestSequenceNrItemDuration(System.nanoTime() - itemStart)
-              if (response.sdkHttpResponse().isSuccessful) {
-                metricsReporter.incrementHighestSequenceNrItemCallCounter()
-                if (response.count() > 0)
-                  metricsReporter.addHighestSequenceNrItemCounter(response.count().toLong)
-                val result = response.itemsAsScala
-                  .getOrElse(Seq.empty).toVector.headOption.map { head =>
-                    head(pluginConfig.columnsDefConfig.sequenceNrColumnName).n().toLong
-                  }.getOrElse(0L)
-                Source.single(result)
-              } else {
-                metricsReporter.incrementHighestSequenceNrItemCallErrorCounter()
-                val statusCode = response.sdkHttpResponse().statusCode()
-                val statusText = response.sdkHttpResponse().statusText()
-                Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-              }
-            }
-        }
-        .map { seqNr =>
-          metricsReporter.setHighestSequenceNrCallDuration(System.nanoTime() - callStat)
-          metricsReporter.incrementHighestSequenceNrCallCounter()
-          seqNr
-        }.recoverWithRetries(
-          attempts = 1, {
-            case t: Throwable =>
-              metricsReporter.setHighestSequenceNrCallDuration(System.nanoTime() - callStat)
-              metricsReporter.incrementHighestSequenceNrCallErrorCounter()
-              logger.debug(
-                s"highestSequenceNr(persistenceId = $persistenceId, fromSequenceNr = $fromSequenceNr, deleted = $deleted): finished"
-              )
-              Source.failed(t)
-          }
-        )
-        .withAttributes(logLevels)
-    }
-  }
-
-  private def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {
-    JournalRow(
-      persistenceId = PersistenceId(map(pluginConfig.columnsDefConfig.persistenceIdColumnName).s),
-      sequenceNumber = SequenceNumber(map(pluginConfig.columnsDefConfig.sequenceNrColumnName).n.toLong),
-      deleted = map(pluginConfig.columnsDefConfig.deletedColumnName).bool.get,
-      message = map.get(pluginConfig.columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
-      ordering = map(pluginConfig.columnsDefConfig.orderingColumnName).n.toLong,
-      tags = map.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.s)
-    )
-  }
-
-  private def createGSIRequest(
-      persistenceId: PersistenceId,
-      fromSequenceNr: SequenceNumber,
-      toSequenceNr: SequenceNumber,
-      deleted: Option[Boolean],
-      limit: Int,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(pluginConfig.tableName)
-      .indexName(pluginConfig.getJournalRowsIndexName)
-      .keyConditionExpression(
-        "#pid = :pid and #snr between :min and :max"
-      )
-      .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
-        ) ++ deleted
-          .map(_ => Map("#flg" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-      ).expressionAttributeValuesAsScala(
-        Map(
-          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-          ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
-          ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
-      )
-      .limit(limit)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .build()
-  }
-
-  private def createHighestSequenceNrRequest(
-      persistenceId: PersistenceId,
-      fromSequenceNr: Option[SequenceNumber] = None,
-      deleted: Option[Boolean] = None
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(pluginConfig.tableName)
-      .indexName(pluginConfig.getJournalRowsIndexName)
-      .keyConditionExpressionAsScala(
-        fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
-      )
-      .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
-        ) ++ deleted
-          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-        fromSequenceNr
-          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
-      )
-      .expressionAttributeValuesAsScala(
-        Map(
-          ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
-        ) ++ deleted
-          .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
-      ).scanIndexForward(false)
-      .limit(1)
-      .build()
-  }
-
-}
-
 final class V2JournalRowWriteDriver(
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbSyncClient],
-    val pluginConfig: PluginConfig,
+    val pluginConfig: JournalPluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
     val metricsReporter: MetricsReporter
@@ -410,29 +84,15 @@ final class V2JournalRowWriteDriver(
                   )
                 ).build()
               Source.single(deleteRequest).via(deleteItemFlow).flatMapConcat { response =>
-                metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
                 if (response.sdkHttpResponse().isSuccessful) {
-                  metricsReporter.incrementDeleteJournalRowsItemCallCounter()
                   Source.single(1L)
                 } else {
-                  metricsReporter.incrementDeleteJournalRowsItemCallErrorCounter()
                   val statusCode = response.sdkHttpResponse().statusCode()
                   val statusText = response.sdkHttpResponse().statusText()
                   Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
                 }
               }
-            }.map { n =>
-              metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
-              metricsReporter.incrementDeleteJournalRowsCallCounter()
-              n
-            }.recoverWithRetries(
-              attempts = 1, {
-                case t: Throwable =>
-                  metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
-                  metricsReporter.incrementDeleteJournalRowsCallErrorCounter()
-                  Source.failed(t)
-              }
-            )
+            }
         }
     }
   }
@@ -453,23 +113,18 @@ final class V2JournalRowWriteDriver(
                         BatchWriteItemRequest
                           .builder().requestItemsAsScala(Map(pluginConfig.tableName -> requests)).build()
                       }.via(batchWriteItemFlow).flatMapConcat { response =>
-                        metricsReporter.setDeleteJournalRowsItemDuration(System.nanoTime() - start)
                         if (response.sdkHttpResponse().isSuccessful) {
-                          metricsReporter.incrementDeleteJournalRowsItemCallCounter()
                           if (response.unprocessedItemsAsScala.get.nonEmpty) {
                             val n =
                               requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
-                            metricsReporter.addDeleteJournalRowsItemCounter(n)
                             Source
                               .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
                                 _ + n
                               )
                           } else {
-                            metricsReporter.addDeleteJournalRowsItemCounter(requestItems.size)
                             Source.single(requestItems.size)
                           }
                         } else {
-                          metricsReporter.incrementDeleteJournalRowsItemCallErrorCounter()
                           val statusCode = response.sdkHttpResponse().statusCode()
                           val statusText = response.sdkHttpResponse().statusText()
                           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
@@ -501,18 +156,7 @@ final class V2JournalRowWriteDriver(
                   }
                   Source
                     .single(requestItems)
-                }.via(loopFlow).map { n =>
-                  metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
-                  metricsReporter.incrementDeleteJournalRowsCallCounter()
-                  n
-                }.recoverWithRetries(
-                  attempts = 1, {
-                    case t: Throwable =>
-                      metricsReporter.setDeleteJournalRowsCallDuration(System.nanoTime() - callStart)
-                      metricsReporter.incrementDeleteJournalRowsCallErrorCounter()
-                      Source.failed(t)
-                  }
-                )
+                }.via(loopFlow)
           }
       }.withAttributes(logLevels)
 
@@ -572,20 +216,6 @@ final class V2JournalRowWriteDriver(
               Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
             }
           }
-          .map { _ =>
-            metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementUpdateMessageCallCounter()
-            logger.debug(s"updateMessage(journalRow = $journalRow): finished")
-            ()
-          }.recoverWithRetries(
-            attempts = 1, {
-              case t: Throwable =>
-                metricsReporter.setUpdateMessageCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementUpdateMessageCallErrorCounter()
-                logger.debug(s"updateMessage(journalRow = $journalRow): finished")
-                Source.failed(t)
-            }
-          )
       }.withAttributes(logLevels)
   }
 
@@ -625,16 +255,9 @@ final class V2JournalRowWriteDriver(
               )
           ).build()
         Source.single(request).via(putItemFlow).flatMapConcat { response =>
-          metricsReporter.setPutJournalRowsItemDuration(System.nanoTime() - itemStart)
           if (response.sdkHttpResponse().isSuccessful) {
-            // metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - callStart)
-            metricsReporter.incrementPutJournalRowsCallCounter()
-            metricsReporter.addPutJournalRowsItemCallCounter()
-            metricsReporter.incrementPutJournalRowsItemCounter()
             Source.single(1L)
           } else {
-            metricsReporter.incrementPutJournalRowsCallErrorCounter()
-            metricsReporter.incrementPutJournalRowsItemCallErrorCounter()
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
@@ -659,22 +282,17 @@ final class V2JournalRowWriteDriver(
                 }
                 .flatMapConcat {
                   case (response, itemStart) =>
-                    metricsReporter.setPutJournalRowsItemDuration(System.nanoTime() - itemStart)
                     if (response.sdkHttpResponse().isSuccessful) {
-                      metricsReporter.addPutJournalRowsItemCallCounter()
                       if (response.unprocessedItemsAsScala.get.nonEmpty) {
                         val n = requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
-                        metricsReporter.addPutJournalRowsItemCounter(n)
                         Source
                           .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
                             _ + n
                           )
                       } else {
-                        metricsReporter.addPutJournalRowsItemCounter(requestItems.size)
                         Source.single(requestItems.size)
                       }
                     } else {
-                      metricsReporter.incrementPutJournalRowsItemCallErrorCounter()
                       val statusCode = response.sdkHttpResponse().statusCode()
                       val statusText = response.sdkHttpResponse().statusText()
                       Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
@@ -747,29 +365,34 @@ final class V2JournalRowWriteDriver(
                 }
                 Source.single(requestItems)
               }
-              .via(loopFlow).map { n =>
-                metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - callStart)
-                metricsReporter.incrementPutJournalRowsCallCounter()
-                n
-              }
-              .recoverWithRetries(
-                attempts = 1, {
-                  case t: Throwable =>
-                    metricsReporter.setPutJournalRowsCallDuration(System.nanoTime() - callStart)
-                    metricsReporter.incrementPutJournalRowsCallErrorCounter()
-                    Source.failed(t)
-                }
-              )
+              .via(loopFlow)
         }.withAttributes(logLevels)
   }
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    (streamClient, syncClient) match {
+    val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        c.deleteItemFlow(1)
+        Flow[DeleteItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[DeleteItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[DeleteItemResponse, Stopwatch]())
+              unzip.out0 ~> c.deleteItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.setDeleteItemDuration(sw.elapsed())
+                response
+            }
+        }
       case (None, Some(c)) =>
         val flow = Flow[DeleteItemRequest].map { request =>
-          c.deleteItem(request) match {
+          val sw     = Stopwatch.start()
+          val result = c.deleteItem(request)
+          metricsReporter.setDeleteItemDuration(sw.elapsed())
+          result match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -777,16 +400,42 @@ final class V2JournalRowWriteDriver(
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("deleteItem")
+    }).log("deleteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
-  private def batchWriteItemFlow = {
-    (streamClient, syncClient) match {
+  private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
+    val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        c.batchWriteItemFlow(1)
+        Flow[BatchWriteItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[BatchWriteItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[BatchWriteItemResponse, Stopwatch]())
+              unzip.out0 ~> c.batchWriteItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.setBatchWriteItemDuration(sw.elapsed())
+                response
+            }
+        }
       case (None, Some(c)) =>
         val flow = Flow[BatchWriteItemRequest].map { request =>
-          c.batchWriteItem(request) match {
+          val sw     = Stopwatch.start()
+          val result = c.batchWriteItem(request)
+          metricsReporter.setBatchWriteItemDuration(sw.elapsed())
+          result match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -794,16 +443,42 @@ final class V2JournalRowWriteDriver(
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("batchWriteItem")
+    }).log("batchWriteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    (streamClient, syncClient) match {
+    val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        c.putItemFlow(1).log("putItem")
+        Flow[PutItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[PutItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[PutItemResponse, Stopwatch]())
+              unzip.out0 ~> c.putItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.setPutItemDuration(sw.elapsed())
+                response
+            }
+        }
       case (None, Some(c)) =>
         val flow = Flow[PutItemRequest].map { request =>
-          c.putItem(request) match {
+          val sw     = Stopwatch.start()
+          val result = c.putItem(request)
+          metricsReporter.setPutItemDuration(sw.elapsed())
+          result match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -811,16 +486,42 @@ final class V2JournalRowWriteDriver(
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
+    }).log("putItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
   }
 
   private def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResponse, NotUsed] = {
-    (streamClient, syncClient) match {
+    val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        c.updateItemFlow(1)
+        Flow[UpdateItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[UpdateItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[UpdateItemResponse, Stopwatch]())
+              unzip.out0 ~> c.updateItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.setUpdateItemDuration(sw.elapsed())
+                response
+            }
+        }
       case (None, Some(c)) =>
         val flow = Flow[UpdateItemRequest].map { request =>
-          c.updateItem(request) match {
+          val sw     = Stopwatch.start()
+          val result = c.updateItem(request)
+          metricsReporter.setUpdateItemDuration(sw.elapsed())
+          result match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -828,6 +529,15 @@ final class V2JournalRowWriteDriver(
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }
-  }.log("updateItem")
+    }).log("updateItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
 }

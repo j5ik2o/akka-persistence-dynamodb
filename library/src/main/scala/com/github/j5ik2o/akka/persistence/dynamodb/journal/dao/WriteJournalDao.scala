@@ -10,7 +10,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 trait WriteJournalDao extends JournalDaoWithReadMessages {
-  import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber }
 
   def deleteMessages(
       persistenceId: PersistenceId,

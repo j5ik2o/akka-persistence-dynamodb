@@ -37,7 +37,7 @@ object DaoSupport {
 trait DaoSupport {
 
   protected def serializer: FlowPersistentReprSerializer[JournalRow]
-  protected def metricsReporter: MetricsReporter
+  protected def metricsReporter: Option[MetricsReporter]
 
   protected def journalRowDriver: JournalRowReadDriver
 

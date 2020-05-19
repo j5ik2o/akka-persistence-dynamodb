@@ -18,34 +18,18 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import java.net.InetAddress
 import java.time.{ Duration => JavaDuration }
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.apache.ApacheHttpClient
-import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.http.nio.netty.{ Http2Configuration, NettyNioAsyncHttpClient, SdkEventLoopGroup }
-import software.amazon.awssdk.http.{ Protocol, SdkHttpClient }
 
 import scala.concurrent.duration.Duration
 
 object V2HttpClientBuilderUtils {
 
-  /**
-    * private static final Duration DEFAULT_SOCKET_READ_TIMEOUT = Duration.ofSeconds(30);
-    * private static final Duration DEFAULT_SOCKET_WRITE_TIMEOUT = Duration.ofSeconds(30);
-    * private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(2);
-    * private static final Duration DEFAULT_CONNECTION_ACQUIRE_TIMEOUT = Duration.ofSeconds(10);
-    * private static final Duration DEFAULT_CONNECTION_MAX_IDLE_TIMEOUT = Duration.ofSeconds(60);
-    * private static final Duration DEFAULT_CONNECTION_TIME_TO_LIVE = Duration.ZERO;
-    * private static final Boolean DEFAULT_REAP_IDLE_CONNECTIONS = Boolean.TRUE;
-    * private static final int DEFAULT_MAX_CONNECTIONS = 50;
-    * private static final int DEFAULT_MAX_CONNECTION_ACQUIRES = 10_000;
-    * private static final Boolean DEFAULT_TRUST_ALL_CERTIFICATES = Boolean.FALSE;
-    *
-    * @param dynamoDBClientConfig
-    * @return
-    */
-  def setupSync(dynamoDBClientConfig: DynamoDBClientConfig): SdkHttpClient = {
+  def setupSync(pluginConfig: PluginConfig): ApacheHttpClient.Builder = {
+    import pluginConfig.clientConfig.v2ClientConfig.syncClientConfig._
     val result = ApacheHttpClient.builder()
-    import dynamoDBClientConfig.v2ClientConfig.syncClientConfig._
 
     if (socketTimeout != Duration.Zero)
       result.socketTimeout(JavaDuration.ofMillis(socketTimeout.toMillis))
@@ -70,12 +54,12 @@ object V2HttpClientBuilderUtils {
 //    Builder credentialsProvider(CredentialsProvider credentialsProvider);
 //    Builder tlsKeyManagersProvider(TlsKeyManagersProvider tlsKeyManagersProvider);
 //    Builder tlsTrustManagersProvider(TlsTrustManagersProvider tlsTrustManagersProvider);
-    result.build()
+    result
   }
 
-  def setupAsync(dynamoDBClientConfig: DynamoDBClientConfig): SdkAsyncHttpClient = {
+  def setupAsync(pluginConfig: PluginConfig): NettyNioAsyncHttpClient.Builder = {
     val result = NettyNioAsyncHttpClient.builder()
-    import dynamoDBClientConfig.v2ClientConfig.asyncClientConfig._
+    import pluginConfig.clientConfig.v2ClientConfig.asyncClientConfig._
     result.maxConcurrency(maxConcurrency)
     result.maxPendingConnectionAcquires(maxPendingConnectionAcquires)
 
@@ -103,7 +87,7 @@ object V2HttpClientBuilderUtils {
     http2HealthCheckPingPeriod.foreach(v => http2Builder.healthCheckPingPeriod(JavaDuration.ofMillis(v.toMillis)))
     result.http2Configuration(http2Builder.build())
     threadsOfEventLoopGroup.foreach(v => result.eventLoopGroup(SdkEventLoopGroup.builder().numberOfThreads(v).build()))
-    result.build()
+    result
 
   }
 

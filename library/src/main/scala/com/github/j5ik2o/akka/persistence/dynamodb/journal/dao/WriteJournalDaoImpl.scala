@@ -29,13 +29,11 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
-case class PersistenceIdWithSeqNr(persistenceId: PersistenceId, sequenceNumber: SequenceNumber)
-
 class WriteJournalDaoImpl(
     pluginConfig: JournalPluginConfig,
     protected val journalRowDriver: JournalRowWriteDriver,
     val serializer: FlowPersistentReprSerializer[JournalRow],
-    protected val metricsReporter: MetricsReporter
+    protected val metricsReporter: Option[MetricsReporter]
 )(
     implicit val ec: ExecutionContext,
     system: ActorSystem
@@ -65,7 +63,7 @@ class WriteJournalDaoImpl(
     case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase()      => OverflowStrategy.dropNew
     case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase()         => OverflowStrategy.fail
     case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() => OverflowStrategy.backpressure
-    case _                                                                            => throw new IllegalArgumentException()
+    case _                                                                            => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
   }
 
   private def internalPutStream(promise: Promise[Long], rows: Seq[JournalRow]): Future[Done] = {
@@ -92,7 +90,6 @@ class WriteJournalDaoImpl(
       .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
-          logger.debug(s"put rows.size = ${rows.size}")
           internalPutStream(promise, rows)
       }
       .toMat(Sink.ignore)(Keep.left)
@@ -130,7 +127,6 @@ class WriteJournalDaoImpl(
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](queueBufferSize, queueOverflowStrategy)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
-          logger.debug(s"delete rows.size = ${rows.size}")
           internalDeleteStream(promise, rows)
       }
       .toMat(Sink.ignore)(Keep.left)

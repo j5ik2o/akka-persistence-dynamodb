@@ -34,6 +34,7 @@ object JournalColumnsDefConfig extends LoggingSupport {
   def fromConfig(config: Config): JournalColumnsDefConfig = {
     logger.debug("config = {}", config)
     val result = JournalColumnsDefConfig(
+      sourceConfig = config,
       partitionKeyColumnName =
         config.getOrElse[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
       sortKeyColumnName = config.getOrElse[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
@@ -52,6 +53,7 @@ object JournalColumnsDefConfig extends LoggingSupport {
 }
 
 case class JournalColumnsDefConfig(
+    sourceConfig: Config,
     partitionKeyColumnName: String,
     sortKeyColumnName: String,
     persistenceIdColumnName: String,

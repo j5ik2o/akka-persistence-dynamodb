@@ -30,6 +30,7 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
   def fromConfig(config: Config): SnapshotColumnsDefConfig = {
     logger.debug("config = {}", config)
     val result = SnapshotColumnsDefConfig(
+      sourceConfig = config,
       persistenceIdColumnName =
         config.getOrElse[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
       sequenceNrColumnName = config.getOrElse[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
@@ -43,6 +44,7 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
 }
 
 case class SnapshotColumnsDefConfig(
+    sourceConfig: Config,
     persistenceIdColumnName: String,
     sequenceNrColumnName: String,
     snapshotColumnName: String,

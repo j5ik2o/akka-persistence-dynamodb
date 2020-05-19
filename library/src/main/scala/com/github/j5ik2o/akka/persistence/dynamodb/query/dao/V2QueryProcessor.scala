@@ -21,7 +21,7 @@ class V2QueryProcessor(
     asyncClient: Option[DynamoDbAsyncClient],
     syncClient: Option[DynamoDbSyncClient],
     pluginConfig: QueryPluginConfig,
-    metricsReporter: MetricsReporter
+    metricsReporter: Option[MetricsReporter]
 ) extends QueryProcessor {
   (asyncClient, syncClient) match {
     case (None, None) =>
@@ -30,7 +30,8 @@ class V2QueryProcessor(
   }
 
   val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
-  private val streamClient                      = asyncClient.map(DynamoDbAkkaClient(_))
+
+  private val streamClient = asyncClient.map(DynamoDbAkkaClient(_))
 
   private def scanFlow: Flow[ScanRequest, ScanResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
@@ -38,7 +39,7 @@ class V2QueryProcessor(
         val flow = Flow[ScanRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.scan(request)
-          metricsReporter.setScanDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex
@@ -57,7 +58,7 @@ class V2QueryProcessor(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setScanDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
                 response
             }
         }

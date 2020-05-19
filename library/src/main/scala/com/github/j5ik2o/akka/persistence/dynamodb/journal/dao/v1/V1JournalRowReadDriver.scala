@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
@@ -21,8 +21,8 @@ import scala.jdk.CollectionConverters._
 final class V1JournalRowReadDriver(
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
-    val pluginConfig: PluginConfig,
-    val metricsReporter: MetricsReporter
+    val pluginConfig: JournalPluginBaseConfig,
+    val metricsReporter: Option[MetricsReporter]
 )(implicit ec: ExecutionContext)
     extends JournalRowReadDriver {
   (asyncClient, syncClient) match {
@@ -179,7 +179,7 @@ final class V1JournalRowReadDriver(
             .map { request =>
               val sw     = Stopwatch.start()
               val result = c.query(request)
-              metricsReporter.setQueryDuration(sw.elapsed())
+              metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
               result
             }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
@@ -187,7 +187,7 @@ final class V1JournalRowReadDriver(
           Flow[QueryRequest].mapAsync(1) { request =>
             val sw     = Stopwatch.start()
             val future = c.queryAsync(request).toScala
-            future.onComplete { _ => metricsReporter.setQueryDuration(sw.elapsed()) }
+            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed())) }
             future
           }
         case _ =>

@@ -18,58 +18,64 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import java.net.URI
 
 import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.http.SdkHttpClient
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient,
+  DynamoDbAsyncClientBuilder,
+  DynamoDbClient,
+  DynamoDbClientBuilder
+}
 
 object V2DynamoDbClientBuilderUtils {
 
   def setupSync(
       dynamicAccess: DynamicAccess,
-      dynamoDBClientConfig: DynamoDBClientConfig
-  ): DynamoDbClient = {
-    val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(dynamoDBClientConfig)
+      pluginConfig: PluginConfig
+  ): DynamoDbClientBuilder = {
+    val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
-      V2ClientOverrideConfigurationUtils.setup(dynamicAccess, dynamoDBClientConfig)
+      V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
     var builder =
       DynamoDbClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
-    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
+    (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    dynamoDBClientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
-    dynamoDBClientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
-    builder.build()
+    pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
+    pluginConfig.clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
+    builder
   }
 
   def setupAsync(
       dynamicAccess: DynamicAccess,
-      dynamoDBClientConfig: DynamoDBClientConfig
-  ): DynamoDbAsyncClient = {
-    val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(dynamoDBClientConfig)
+      pluginConfig: PluginConfig
+  ): DynamoDbAsyncClientBuilder = {
+    val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
-      V2ClientOverrideConfigurationUtils.setup(dynamicAccess, dynamoDBClientConfig)
+      V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
     var builder =
       DynamoDbAsyncClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
-    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
+    (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    dynamoDBClientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
-    dynamoDBClientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
-    builder.build()
+    pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
+    pluginConfig.clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
+    builder
   }
 
 }

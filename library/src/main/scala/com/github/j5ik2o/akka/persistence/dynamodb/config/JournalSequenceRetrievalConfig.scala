@@ -23,12 +23,17 @@ import scala.concurrent.duration._
 
 object JournalSequenceRetrievalConfig extends LoggingSupport {
 
+  val batchSizeKey  = "batch-size"
+  val maxTriesKey   = "max-tries"
+  val queryDelayKey = "query-delay"
+
   def fromConfig(config: Config): JournalSequenceRetrievalConfig = {
     logger.debug("config = {}", config)
     val result = JournalSequenceRetrievalConfig(
-      batchSize = config.getOrElse[Int]("batch-size", 10000),
-      maxTries = config.getOrElse[Int]("max-tries", 10),
-      queryDelay = config.getOrElse[FiniteDuration]("query-delay", 1.second),
+      sourceConfig = config,
+      batchSize = config.getOrElse[Int](batchSizeKey, 10000),
+      maxTries = config.getOrElse[Int](maxTriesKey, 10),
+      queryDelay = config.getOrElse[FiniteDuration](queryDelayKey, 1.second),
       maxBackoffQueryDelay = config.getOrElse[FiniteDuration]("max-backoff-query-delay", 1.minute),
       askTimeout = config.getOrElse[FiniteDuration]("ask-timeout", 1.second)
     )
@@ -39,6 +44,7 @@ object JournalSequenceRetrievalConfig extends LoggingSupport {
 }
 
 case class JournalSequenceRetrievalConfig(
+    sourceConfig: Config,
     batchSize: Int,
     maxTries: Int,
     queryDelay: FiniteDuration,

@@ -5,48 +5,81 @@ import java.util.concurrent.TimeUnit
 import com.amazon.dax.client.dynamodbv2.ClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
+import scala.concurrent.duration.Duration
+
 object V1DaxClientConfigUtils {
 
   def setup(dynamoDBClientConfig: DynamoDBClientConfig): ClientConfig = {
     import dynamoDBClientConfig.v1DaxClientConfig._
-    new ClientConfig()
-      .withConnectTimeout(
-        connectionTimeout.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withRequestTimeout(
-        requestTimeout.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withHealthCheckTimeout(
+    val result = new ClientConfig()
+    if (connectionTimeout != Duration.Zero)
+      result
+        .setConnectTimeout(
+          connectionTimeout.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    if (requestTimeout != Duration.Zero)
+      result
+        .setRequestTimeout(
+          requestTimeout.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    if (healthCheckTimeout != Duration.Zero)
+      result.setHealthCheckTimeout(
         healthCheckTimeout.toMillis,
         TimeUnit.MILLISECONDS
-      ).withHealthCheckInterval(
+      )
+    if (healthCheckInterval != Duration.Zero)
+      result.setHealthCheckInterval(
         healthCheckInterval.toMillis,
         TimeUnit.MILLISECONDS
-      ).withIdleConnectionTimeout(
+      )
+    if (idleConnectionTimeout != Duration.Zero)
+      result.setIdleConnectionTimeout(
         idleConnectionTimeout.toMillis,
         TimeUnit.MILLISECONDS
-      ).withMinIdleConnectionSize(
-        minIdleConnectionSize
-      ).withWriteRetries(
-        writeRetries
-      ).withMaxPendingConnectsPerHost(
-        maxPendingConnectionsPerHost
-      ).withReadRetries(
-        readRetries
-      ).withThreadKeepAlive(
-        threadKeepAlive.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withClusterUpdateInterval(
-        clusterUpdateInterval.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withClusterUpdateThreshold(
-        clusterUpdateThreshold.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withMaxRetryDelay(
-        maxRetryDelay.toMillis,
-        TimeUnit.MILLISECONDS
-      ).withUnhealthyConsecutiveErrorCount(
-        unhealthyConsecutiveErrorCount
       )
+    result.setMinIdleConnectionSize(
+      minIdleConnectionSize
+    )
+
+    result.setWriteRetries(
+      writeRetries
+    )
+    result
+      .setMaxPendingConnectsPerHost(
+        maxPendingConnectionsPerHost
+      )
+    result.setReadRetries(
+      readRetries
+    )
+    if (threadKeepAlive != Duration.Zero)
+      result
+        .setThreadKeepAlive(
+          threadKeepAlive.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    if (clusterUpdateInterval != Duration.Zero)
+      result
+        .setClusterUpdateInterval(
+          clusterUpdateInterval.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    if (clusterUpdateThreshold != Duration.Zero)
+      result
+        .setClusterUpdateThreshold(
+          clusterUpdateThreshold.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    if (maxRetryDelay != Duration.Zero)
+      result
+        .setMaxRetryDelay(
+          maxRetryDelay.toMillis,
+          TimeUnit.MILLISECONDS
+        )
+    result.setUnhealthyConsecutiveErrorCount(
+      unhealthyConsecutiveErrorCount
+    )
+    result
   }
 }

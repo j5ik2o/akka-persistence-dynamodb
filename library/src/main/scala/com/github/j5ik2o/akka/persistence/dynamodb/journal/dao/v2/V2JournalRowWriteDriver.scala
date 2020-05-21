@@ -23,7 +23,7 @@ final class V2JournalRowWriteDriver(
     val pluginConfig: JournalPluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
-    val metricsReporter: MetricsReporter
+    val metricsReporter: Option[MetricsReporter]
 ) extends JournalRowWriteDriver {
   (asyncClient, syncClient) match {
     case (None, None) =>
@@ -383,7 +383,7 @@ final class V2JournalRowWriteDriver(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setDeleteItemDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
                 response
             }
         }
@@ -391,7 +391,7 @@ final class V2JournalRowWriteDriver(
         val flow = Flow[DeleteItemRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.deleteItem(request)
-          metricsReporter.setDeleteItemDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex
@@ -426,7 +426,7 @@ final class V2JournalRowWriteDriver(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setBatchWriteItemDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
                 response
             }
         }
@@ -434,7 +434,7 @@ final class V2JournalRowWriteDriver(
         val flow = Flow[BatchWriteItemRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.batchWriteItem(request)
-          metricsReporter.setBatchWriteItemDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex
@@ -469,7 +469,7 @@ final class V2JournalRowWriteDriver(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setPutItemDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
                 response
             }
         }
@@ -477,7 +477,7 @@ final class V2JournalRowWriteDriver(
         val flow = Flow[PutItemRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.putItem(request)
-          metricsReporter.setPutItemDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex
@@ -512,7 +512,7 @@ final class V2JournalRowWriteDriver(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setUpdateItemDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
                 response
             }
         }
@@ -520,7 +520,7 @@ final class V2JournalRowWriteDriver(
         val flow = Flow[UpdateItemRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.updateItem(request)
-          metricsReporter.setUpdateItemDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex

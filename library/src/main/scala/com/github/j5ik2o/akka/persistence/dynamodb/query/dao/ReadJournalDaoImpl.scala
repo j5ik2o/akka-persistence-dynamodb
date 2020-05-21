@@ -36,7 +36,7 @@ class ReadJournalDaoImpl(
     override protected val journalRowDriver: JournalRowReadDriver,
     pluginConfig: QueryPluginConfig,
     override val serializer: FlowPersistentReprSerializer[JournalRow],
-    override protected val metricsReporter: MetricsReporter
+    override protected val metricsReporter: Option[MetricsReporter]
 )(implicit val ec: ExecutionContext, system: ActorSystem)
     extends ReadJournalDao
     with DaoSupport {

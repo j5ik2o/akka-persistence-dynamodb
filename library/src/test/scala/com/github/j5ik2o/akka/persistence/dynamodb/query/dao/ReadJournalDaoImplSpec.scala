@@ -25,7 +25,7 @@ import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
@@ -85,13 +85,18 @@ class ReadJournalDaoImplSpec
     new ByteArrayJournalSerializer(serialization, ",")
 
   val queryProcessor =
-    new V2QueryProcessor(Some(dynamoDbAsyncClient), None, queryPluginConfig, new NullMetricsReporter)
+    new V2QueryProcessor(
+      Some(dynamoDbAsyncClient),
+      None,
+      queryPluginConfig,
+      Some(new MetricsReporter.None(queryPluginConfig))
+    )
 
   val journalRowReadDriver = new V2JournalRowReadDriver(
     Some(dynamoDbAsyncClient),
     None,
     journalPluginConfig,
-    new NullMetricsReporter
+    Some(new MetricsReporter.None(queryPluginConfig))
   )
 
   val readJournalDao =
@@ -100,7 +105,7 @@ class ReadJournalDaoImplSpec
       journalRowReadDriver,
       queryPluginConfig,
       serializer,
-      new NullMetricsReporter
+      Some(new MetricsReporter.None(queryPluginConfig))
     )(
       ec,
       system
@@ -108,8 +113,8 @@ class ReadJournalDaoImplSpec
 
   val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
-  val partitionKeyResolver = new PartitionKeyResolver.Default(config)
-  val sortKeyResolver      = new SortKeyResolver.Default(config)
+  val partitionKeyResolver = new PartitionKeyResolver.Default(journalPluginConfig)
+  val sortKeyResolver      = new SortKeyResolver.Default(journalPluginConfig)
 
   val journalRowWriteDriver = new V2JournalRowWriteDriver(
     Some(dynamoDbAsyncClient),
@@ -117,7 +122,7 @@ class ReadJournalDaoImplSpec
     journalPluginConfig,
     partitionKeyResolver,
     sortKeyResolver,
-    new NullMetricsReporter
+    Some(new MetricsReporter.None(journalPluginConfig))
   )
 
   val writeJournalDao =
@@ -125,7 +130,7 @@ class ReadJournalDaoImplSpec
       journalPluginConfig,
       journalRowWriteDriver,
       serializer,
-      new NullMetricsReporter
+      Some(new MetricsReporter.None(journalPluginConfig))
     )(
       ec,
       system

@@ -36,16 +36,22 @@ object DynamoDBClientConfig extends LoggingSupport {
   val batchGetItemLimitKey   = "batch-get-item-limit"
   val batchWriteItemLimitKey = "batch-write-item-limit"
 
+  val DefaultClientVersion: ClientVersion.Value = ClientVersion.V2
+  val DefaultClientType: ClientType.Value       = ClientType.Async
+  val DefaultBatchGetItemLimit                  = 100
+  val DefaultBatchWriteItemLimit                = 25
+
   def fromConfig(config: Config, legacy: Boolean): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientConfig(
+      sourceConfig = config,
       accessKeyId = config.getAs[String](accessKeyIdKeyKey),
       secretAccessKey = config.getAs[String](secretAccessKeyKey),
       endpoint = config.getAs[String](endpointKey),
       region = config.getAs[String](regionKey),
       clientVersion =
-        config.getAs[String](clientVersionKey).map(s => ClientVersion.withName(s)).getOrElse(ClientVersion.V2),
-      clientType = config.getAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(ClientType.Async),
+        config.getAs[String](clientVersionKey).map(s => ClientVersion.withName(s)).getOrElse(DefaultClientVersion),
+      clientType = config.getAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(DefaultClientType),
       DynamoDBClientV1Config.fromConfig(config.getOrElse[Config](v1Key, ConfigFactory.empty())),
       DynamoDBClientV1DaxConfig.fromConfig(config.getOrElse[Config](v1DaxKey, ConfigFactory.empty())), {
         if (legacy) {
@@ -59,8 +65,8 @@ object DynamoDBClientConfig extends LoggingSupport {
         } else
           DynamoDBClientV2Config.fromConfig(config.getOrElse[Config](v2Key, ConfigFactory.empty()), legacy)
       },
-      batchGetItemLimit = config.getOrElse[Int](batchGetItemLimitKey, 100),
-      batchWriteItemLimit = config.getOrElse[Int](batchWriteItemLimitKey, 25)
+      batchGetItemLimit = config.getOrElse[Int](batchGetItemLimitKey, DefaultBatchGetItemLimit),
+      batchWriteItemLimit = config.getOrElse[Int](batchWriteItemLimitKey, DefaultBatchWriteItemLimit)
     )
     logger.debug("result = {}", result)
     result
@@ -69,6 +75,7 @@ object DynamoDBClientConfig extends LoggingSupport {
 }
 
 case class DynamoDBClientConfig(
+    sourceConfig: Config,
     accessKeyId: Option[String],
     secretAccessKey: Option[String],
     endpoint: Option[String],

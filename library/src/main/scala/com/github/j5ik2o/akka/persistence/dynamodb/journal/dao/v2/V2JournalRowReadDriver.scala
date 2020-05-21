@@ -5,7 +5,7 @@ import java.io.IOException
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{ Concat, Flow, GraphDSL, RestartFlow, Source, Unzip, Zip }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
@@ -21,8 +21,8 @@ import scala.collection.mutable.ArrayBuffer
 final class V2JournalRowReadDriver(
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbSyncClient],
-    val pluginConfig: PluginConfig,
-    val metricsReporter: MetricsReporter
+    val pluginConfig: JournalPluginBaseConfig,
+    val metricsReporter: Option[MetricsReporter]
 ) extends JournalRowReadDriver {
   (asyncClient, syncClient) match {
     case (None, None) =>
@@ -40,7 +40,7 @@ final class V2JournalRowReadDriver(
         val flow = Flow[QueryRequest].map { request =>
           val sw     = Stopwatch.start()
           val result = c.query(request)
-          metricsReporter.setQueryDuration(sw.elapsed())
+          metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
           result match {
             case Right(r) => r
             case Left(ex) => throw ex
@@ -59,7 +59,7 @@ final class V2JournalRowReadDriver(
               FlowShape(unzip.in, zip.out)
             })).map {
               case (response, sw) =>
-                metricsReporter.setQueryDuration(sw.elapsed())
+                metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
                 response
             }
         }

@@ -24,7 +24,7 @@ final class V1JournalRowWriteDriver(
     val pluginConfig: JournalPluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
-    val metricsReporter: MetricsReporter
+    val metricsReporter: Option[MetricsReporter]
 )(implicit ec: ExecutionContext)
     extends JournalRowWriteDriver {
   (asyncClient, syncClient) match {
@@ -344,7 +344,7 @@ final class V1JournalRowWriteDriver(
           .map { request =>
             val sw     = Stopwatch.start()
             val result = c.putItem(request)
-            metricsReporter.setPutItemDuration(sw.elapsed())
+            metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
             result
           }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
@@ -352,7 +352,7 @@ final class V1JournalRowWriteDriver(
         Flow[PutItemRequest].mapAsync(1) { request =>
           val sw     = Stopwatch.start()
           val future = c.putItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.setPutItemDuration(sw.elapsed()) }
+          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed())) }
           future
         }
       case _ =>
@@ -376,7 +376,7 @@ final class V1JournalRowWriteDriver(
           .map { request =>
             val sw     = Stopwatch.start()
             val result = c.batchWriteItem(request)
-            metricsReporter.setBatchWriteItemDuration(sw.elapsed())
+            metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
             result
           }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
@@ -384,7 +384,7 @@ final class V1JournalRowWriteDriver(
         Flow[BatchWriteItemRequest].mapAsync(1) { request =>
           val sw     = Stopwatch.start()
           val future = c.batchWriteItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.setBatchWriteItemDuration(sw.elapsed()) }
+          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed())) }
           future
         }
       case _ =>
@@ -409,7 +409,7 @@ final class V1JournalRowWriteDriver(
             .map { request =>
               val sw     = Stopwatch.start()
               val result = c.updateItem(request)
-              metricsReporter.setUpdateItemDuration(sw.elapsed())
+              metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
               result
             }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
@@ -417,7 +417,7 @@ final class V1JournalRowWriteDriver(
           Flow[UpdateItemRequest].mapAsync(1) { request =>
             val sw     = Stopwatch.start()
             val future = c.updateItemAsync(request).toScala
-            future.onComplete { _ => metricsReporter.setUpdateItemDuration(sw.elapsed()) }
+            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed())) }
             future
           }
         case _ =>
@@ -443,7 +443,7 @@ final class V1JournalRowWriteDriver(
             .map { request =>
               val sw     = Stopwatch.start()
               val result = c.deleteItem(request)
-              metricsReporter.setDeleteItemDuration(sw.elapsed())
+              metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
               result
             }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
@@ -451,7 +451,7 @@ final class V1JournalRowWriteDriver(
           Flow[DeleteItemRequest].mapAsync(1) { request =>
             val sw     = Stopwatch.start()
             val future = c.deleteItemAsync(request).toScala
-            future.onComplete { _ => metricsReporter.setDeleteItemDuration(sw.elapsed()) }
+            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed())) }
             future
           }
         case _ =>

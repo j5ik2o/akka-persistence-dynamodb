@@ -9,7 +9,7 @@ import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, Sc
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
 
@@ -21,7 +21,7 @@ class V1QueryProcessor(
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: QueryPluginConfig,
-    val metricsReporter: MetricsReporter
+    val metricsReporter: Option[MetricsReporter]
 )(implicit ec: ExecutionContext)
     extends QueryProcessor {
 
@@ -30,10 +30,20 @@ class V1QueryProcessor(
   private def scanFlow: Flow[ScanRequest, ScanResult, NotUsed] = {
     val flow = ((asyncClient, syncClient) match {
       case (None, Some(c)) =>
-        val flow = Flow[ScanRequest].map { request => c.scan(request) }
+        val flow = Flow[ScanRequest].map { request =>
+          val sw     = Stopwatch.start()
+          val result = c.scan(request)
+          metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
+          result
+        }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (Some(c), None) =>
-        Flow[ScanRequest].mapAsync(1) { request => c.scanAsync(request).toScala }
+        Flow[ScanRequest].mapAsync(1) { request =>
+          val sw     = Stopwatch.start()
+          val future = c.scanAsync(request).toScala
+          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed())) }
+          future
+        }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("scan")
@@ -69,7 +79,6 @@ class V1QueryProcessor(
           val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
           val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
           if (lastEvaluatedKey.nonEmpty && (count + response.getCount) < max) {
-            // logger.debug(s"index = $index, next loop")
             loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
           } else
             combinedSource
@@ -101,42 +110,38 @@ class V1QueryProcessor(
         acc: Source[Map[String, AttributeValue], NotUsed],
         count: Long,
         index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] =
-      startTimeSource
-        .flatMapConcat { itemStart =>
-          // logger.debug(s"index = $index, count = $count")
-          val scanRequest = new ScanRequest()
-            .withTableName(pluginConfig.tableName)
-            .withIndexName(pluginConfig.tagsIndexName)
-            .withFilterExpression("contains(#tags, :tag)")
-            .withExpressionAttributeNames(
-              Map("#tags" -> columnsDefConfig.tagsColumnName).asJava
-            )
-            .withExpressionAttributeValues(
-              Map(
-                ":tag" -> new AttributeValue().withS(tag)
-              ).asJava
-            )
-            .withLimit(pluginConfig.scanBatchSize)
-            .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
-          Source
-            .single(scanRequest).via(scanFlow).flatMapConcat { response =>
-              if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-                val items =
-                  Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-                val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-                val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-                if (lastEvaluatedKey.nonEmpty) {
-                  // logger.debug(s"index = $index, next loop")
-                  loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-                } else
-                  combinedSource
-              } else {
-                val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-                Source.failed(new IOException(s"statusCode: $statusCode"))
-              }
-            }
+    ): Source[Map[String, AttributeValue], NotUsed] = {
+      val scanRequest = new ScanRequest()
+        .withTableName(pluginConfig.tableName)
+        .withIndexName(pluginConfig.tagsIndexName)
+        .withFilterExpression("contains(#tags, :tag)")
+        .withExpressionAttributeNames(
+          Map("#tags" -> columnsDefConfig.tagsColumnName).asJava
+        )
+        .withExpressionAttributeValues(
+          Map(
+            ":tag" -> new AttributeValue().withS(tag)
+          ).asJava
+        )
+        .withLimit(pluginConfig.scanBatchSize)
+        .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
+      Source
+        .single(scanRequest).via(scanFlow).flatMapConcat { response =>
+          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
+            val items =
+              Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
+            val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
+            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+            if (lastEvaluatedKey.nonEmpty) {
+              loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
+            } else
+              combinedSource
+          } else {
+            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+            Source.failed(new IOException(s"statusCode: $statusCode"))
+          }
         }
+    }
 
     loop(None, Source.empty, 0L, 1)
       .map(convertToJournalRow)
@@ -174,7 +179,6 @@ class V1QueryProcessor(
             val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
             if (lastEvaluatedKey.nonEmpty) {
-              // logger.debug(s"index = $index, next loop")
               loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
             } else
               combinedSource

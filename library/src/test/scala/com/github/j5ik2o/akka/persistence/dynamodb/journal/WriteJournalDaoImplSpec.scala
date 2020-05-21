@@ -9,7 +9,8 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{ ReadJournalDaoImpl, V2QueryProcessor }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -83,13 +84,18 @@ class WriteJournalDaoImplSpec
     new ByteArrayJournalSerializer(serialization, ",")
 
   val queryProcessor =
-    new V2QueryProcessor(Some(dynamoDbAsyncClient), None, queryPluginConfig, new NullMetricsReporter)
+    new V2QueryProcessor(
+      Some(dynamoDbAsyncClient),
+      None,
+      queryPluginConfig,
+      Some(new MetricsReporter.None(queryPluginConfig))
+    )
 
   val journalRowReadDriver = new V2JournalRowReadDriver(
     Some(dynamoDbAsyncClient),
     None,
     journalPluginConfig,
-    new NullMetricsReporter
+    Some(new MetricsReporter.None(queryPluginConfig))
   )
 
   val readJournalDao =
@@ -98,15 +104,15 @@ class WriteJournalDaoImplSpec
       journalRowReadDriver,
       queryPluginConfig,
       serializer,
-      new NullMetricsReporter
+      Some(new MetricsReporter.None(queryPluginConfig))
     )(
       ec,
       system
     )
   val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
-  val partitionKeyResolver = new PartitionKeyResolver.Default(config)
-  val sortKeyResolver      = new SortKeyResolver.Default(config)
+  val partitionKeyResolver = new PartitionKeyResolver.Default(journalPluginConfig)
+  val sortKeyResolver      = new SortKeyResolver.Default(journalPluginConfig)
 
   val journalRowWriteDriver = new V2JournalRowWriteDriver(
     Some(dynamoDbAsyncClient),
@@ -114,7 +120,7 @@ class WriteJournalDaoImplSpec
     journalPluginConfig,
     partitionKeyResolver,
     sortKeyResolver,
-    new NullMetricsReporter
+    Some(new MetricsReporter.None(journalPluginConfig))
   )
 
   val writeJournalDao =
@@ -122,7 +128,7 @@ class WriteJournalDaoImplSpec
       journalPluginConfig,
       journalRowWriteDriver,
       serializer,
-      new NullMetricsReporter
+      Some(new MetricsReporter.None(journalPluginConfig))
     )(
       ec,
       system

@@ -18,38 +18,38 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import com.amazon.dax.client.dynamodbv2.{ AmazonDaxAsyncClientBuilder, AmazonDaxClientBuilder }
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
 object V1DaxClientBuilderUtils {
 
-  def setupSync(pluginConfig: PluginConfig): AmazonDynamoDB = {
-    val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
+  def setupSync(dynamoDBClientConfig: DynamoDBClientConfig): AmazonDaxClientBuilder = {
+    val cc      = V1DaxClientConfigUtils.setup(dynamoDBClientConfig)
     val builder = AmazonDaxClientBuilder.standard().withClientConfiguration(cc)
-    (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
+    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder.setCredentials(
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
     }
-    pluginConfig.clientConfig.region.foreach(builder.setRegion)
-    pluginConfig.clientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
-    builder.build()
+    dynamoDBClientConfig.region.foreach(builder.setRegion)
+    dynamoDBClientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
+    builder
   }
 
-  def setupAsync(pluginConfig: PluginConfig): AmazonDynamoDBAsync = {
-    val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
+  def setupAsync(dynamoDBClientConfig: DynamoDBClientConfig): AmazonDaxAsyncClientBuilder = {
+    val cc      = V1DaxClientConfigUtils.setup(dynamoDBClientConfig)
     val builder = AmazonDaxAsyncClientBuilder.standard().withClientConfiguration(cc)
-    (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
+    (dynamoDBClientConfig.accessKeyId, dynamoDBClientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder.setCredentials(
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
     }
-    pluginConfig.clientConfig.region.foreach(builder.setRegion)
-    pluginConfig.clientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
-    builder.build()
+    dynamoDBClientConfig.region.foreach(builder.setRegion)
+    dynamoDBClientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
+    builder
   }
 
 }

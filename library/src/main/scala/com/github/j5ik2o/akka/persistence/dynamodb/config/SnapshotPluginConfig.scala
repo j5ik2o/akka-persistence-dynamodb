@@ -16,33 +16,48 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.NullMetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 import net.ceedubs.ficus.Ficus._
 
 object SnapshotPluginConfig extends LoggingSupport {
 
-  val legacyConfigLayoutKey       = "legacy-config-layout"
-  val tableNameKey                = "table-name"
-  val columnsDefKey               = "columns-def"
-  val consistentReadKey           = "consistent-read"
-  val metricsReporterClassNameKey = "metrics-reporter-class-name"
-  val dynamoDbClientKey           = "dynamo-db-client"
+  val legacyConfigFormatKey               = "legacy-config-format"
+  val tableNameKey                        = "table-name"
+  val columnsDefKey                       = "columns-def"
+  val consistentReadKey                   = "consistent-read"
+  val metricsReporterClassNameKey         = "metrics-reporter-class-name"
+  val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
+  val dynamoDbClientKey                   = "dynamo-db-client"
+
+  val DefaultLegacyConfigFormat: Boolean              = false
+  val DefaultLegacyConfigLayoutKey: Boolean           = false
+  val DefaultTableName: String                        = "Snapshot"
+  val DefaultConsistentRead: Boolean                  = false
+  val DefaultMetricsReporterClassName: String         = classOf[MetricsReporter.None].getName
+  val DefaultMetricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
-    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigLayoutKey, default = false)
+    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = SnapshotPluginConfig(
+      sourceConfig = config,
       legacyConfigFormat,
-      tableName = config.getOrElse[String](tableNameKey, default = "Snapshot"),
+      tableName = config.getOrElse[String](tableNameKey, DefaultTableName),
       columnsDefConfig =
         SnapshotColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
-      consistentRead = config.getOrElse[Boolean](consistentReadKey, default = false),
-      metricsReporterClassName = config.getOrElse[String](
-        metricsReporterClassNameKey,
-        classOf[NullMetricsReporter].getName
-      ),
+      consistentRead = config.getOrElse[Boolean](consistentReadKey, DefaultConsistentRead),
+      metricsReporterProviderClassName = {
+        val className =
+          config.getOrElse[String](metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+        ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
+      },
+      metricsReporterClassName = {
+        val className = config.getAs[String](metricsReporterClassNameKey) // , DefaultMetricsReporterClassName)
+        ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
+      },
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.getOrElse[Config](dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
@@ -53,10 +68,14 @@ object SnapshotPluginConfig extends LoggingSupport {
 }
 
 final case class SnapshotPluginConfig(
+    sourceConfig: Config,
     legacyConfigFormat: Boolean,
     tableName: String,
     columnsDefConfig: SnapshotColumnsDefConfig,
     consistentRead: Boolean,
-    metricsReporterClassName: String,
+    metricsReporterProviderClassName: String,
+    metricsReporterClassName: Option[String],
     clientConfig: DynamoDBClientConfig
-)
+) extends PluginConfig {
+  override val configRootPath: String = "j5ik2o.dynamo-db-snapshot"
+}

@@ -50,7 +50,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
   protected val javaClient: JavaDynamoDbAsyncClient =
-    V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig.clientConfig)
+    V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig).build()
   protected val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaClient)
 
   protected val snapshotDao: SnapshotDao =

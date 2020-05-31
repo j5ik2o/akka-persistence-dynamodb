@@ -83,7 +83,10 @@ lazy val baseSettings = Seq(
       "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
     ),
   parallelExecution in Test := false,
-  scalafmtOnCompile in ThisBuild := true
+  scalafmtOnCompile in ThisBuild := true,
+  envVars := Map(
+      "AWS_REGION" -> "ap-northeast-1"
+    )
 )
 
 lazy val library = (project in file("library"))

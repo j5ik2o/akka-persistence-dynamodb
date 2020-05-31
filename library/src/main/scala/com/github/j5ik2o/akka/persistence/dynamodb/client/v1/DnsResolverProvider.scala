@@ -23,20 +23,21 @@ object DnsResolverProvider {
         )
       ).getOrElse(throw new ClassNotFoundException(className))
   }
-}
 
-class DnsResolverProviderImpl(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends DnsResolverProvider {
+  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends DnsResolverProvider {
 
-  override def create: Option[DnsResolver] = {
-    val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverClassName
-    classNameOpt.map { className =>
-      dynamicAccess
-        .createInstanceFor[DnsResolver](
-          className,
-          Seq(
-            classOf[PluginConfig] -> pluginConfig
-          )
-        ).getOrElse(throw new ClassNotFoundException(className))
+    override def create: Option[DnsResolver] = {
+      val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverClassName
+      classNameOpt.map { className =>
+        dynamicAccess
+          .createInstanceFor[DnsResolver](
+            className,
+            Seq(
+              classOf[PluginConfig] -> pluginConfig
+            )
+          ).getOrElse(throw new ClassNotFoundException(className))
+      }
     }
   }
+
 }

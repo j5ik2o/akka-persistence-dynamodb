@@ -26,7 +26,7 @@ object MonitoringListenerProvider {
       )
   }
 
-  class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MonitoringListenerProvider {
+  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MonitoringListenerProvider {
 
     override def create: Option[MonitoringListener] = {
       val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.monitoringListenerClassName

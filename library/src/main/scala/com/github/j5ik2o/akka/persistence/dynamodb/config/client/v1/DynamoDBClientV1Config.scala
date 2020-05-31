@@ -150,7 +150,7 @@ object ClientConfiguration {
 
   val DefaultMaxConsecutiveRetiesBeforeThrottling: Int =
     AWSClientConfiguration.DEFAULT_MAX_CONSECUTIVE_RETRIES_BEFORE_THROTTLING
-  val DnsResolverProviderClassName: String = classOf[DnsResolverProviderImpl].getName
+  val DnsResolverProviderClassName: String = classOf[DnsResolverProvider.Default].getName
 
   def fromConfig(config: Config) = {
     ClientConfiguration(

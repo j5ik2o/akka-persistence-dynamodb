@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
+import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient }
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.{ BeforeAndAfter, Matchers, Suite }
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -9,6 +9,7 @@ import org.slf4j.{ Logger, LoggerFactory }
 import software.amazon.awssdk.services.dynamodb.model._
 
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 trait DynamoDBSpecSupport
     extends Matchers
@@ -29,35 +30,43 @@ trait DynamoDBSpecSupport
 
   def dynamoDbAsyncClient: DynamoDbAsyncClient
 
-  def deleteTable(): Unit = {
+  def deleteTable(): Unit = synchronized {
+    Thread.sleep(500)
     deleteJournalTable()
     deleteSnapshotTable()
+    Thread.sleep(500)
   }
 
   private def deleteJournalTable(): Unit = {
-    dynamoDbAsyncClient.deleteTable(journalTableName)
+    val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
+    if (listTablesResult.tableNamesAsScala.exists(_.contains(journalTableName)))
+      dynamoDbAsyncClient.deleteTable(journalTableName).futureValue
     eventually {
-      val result = dynamoDbAsyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
-      result.tableNamesAsScala.fold(true)(v => !v.contains(journalTableName)) shouldBe true
+      val result = dynamoDbAsyncClient.listTables(2).futureValue
+      result.tableNamesAsScala.exists(_.contains(journalTableName)) shouldBe false
     }
   }
 
   private def deleteSnapshotTable(): Unit = {
-    dynamoDbAsyncClient.deleteTable(snapshotTableName)
+    val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
+    if (listTablesResult.tableNamesAsScala.exists(_.contains(snapshotTableName)))
+      dynamoDbAsyncClient.deleteTable(snapshotTableName).futureValue
     eventually {
-      val result = dynamoDbAsyncClient.listTables(ListTablesRequest.builder().limit(1).build()).futureValue
-      result.tableNamesAsScala.fold(true)(v => !v.contains(snapshotTableName)) shouldBe true
+      val result = dynamoDbAsyncClient.listTables(2).futureValue
+      result.tableNamesAsScala.exists(_.contains(snapshotTableName)) shouldBe false
     }
   }
 
   val legacyJournalTable = false
 
-  def createTable(): Unit = {
+  def createTable(): Unit = synchronized {
+    Thread.sleep(500)
     if (legacyJournalTable)
       createLegacyJournalTable()
     else
       createJournalTable()
     createSnapshotTable()
+    Thread.sleep(500)
   }
 
   def createSnapshotTable(): Unit = {
@@ -95,9 +104,12 @@ trait DynamoDBSpecSupport
           .writeCapacityUnits(10L).build()
       )
       .build()
-    val createResponse = dynamoDbAsyncClient
-      .createTable(createRequest).futureValue
-    createResponse.sdkHttpResponse().isSuccessful shouldBe true
+    val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
+    println("listTablesResult = " + listTablesResult)
+    if (!listTablesResult.tableNames.asScala.contains(snapshotTableName)) {
+      val createResponse = dynamoDbAsyncClient.createTable(createRequest).futureValue
+      createResponse.sdkHttpResponse().isSuccessful shouldBe true
+    }
   }
 
   private def createLegacyJournalTable(): Unit = {
@@ -178,11 +190,13 @@ trait DynamoDBSpecSupport
         StreamSpecification.builder().streamEnabled(true).streamViewType(StreamViewType.NEW_IMAGE).build()
       )
       .build()
-
-    val createResponse = dynamoDbAsyncClient
-      .createTable(createRequest).futureValue
-    createResponse.sdkHttpResponse().isSuccessful shouldBe true
-
+    val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
+    println("listTablesResult = " + listTablesResult)
+    if (!listTablesResult.tableNames.asScala.contains(journalTableName)) {
+      val createResponse = dynamoDbAsyncClient
+        .createTable(createRequest).futureValue
+      createResponse.sdkHttpResponse().isSuccessful shouldBe true
+    }
   }
 
   private def createJournalTable(): Unit = {
@@ -267,10 +281,11 @@ trait DynamoDBSpecSupport
         StreamSpecification.builder().streamEnabled(true).streamViewType(StreamViewType.NEW_IMAGE).build()
       )
       .build()
-
-    val createResponse = dynamoDbAsyncClient
-      .createTable(createRequest).futureValue
-    createResponse.sdkHttpResponse().isSuccessful shouldBe true
-
+    val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
+    println("listTablesResult = " + listTablesResult)
+    if (!listTablesResult.tableNames.asScala.contains(journalTableName)) {
+      val createResponse = dynamoDbAsyncClient.createTable(createRequest).futureValue
+      createResponse.sdkHttpResponse().isSuccessful shouldBe true
+    }
   }
 }

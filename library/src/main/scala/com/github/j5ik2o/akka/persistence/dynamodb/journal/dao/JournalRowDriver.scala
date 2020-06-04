@@ -1,11 +1,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.Attributes
 import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
 
 trait JournalRowDriver {
+
+  def system: ActorSystem
 
   protected val startTimeSource: Source[Long, NotUsed] =
     SourceUtils

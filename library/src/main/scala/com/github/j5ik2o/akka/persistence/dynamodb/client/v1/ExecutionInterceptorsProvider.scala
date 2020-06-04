@@ -2,9 +2,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 
 import scala.collection.immutable._
+import scala.util.{ Failure, Success }
 
 trait ExecutionInterceptorsProvider {
   def create: Seq[ExecutionInterceptor]
@@ -18,7 +20,11 @@ object ExecutionInterceptorsProvider {
       .createInstanceFor[ExecutionInterceptorsProvider](
         className,
         Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-      ).getOrElse(throw new ClassNotFoundException(className))
+      ) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new PluginException("Failed to initialize ExecutionInterceptorsProvider", Some(ex))
+    }
   }
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends ExecutionInterceptorsProvider {
@@ -27,9 +33,11 @@ object ExecutionInterceptorsProvider {
       val classNames = pluginConfig.clientConfig.v2ClientConfig.executionInterceptorClassNames
       classNames.map { className =>
         dynamicAccess
-          .createInstanceFor[ExecutionInterceptor](className, Seq(classOf[PluginConfig] -> pluginConfig)).getOrElse(
-            throw new ClassNotFoundException(className)
-          )
+          .createInstanceFor[ExecutionInterceptor](className, Seq(classOf[PluginConfig] -> pluginConfig)) match {
+          case Success(value) => value
+          case Failure(ex) =>
+            throw new PluginException("Failed to initialize ExecutionInterceptor", Some(ex))
+        }
       }
     }
   }

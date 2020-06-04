@@ -6,9 +6,11 @@ import java.text.DecimalFormat
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, PluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import net.ceedubs.ficus.Ficus._
 
 import scala.collection.immutable.Seq
+import scala.util.{ Failure, Success }
 
 case class PartitionKey(private val value: String) {
   def asString: String = value
@@ -37,7 +39,12 @@ object PartitionKeyResolverProvider {
           classOf[DynamicAccess]       -> dynamicAccess,
           classOf[JournalPluginConfig] -> journalPluginConfig
         )
-      ).getOrElse(throw new ClassNotFoundException(className))
+      ) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new PluginException("Failed to initialize PartitionKeyResolverProvider", Some(ex))
+    }
+
   }
 
   final class Default(dynamicAccess: DynamicAccess, journalPluginConfig: JournalPluginConfig)
@@ -51,7 +58,11 @@ object PartitionKeyResolverProvider {
         .createInstanceFor[PartitionKeyResolver](
           className,
           args
-        ).getOrElse(throw new ClassNotFoundException(className))
+        ) match {
+        case Success(value) => value
+        case Failure(ex) =>
+          throw new PluginException("Failed to initialize PartitionKeyResolver", Some(ex))
+      }
     }
 
   }

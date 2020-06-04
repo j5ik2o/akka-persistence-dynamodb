@@ -71,6 +71,7 @@ trait DynamoDBEmbeddedSpecSupport extends BeforeAndAfterAll with RandomPortSuppo
         isWaken = true
       } catch {
         case _: Exception =>
+          println("wait to create table...")
           Thread.sleep(waitIntervalForDynamoDBLocal.toMillis)
       }
     }

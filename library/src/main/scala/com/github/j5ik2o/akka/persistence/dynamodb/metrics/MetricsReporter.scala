@@ -2,10 +2,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 
 import scala.concurrent.duration.Duration
-
 import scala.collection.immutable._
+import scala.util.{ Failure, Success }
 
 trait MetricsReporter {
   def setDynamoDBClientPutItemDuration(duration: Duration): Unit
@@ -43,7 +44,11 @@ object MetricsReporterProvider {
       .createInstanceFor[MetricsReporterProvider](
         className,
         Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-      ).getOrElse(throw new ClassNotFoundException(className))
+      ) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new PluginException("Failed to initialize MetricsReporterProvider", Some(ex))
+    }
   }
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MetricsReporterProvider {
@@ -54,7 +59,11 @@ object MetricsReporterProvider {
           .createInstanceFor[MetricsReporter](
             className,
             Seq(classOf[PluginConfig] -> pluginConfig)
-          ).getOrElse(throw new ClassNotFoundException(className))
+          ) match {
+          case Success(value) => value
+          case Failure(ex) =>
+            throw new PluginException("Failed to initialize MetricsReporter", Some(ex))
+        }
       }
     }
 

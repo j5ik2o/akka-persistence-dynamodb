@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import akka.stream.OverflowStrategy
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
   PartitionKeyResolver,
   PartitionKeyResolverProvider,
@@ -136,7 +137,11 @@ object JournalPluginConfig extends LoggingSupport {
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.getOrElse[Config](dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat)
+        .fromConfig(config.getOrElse[Config](dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat),
+      journalRowDriverWrapperClassName = {
+        val className = config.getAs[String]("journal-row-driver-wrapper-class-name")
+        ClassCheckUtils.requireClass(classOf[JournalRowWriteDriver], className)
+      }
     )
     logger.debug("result = {}", result)
     result
@@ -184,7 +189,8 @@ case class JournalPluginConfig(
     softDeleted: Boolean,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
-    clientConfig: DynamoDBClientConfig
+    clientConfig: DynamoDBClientConfig,
+    journalRowDriverWrapperClassName: Option[String]
 ) extends JournalPluginBaseConfig {
   require(shardCount > 1)
   override val configRootPath: String = "j5ik2o.dynamo-db-journal"

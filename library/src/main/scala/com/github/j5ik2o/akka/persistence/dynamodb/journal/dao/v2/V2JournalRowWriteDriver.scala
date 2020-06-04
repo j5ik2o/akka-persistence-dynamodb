@@ -3,6 +3,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 import java.io.IOException
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{ Flow, GraphDSL, RestartFlow, Source, SourceUtils, Unzip, Zip }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
@@ -18,6 +19,7 @@ import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 
 final class V2JournalRowWriteDriver(
+    val system: ActorSystem,
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbSyncClient],
     val pluginConfig: JournalPluginConfig,
@@ -34,7 +36,8 @@ final class V2JournalRowWriteDriver(
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  private val readDriver = new V2JournalRowReadDriver(
+  private val readDriver: V2JournalRowReadDriver = new V2JournalRowReadDriver(
+    system,
     asyncClient,
     syncClient,
     pluginConfig,

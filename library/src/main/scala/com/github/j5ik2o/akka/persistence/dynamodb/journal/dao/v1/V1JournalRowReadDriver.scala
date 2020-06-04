@@ -3,6 +3,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 import java.io.IOException
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
@@ -19,6 +20,7 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowReadDriver(
+    val system: ActorSystem,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: JournalPluginBaseConfig,

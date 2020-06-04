@@ -4,6 +4,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, RestartFlow, Source, SourceUtils }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
@@ -19,6 +20,7 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowWriteDriver(
+    val system: ActorSystem,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: JournalPluginConfig,
@@ -35,6 +37,7 @@ final class V1JournalRowWriteDriver(
   private val logger = LoggerFactory.getLogger(getClass)
 
   private val readDriver = new V1JournalRowReadDriver(
+    system,
     asyncClient,
     syncClient,
     pluginConfig,

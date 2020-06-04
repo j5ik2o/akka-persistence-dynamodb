@@ -26,7 +26,9 @@ class DynamoDBJournalV2SyncSpec
         legacyJournalMode = DynamoDBJournalV2AsyncSpec.legacyJournalMode,
         dynamoDBPort = DynamoDBJournalV2AsyncSpec.dynamoDBPort,
         clientVersion = ClientVersion.V2,
-        clientType = ClientType.Sync
+        clientType = ClientType.Sync,
+        None,
+        None
       )
     )
     with ScalaFutures

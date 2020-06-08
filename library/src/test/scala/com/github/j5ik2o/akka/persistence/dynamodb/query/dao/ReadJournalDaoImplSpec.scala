@@ -93,6 +93,7 @@ class ReadJournalDaoImplSpec
     )
 
   val journalRowReadDriver = new V2JournalRowReadDriver(
+    system,
     Some(dynamoDbAsyncClient),
     None,
     journalPluginConfig,
@@ -117,6 +118,7 @@ class ReadJournalDaoImplSpec
   val sortKeyResolver      = new SortKeyResolver.Default(journalPluginConfig)
 
   val journalRowWriteDriver = new V2JournalRowWriteDriver(
+    system,
     Some(dynamoDbAsyncClient),
     None,
     journalPluginConfig,

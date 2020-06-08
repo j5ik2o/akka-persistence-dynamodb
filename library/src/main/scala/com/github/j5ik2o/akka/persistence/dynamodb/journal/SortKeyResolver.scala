@@ -2,9 +2,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import net.ceedubs.ficus.Ficus._
 
 import scala.collection.immutable.Seq
+import scala.util.{ Failure, Success }
 
 case class SortKey(value: String) {
   def asString: String = value
@@ -31,9 +33,11 @@ object SortKeyResolverProvider {
           classOf[DynamicAccess]       -> dynamicAccess,
           classOf[JournalPluginConfig] -> journalPluginConfig
         )
-      ).getOrElse(
-        throw new ClassNotFoundException(className)
-      )
+      ) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new PluginException("Failed to initialize SortKeyResolverProvider", Some(ex))
+    }
   }
 
   final class Default(
@@ -49,7 +53,11 @@ object SortKeyResolverProvider {
         .createInstanceFor[SortKeyResolver](
           className,
           args
-        ).getOrElse(throw new ClassNotFoundException(className))
+        ) match {
+        case Success(value) => value
+        case Failure(ex) =>
+          throw new PluginException("Failed to initialize SortKeyResolver", Some(ex))
+      }
     }
 
   }

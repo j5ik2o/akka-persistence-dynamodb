@@ -29,6 +29,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriver
@@ -56,7 +57,8 @@ object DynamoDBJournal {
 
   final case class WriteFinished(pid: String, f: Future[_])
 
-  private def createV1JournalRowWriteDriver(
+  def createV1JournalRowWriteDriver(
+      system: ActorSystem,
       dynamicAccess: DynamicAccess,
       journalPluginConfig: JournalPluginConfig,
       partitionKeyResolver: PartitionKeyResolver,
@@ -73,6 +75,7 @@ object DynamoDBJournal {
         (None, Some(client))
     }
     new V1JournalRowWriteDriver(
+      system,
       maybeAsyncClient,
       maybeSyncClient,
       journalPluginConfig,
@@ -82,7 +85,8 @@ object DynamoDBJournal {
     )
   }
 
-  private def createV2JournalRowWriteDriver(
+  def createV2JournalRowWriteDriver(
+      system: ActorSystem,
       dynamicAccess: DynamicAccess,
       journalPluginConfig: JournalPluginConfig,
       partitionKeyResolver: PartitionKeyResolver,
@@ -98,6 +102,7 @@ object DynamoDBJournal {
         (None, Some(client))
     }
     new V2JournalRowWriteDriver(
+      system,
       maybeAsyncClient,
       maybeSyncClient,
       journalPluginConfig,
@@ -107,7 +112,8 @@ object DynamoDBJournal {
     )
   }
 
-  private def createV1DaxJournalRowWriteDriver(
+  def createV1DaxJournalRowWriteDriver(
+      system: ActorSystem,
       journalPluginConfig: JournalPluginConfig,
       partitionKeyResolver: PartitionKeyResolver,
       sortKeyResolver: SortKeyResolver,
@@ -123,6 +129,7 @@ object DynamoDBJournal {
         (None, Some(client))
     }
     new V1JournalRowWriteDriver(
+      system,
       maybeAsyncClient,
       maybeSyncClient,
       journalPluginConfig,
@@ -176,6 +183,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     journalPluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         createV2JournalRowWriteDriver(
+          system,
           dynamicAccess,
           journalPluginConfig,
           partitionKeyResolver,
@@ -184,6 +192,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         )(v1 => javaSyncClientV2 = v1, v2 => javaAsyncClientV2 = v2)
       case ClientVersion.V1 =>
         createV1JournalRowWriteDriver(
+          system,
           dynamicAccess,
           journalPluginConfig,
           partitionKeyResolver,
@@ -191,16 +200,44 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           metricsReporter
         )
       case ClientVersion.V1Dax =>
-        createV1DaxJournalRowWriteDriver(journalPluginConfig, partitionKeyResolver, sortKeyResolver, metricsReporter)
+        createV1DaxJournalRowWriteDriver(
+          system,
+          journalPluginConfig,
+          partitionKeyResolver,
+          sortKeyResolver,
+          metricsReporter
+        )
     }
   }
 
-  protected val journalDao: JournalDaoWithUpdates = new WriteJournalDaoImpl(
-    journalPluginConfig,
-    journalRowWriteDriver,
-    serializer,
-    metricsReporter
-  )
+  protected val journalDao: JournalDaoWithUpdates =
+    journalPluginConfig.journalRowDriverWrapperClassName match {
+      case Some(className) =>
+        val wrapper = dynamicAccess
+          .createInstanceFor[JournalRowWriteDriver](
+            className,
+            Seq(
+              classOf[JournalPluginConfig]   -> journalPluginConfig,
+              classOf[JournalRowWriteDriver] -> journalRowWriteDriver
+            )
+          ) match {
+          case Success(value) => value
+          case Failure(ex)    => throw new PluginException("Failed to initialize JournalRowDriverWrapper", Some(ex))
+        }
+        new WriteJournalDaoImpl(
+          journalPluginConfig,
+          wrapper,
+          serializer,
+          metricsReporter
+        )
+      case None =>
+        new WriteJournalDaoImpl(
+          journalPluginConfig,
+          journalRowWriteDriver,
+          serializer,
+          metricsReporter
+        )
+    }
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 

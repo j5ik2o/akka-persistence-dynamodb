@@ -155,6 +155,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         }
         (
           new V2JournalRowReadDriver(
+            system,
             maybeAsyncClient,
             maybeSyncClient,
             queryPluginConfig,
@@ -177,6 +178,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         }
         (
           new V1JournalRowReadDriver(
+            system,
             maybeAsyncClient,
             maybeSyncClient,
             queryPluginConfig,
@@ -196,6 +198,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         }
         (
           new V1JournalRowReadDriver(
+            system,
             maybeAsyncClient,
             maybeSyncClient,
             queryPluginConfig,

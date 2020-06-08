@@ -15,6 +15,8 @@ object ConfigHelper {
       kafkaPort: Option[Int]
   ): Config = {
     val configString = s"""
+       |akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
+       |akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
        |j5ik2o.dynamo-db-journal {
        |  legacy-config-format = ${legacyConfigFormat}
        |  shard-count = 1024
@@ -119,9 +121,11 @@ object ConfigHelper {
        |}
            """.stripMargin
     println(configString)
-    ConfigFactory
+    val config = ConfigFactory
       .parseString(
         configString
       ).withFallback(ConfigFactory.load())
+    println(config.toString)
+    config
   }
 }

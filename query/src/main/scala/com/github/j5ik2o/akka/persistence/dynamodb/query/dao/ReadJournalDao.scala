@@ -19,7 +19,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 import akka.NotUsed
 import akka.persistence.PersistentRepr
 import akka.stream.scaladsl.Source
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
 import scala.collection.immutable.Set
 import scala.util.Try

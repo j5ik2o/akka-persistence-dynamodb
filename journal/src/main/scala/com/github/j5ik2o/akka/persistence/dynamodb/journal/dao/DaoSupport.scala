@@ -10,8 +10,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
   FlowControl,
   Stop
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
 
 import scala.concurrent.duration.FiniteDuration

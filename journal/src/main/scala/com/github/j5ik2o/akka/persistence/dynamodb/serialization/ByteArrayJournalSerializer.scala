@@ -18,7 +18,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
 import scala.util.{ Failure, Success }
 

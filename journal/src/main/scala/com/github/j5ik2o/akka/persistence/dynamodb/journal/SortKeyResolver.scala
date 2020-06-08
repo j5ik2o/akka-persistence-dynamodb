@@ -3,6 +3,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import net.ceedubs.ficus.Ficus._
 
 import scala.collection.immutable.Seq

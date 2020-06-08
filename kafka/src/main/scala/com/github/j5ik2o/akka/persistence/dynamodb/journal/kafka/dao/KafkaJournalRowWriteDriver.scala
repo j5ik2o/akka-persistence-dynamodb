@@ -21,12 +21,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka.{
   KafkaWriteAdaptorConfig,
   PartitionKeyResolverType
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
-  JournalRow,
-  PersistenceId,
-  SequenceNumber,
-  ToPersistenceIdOps
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, ToPersistenceIdOps }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.Header
 import org.apache.kafka.common.header.internals.RecordHeader

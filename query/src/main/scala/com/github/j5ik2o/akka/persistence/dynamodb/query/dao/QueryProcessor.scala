@@ -3,7 +3,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.{ Source, SourceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 
 trait QueryProcessor {
   def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed]

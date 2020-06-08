@@ -1,5 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+
 case class JournalRow(
     persistenceId: PersistenceId,
     sequenceNumber: SequenceNumber,

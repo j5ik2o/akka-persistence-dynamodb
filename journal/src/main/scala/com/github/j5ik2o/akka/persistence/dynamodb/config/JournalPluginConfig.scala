@@ -149,21 +149,6 @@ object JournalPluginConfig extends LoggingSupport {
 
 }
 
-trait PluginConfig {
-  val configRootPath: String
-  val tableName: String
-  val metricsReporterProviderClassName: String
-  val metricsReporterClassName: Option[String]
-  val clientConfig: DynamoDBClientConfig
-}
-
-trait JournalPluginBaseConfig extends PluginConfig {
-  val columnsDefConfig: JournalColumnsDefConfig
-  val getJournalRowsIndexName: String
-  val queryBatchSize: Int
-  val readBackoffConfig: BackoffConfig
-}
-
 case class JournalPluginConfig(
     legacyConfigFormat: Boolean,
     sourceConfig: Config,

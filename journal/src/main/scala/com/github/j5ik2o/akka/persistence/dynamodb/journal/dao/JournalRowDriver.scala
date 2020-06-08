@@ -4,7 +4,8 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Attributes
 import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
 trait JournalRowDriver {
 

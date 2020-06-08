@@ -1,5 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
+import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
+
 final class PersistenceIdOps(self: PersistenceId, separator: String) {
   private def value                       = self.asString
   def hasHyphen: Boolean                  = value.contains(separator)

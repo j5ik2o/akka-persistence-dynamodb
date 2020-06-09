@@ -18,7 +18,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 - Java: `1.8+`
 - Scala: `2.11.x` or `2.12.x` or `2.13.x` 
 - Akka: `2.5.x`(Scala 2.11 only), `2.6.x`(Scala 2.12, 2.13)
-- AWS-SDK: `2.4.x`
+- AWS-SDK: `1.x`，`2.x`
 
 ## Features
 
@@ -63,9 +63,9 @@ j5ik2o.dynamo-db-journal {
 
 By the way, `akka/akka-persistence-dynamodb` maybe has a heavy maintenance cost because it provides complicated sharding.
 
-### Non-blocking
+### AWS SDK
 
-- Supports non-blocking I/O by [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2)
+- The AWS SDK is supported for both V1 and V2(non-blocking I/O). Support to DAX enabled by using V1
 - The other logic implemented by akka-actor, akka-stream also non-blocking and async.
 
 ## Installation

@@ -16,10 +16,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
-import software.amazon.awssdk.services.dynamodb.{
-  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
-  DynamoDbClient => JavaDynamoDbSyncClient
-}
 import akka.NotUsed
 import akka.actor.{ ExtendedActorSystem, Scheduler }
 import akka.persistence.query.scaladsl._
@@ -48,13 +44,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  ClientUtils,
-  V1DaxClientBuilderUtils,
-  V1DynamoDBClientBuilderUtils,
-  V2DynamoDbClientBuilderUtils
-}
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.{
@@ -104,11 +94,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with EventsByPersistenceIdQuery
     with CurrentEventsByTagQuery
     with EventsByTagQuery {
-  private val logger                = LoggerFactory.getLogger(getClass)
-  implicit val ec: ExecutionContext = system.dispatcher
-  val dynamicAccess                 = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
-  implicit val mat                  = ActorMaterializer()
-  implicit val _log                 = system.log
+  private val logger                        = LoggerFactory.getLogger(getClass)
+  private implicit val ec: ExecutionContext = system.dispatcher
+  private val dynamicAccess                 = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+  private implicit val mat                  = ActorMaterializer()
+  private implicit val _log                 = system.log
   import DynamoDBReadJournal._
 
   private val queryPluginConfig: QueryPluginConfig = QueryPluginConfig.fromConfig(config)

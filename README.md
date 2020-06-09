@@ -33,7 +33,9 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 
 ### DynamoDB Support
 
-Supports [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2).
+- [aws-sdk-java-v2](https://github.com/aws/aws-sdk-java-v2).
+- [aws-sdk-java-v1](https://github.com/aws/aws-sdk-java).
+- [Amazon DynamoDB Accelerator(DAX) Client](https://aws.amazon.com/jp/dynamodb/dax/)
 
 ### Write Sharding
 

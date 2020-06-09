@@ -92,11 +92,11 @@ lazy val baseSettings = Seq(
     )
 )
 
-lazy val core = (project in file("core"))
+lazy val base = (project in file("base"))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
-    name := "akka-persistence-dynamodb-core",
+    name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
         "org.slf4j"              % "slf4j-api"                    % slf4jVersion,
         "com.iheart"             %% "ficus"                       % ficusVersion,
@@ -195,7 +195,7 @@ lazy val journal = (project in file("journal"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(core % "test->test;compile->compile", snapshot % "test->compile")
+  ).dependsOn(base % "test->test;compile->compile", snapshot % "test->compile")
 
 lazy val snapshot = (project in file("snapshot"))
   .settings(baseSettings)
@@ -242,7 +242,7 @@ lazy val snapshot = (project in file("snapshot"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(core % "test->test;compile->compile")
+  ).dependsOn(base % "test->test;compile->compile")
 
 lazy val query = (project in file("query"))
   .settings(baseSettings)
@@ -291,11 +291,11 @@ lazy val query = (project in file("query"))
       )
   ).dependsOn(journal % "test->test;compile->compile", snapshot % "test->compile")
 
-val `kafka` = (project in file("kafka"))
+val `kafka-write-adaptor` = (project in file("kafka"))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
-    name := "akka-persistence-dynamodb-kafka",
+    name := "akka-persistence-dynamodb-kafka-write-adaptor",
     libraryDependencies ++= Seq(
         "com.typesafe.akka"       %% "akka-stream-kafka" % alpakkaKafkaVersion,
         "ch.qos.logback"          % "logback-classic"    % "1.2.3" % Test,
@@ -341,4 +341,4 @@ lazy val root = (project in file("."))
   .settings(
     skip in publish := true
   )
-  .aggregate(journal, snapshot, query, kafka)
+  .aggregate(journal, snapshot, query, `kafka-write-adaptor`)

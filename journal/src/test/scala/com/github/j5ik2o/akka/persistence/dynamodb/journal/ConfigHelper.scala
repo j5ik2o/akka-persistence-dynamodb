@@ -1,6 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigRenderUtils
 import com.typesafe.config.{ Config, ConfigFactory }
 
 object ConfigHelper {
@@ -120,12 +121,11 @@ object ConfigHelper {
        |  }
        |}
            """.stripMargin
-    println(configString)
     val config = ConfigFactory
       .parseString(
         configString
       ).withFallback(ConfigFactory.load())
-    println(config.toString)
+    println(ConfigRenderUtils.renderConfigToString(config))
     config
   }
 }

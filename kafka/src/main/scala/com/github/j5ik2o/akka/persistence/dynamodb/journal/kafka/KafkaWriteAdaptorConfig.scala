@@ -1,6 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka
 
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.PersistenceId
+import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 

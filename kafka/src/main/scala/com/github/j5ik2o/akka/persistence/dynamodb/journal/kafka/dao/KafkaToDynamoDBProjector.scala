@@ -1,6 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka.dao
 
-import akka.actor.{ Actor, ActorSystem, ExtendedActorSystem }
+import akka.actor.{ ActorSystem, ExtendedActorSystem }
 import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{ Committer, Consumer }
@@ -24,6 +24,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka.dao.KafkaToDyna
   Stopped
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.typesafe.config.Config
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, StringDeserializer }
 import software.amazon.awssdk.services.dynamodb.{
@@ -44,7 +45,7 @@ object KafkaToDynamoDBProjector {
 
 }
 
-class KafkaToDynamoDBProjector(system: ActorSystem, journalPluginConfig: JournalPluginConfig) extends Actor {
+class KafkaToDynamoDBProjector(system: ActorSystem, journalPluginConfig: JournalPluginConfig) {
   implicit val s = system
   import system.dispatcher
   implicit val _log = system.log
@@ -187,13 +188,13 @@ class KafkaToDynamoDBProjector(system: ActorSystem, journalPluginConfig: Journal
       .run()
   }
 
-  override def receive: Receive = {
-    case Start(topics) =>
-      start(topics)
-      sender() ! Started()
-    case Stop() =>
-      stop()
-      sender() ! Stopped()
-  }
+//  override def receive: Receive = {
+//    case Start(topics) =>
+//      start(topics)
+//      sender() ! Started()
+//    case Stop() =>
+//      stop()
+//      sender() ! Stopped()
+//  }
 
 }

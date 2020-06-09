@@ -2,7 +2,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PersistenceId, SequenceNumber, ToPersistenceIdOps }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.ToPersistenceIdOps
+import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 
 import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }

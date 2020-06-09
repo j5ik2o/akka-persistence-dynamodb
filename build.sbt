@@ -23,7 +23,7 @@ val reactiveStreamsVersion = "1.0.2"
 val nettyVersion           = "4.1.33.Final"
 
 val kafkaVersion        = "2.4.1.1"
-val alpakkaKafkaVersion = "2.0.2"
+val alpakkaKafkaVersion = "2.0.3"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>

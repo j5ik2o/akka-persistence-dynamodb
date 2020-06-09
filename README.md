@@ -80,23 +80,8 @@ resolvers += "Sonatype OSS Release Repository" at "https://oss.sonatype.org/cont
 val version = "..."
 
 libraryDependencies += Seq(
-  "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version
-)
-```
-
-If you want to use the module for Akka2.5 in Scala 2.13 or 2.12, you can do the following
-
-```scala
-val akka25Version = "2.5.30"
-
-libraryDependencies += Seq(
-  "com.github.j5ik2o" %% "akka-persistence-dynamodb" % version excludeAll(
-    ExclusionRule(organization = "com.typesafe.akka"),
-  ),
-  "com.typesafe.akka"      %% "akka-slf4j"              % akka25Version,
-  "com.typesafe.akka"      %% "akka-stream"             % akka25Version,
-  "com.typesafe.akka"      %% "akka-persistence"        % akka25Version,
-  "com.typesafe.akka"      %% "akka-persistence-query"  % akka25Version
+  "com.github.j5ik2o" %% "akka-persistence-dynamodb-journal" % version,
+  "com.github.j5ik2o" %% "akka-persistence-dynamodb-snapshot" % version
 )
 ```
 

@@ -34,7 +34,7 @@ abstract class CurrentEventsByTagTest4(config: Config) extends QueryJournalSpec(
 
   it should "persist and find a tagged event with one tag" in
   withTestActors() { (actor1, actor2, actor3) =>
-    (actor1 ? withTags(1, "one2")).toTry should be a 'success
+    (actor1 ? withTags(1, "one2")).toTry should be a Symbol("success")
 
     withClue("query should find the event by tag") {
       withCurrentEventsByTag()("one2", 0) { tp =>
@@ -81,7 +81,7 @@ class DynamoDBCurrentEventsByTagTest4
              |  }
              |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

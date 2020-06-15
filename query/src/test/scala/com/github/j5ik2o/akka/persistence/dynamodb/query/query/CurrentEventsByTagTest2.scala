@@ -37,7 +37,7 @@ abstract class CurrentEventsByTagTest2(config: Config) extends QueryJournalSpec(
         _ <- sendMessage(withTags("a", "number"), actor1)
         _ <- sendMessage(withTags("b", "number"), actor2)
         _ <- sendMessage(withTags("c", "number"), actor3)
-      } yield ()).toTry should be a 'success
+      } yield ()).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("number", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -96,7 +96,7 @@ class DynamoDBCurrentEventsByTagTest2
              |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest2.dynamoDBPort}/"
              |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

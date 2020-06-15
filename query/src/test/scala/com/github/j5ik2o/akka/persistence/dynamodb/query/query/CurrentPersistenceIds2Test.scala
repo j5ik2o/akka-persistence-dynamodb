@@ -35,7 +35,7 @@ abstract class CurrentPersistenceIds2Test(config: Config) extends QueryJournalSp
 
   it should "find events for actors" in
   withTestActors() { (actor1, actor2, actor3) =>
-    Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a 'success
+    Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a Symbol("success")
 
     withCurrentEventsByPersistenceId()("my-1", 1, 1) { tp =>
       tp.request(Int.MaxValue)
@@ -91,7 +91,7 @@ class DynamoDBCurrentPersistenceIds2Test
            |  }
            |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

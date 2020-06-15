@@ -38,9 +38,9 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
         sendMessage("a", actor1, actor2, actor3),
         sendMessage("b", actor1, actor2, actor3),
         sendMessage("c", actor1, actor2, actor3)
-      ).toTry should be a 'success
+      ).toTry should be a Symbol("success")
 
-      deleteEvents(actor1, 0).toTry should be a 'success
+      deleteEvents(actor1, 0).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -50,7 +50,7 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
           .expectComplete()
       }
 
-      deleteEvents(actor1, 1).toTry should be a 'success
+      deleteEvents(actor1, 1).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -59,7 +59,7 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
           .expectComplete()
       }
 
-      deleteEvents(actor1, 2).toTry should be a 'success
+      deleteEvents(actor1, 2).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -67,7 +67,7 @@ abstract class CurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest(config
           .expectComplete()
       }
 
-      deleteEvents(actor1, 3).toTry should be a 'success
+      deleteEvents(actor1, 3).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -104,7 +104,7 @@ class DynamoDBCurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest
            |  }
            |}
       """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

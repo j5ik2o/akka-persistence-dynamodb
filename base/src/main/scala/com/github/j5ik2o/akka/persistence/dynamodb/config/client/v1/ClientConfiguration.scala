@@ -48,7 +48,7 @@ object ClientConfiguration {
   val dnsResolverProviderClassNameKey          = "dns-resolver-provider-class-name"
   val dnsResolverClassNameKey                  = "dns-resolver-class-name"
   val secureRandomProviderClassNameKey         = "secure-random-provider-class-name"
-  val useSecureRandomKey                       = "secure-random-default"
+  val useSecureRandomKey                       = "use-secure-random"
   val useExpectContinueKey                     = "use-expect-continue"
   val cacheResponseMetadataKey                 = "cache-response-metadata"
   val connectionTtlKey                         = "connection-ttl"

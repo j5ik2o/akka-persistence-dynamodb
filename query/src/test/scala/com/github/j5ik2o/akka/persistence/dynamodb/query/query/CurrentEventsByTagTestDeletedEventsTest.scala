@@ -32,21 +32,11 @@ import scala.concurrent.duration._
 abstract class CurrentEventsByTagTestDeletedEventsTest(config: Config) extends QueryJournalSpec(config) {
   it should "show deleted events in event stream" in {
     withTestActors() { (actor1, _, _) =>
-      sendMessage(withTags("a", "one"), actor1).toTry should be a 'success
-      sendMessage(withTags("b", "one"), actor1).toTry should be a 'success
-      sendMessage(withTags("c", "one"), actor1).toTry should be a 'success
+      sendMessage(withTags("a", "one"), actor1).toTry should be a Symbol("success")
+      sendMessage(withTags("b", "one"), actor1).toTry should be a Symbol("success")
+      sendMessage(withTags("c", "one"), actor1).toTry should be a Symbol("success")
 
-      deleteEvents(actor1, 0).toTry should be a 'success
-
-      withCurrentEventsByTag()("one", 0) { tp =>
-        tp.request(Int.MaxValue)
-          .expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
-          .expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "b-2", 0L))
-          .expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "c-3", 0L))
-          .expectComplete()
-      }
-
-      deleteEvents(actor1, 1).toTry should be a 'success
+      deleteEvents(actor1, 0).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("one", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -56,7 +46,7 @@ abstract class CurrentEventsByTagTestDeletedEventsTest(config: Config) extends Q
           .expectComplete()
       }
 
-      deleteEvents(actor1, 2).toTry should be a 'success
+      deleteEvents(actor1, 1).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("one", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -66,7 +56,17 @@ abstract class CurrentEventsByTagTestDeletedEventsTest(config: Config) extends Q
           .expectComplete()
       }
 
-      deleteEvents(actor1, 3).toTry should be a 'success
+      deleteEvents(actor1, 2).toTry should be a Symbol("success")
+
+      withCurrentEventsByTag()("one", 0) { tp =>
+        tp.request(Int.MaxValue)
+          .expectNext(new EventEnvelope(Sequence(1), "my-1", 1, "a-1", 0L))
+          .expectNext(new EventEnvelope(Sequence(2), "my-1", 2, "b-2", 0L))
+          .expectNext(new EventEnvelope(Sequence(3), "my-1", 3, "c-3", 0L))
+          .expectComplete()
+      }
+
+      deleteEvents(actor1, 3).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("one", 0) { tp =>
         tp.request(Int.MaxValue)
@@ -106,7 +106,7 @@ class DynamoDBCurrentEventsByTagTestDeletedEventsTest
            |  }
            |}
          """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

@@ -47,7 +47,7 @@ abstract class CurrentEventsByTagTest5(config: Config) extends QueryJournalSpec(
 
         _ <- actor1 ? "a"
         _ <- actor1 ? "a"
-      } yield ()).toTry should be a 'success
+      } yield ()).toTry should be a Symbol("success")
     }
 
     withCurrentEventsByTag()("one", NoOffset) { tp =>
@@ -193,7 +193,7 @@ class DynamoDBCurrentEventsByTagTest5
          |  }
          |}
          """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

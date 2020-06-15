@@ -24,6 +24,7 @@ class DynamoDBJournalV1AsyncSpec
     extends JournalSpec(
       ConfigHelper
         .config(
+          "journal-reference",
           legacyConfigFormat = false,
           legacyJournalMode = DynamoDBJournalV1AsyncSpec.legacyJournalMode,
           dynamoDBPort = DynamoDBJournalV1AsyncSpec.dynamoDBPort,
@@ -53,8 +54,14 @@ class DynamoDBJournalV1AsyncSpec
 
   override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
-  before { createTable() }
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    createTable()
+  }
 
-  after { deleteTable() }
+  override def afterAll(): Unit = {
+    deleteTable()
+    super.afterAll()
+  }
 
 }

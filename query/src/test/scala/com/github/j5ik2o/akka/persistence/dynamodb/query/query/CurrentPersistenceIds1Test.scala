@@ -41,7 +41,7 @@ abstract class CurrentPersistenceIds1Test(config: Config) extends QueryJournalSp
 
   it should "find events from an offset" in {
     withTestActors() { (actor1, actor2, actor3) =>
-      Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a 'success
+      Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 2, 3) { tp =>
         tp.request(Int.MaxValue)
@@ -80,7 +80,7 @@ class DynamoDBCurrentPersistenceIds1Test
            |  }
            |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

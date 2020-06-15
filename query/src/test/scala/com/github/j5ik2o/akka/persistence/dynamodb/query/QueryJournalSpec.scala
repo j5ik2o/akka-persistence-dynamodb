@@ -103,7 +103,7 @@ abstract class QueryJournalSpec(config: Config)
     val actor3 = setupEmpty(3)
     try f(actor1, actor2, actor3)
     finally {
-      //      clearEventStore(actor1, actor2, actor3).toTry should be a 'success
+      //      clearEventStore(actor1, actor2, actor3).toTry should be a Symbol("success")
       terminate(actor1, actor2, actor3)
     }
   }

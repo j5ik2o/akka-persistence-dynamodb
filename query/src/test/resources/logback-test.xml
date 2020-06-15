@@ -10,12 +10,12 @@
         </encoder>
     </appender>
 
-    <logger name="com.github.j5ik2o" level="DEBUG" />
+    <logger name="com.github.j5ik2o" level="INFO" />
     <logger name="com.almworks.sqlite4java" level="OFF"/>
     <logger name="software.amazon" level="ERROR" />
     <logger name="io.netty" level="ERROR" />
 
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="console"/>
     </root>
 

@@ -33,7 +33,7 @@ abstract class CurrentEventsByPersistenceId2Test(config: Config) extends QueryJo
 
   it should "find events from an offset" in {
     withTestActors() { (actor1, actor2, actor3) =>
-      List.fill(7)(sendMessage("a", actor1)).toTry should be a 'success
+      List.fill(7)(sendMessage("a", actor1)).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 0, 0) { tp =>
         tp.request(Int.MaxValue)

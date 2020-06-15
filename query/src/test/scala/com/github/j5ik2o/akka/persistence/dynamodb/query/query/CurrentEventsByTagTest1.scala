@@ -36,7 +36,7 @@ abstract class CurrentEventsByTagTest1(config: Config) extends QueryJournalSpec(
         sendMessage(withTags("a", "one"), actor1),
         sendMessage(withTags("a", "two"), actor2),
         sendMessage(withTags("a", "three"), actor3)
-      ).toTry should be a 'success
+      ).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("unknown", 0) { tp =>
         tp.request(Int.MaxValue)

@@ -37,7 +37,7 @@ abstract class CurrentEventsByTagTest2(config: Config) extends QueryJournalSpec(
         _ <- sendMessage(withTags("a", "number"), actor1)
         _ <- sendMessage(withTags("b", "number"), actor2)
         _ <- sendMessage(withTags("c", "number"), actor3)
-      } yield ()).toTry should be a 'success
+      } yield ()).toTry should be a Symbol("success")
 
       withCurrentEventsByTag()("number", 0) { tp =>
         tp.request(Int.MaxValue)

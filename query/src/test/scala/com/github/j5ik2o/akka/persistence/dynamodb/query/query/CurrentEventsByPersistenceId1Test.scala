@@ -39,7 +39,7 @@ abstract class CurrentEventsByPersistenceId1Test(config: Config) extends QueryJo
 
   it should "find events for actors" in
   withTestActors() { (actor1, _, _) =>
-    List.fill(3)(sendMessage("a", actor1)).toTry should be a 'success
+    List.fill(3)(sendMessage("a", actor1)).toTry should be a Symbol("success")
 
     withCurrentEventsByPersistenceId()("my-1", 0, 1) { tp =>
       tp.request(Int.MaxValue)

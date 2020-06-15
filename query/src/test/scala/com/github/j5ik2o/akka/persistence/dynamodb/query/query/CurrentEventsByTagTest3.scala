@@ -38,7 +38,7 @@ abstract class CurrentEventsByTagTest3(config: Config) extends QueryJournalSpec(
         _ <- actor1 ? withTags("a", "number2")
         _ <- actor2 ? withTags("b", "number2")
         _ <- actor3 ? withTags("c", "number2")
-      } yield ()).toTry should be a 'success
+      } yield ()).toTry should be a Symbol("success")
 
       eventually {
         countJournal shouldBe 3

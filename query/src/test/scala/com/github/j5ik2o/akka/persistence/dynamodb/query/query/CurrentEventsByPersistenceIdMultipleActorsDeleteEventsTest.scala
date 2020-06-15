@@ -104,7 +104,7 @@ class DynamoDBCurrentEventsByPersistenceIdMultipleActorsDeleteEventsTest
            |  }
            |}
       """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

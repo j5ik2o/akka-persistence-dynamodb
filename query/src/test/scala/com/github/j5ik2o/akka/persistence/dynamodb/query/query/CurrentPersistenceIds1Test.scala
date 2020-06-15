@@ -80,7 +80,7 @@ class DynamoDBCurrentPersistenceIds1Test
            |  }
            |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

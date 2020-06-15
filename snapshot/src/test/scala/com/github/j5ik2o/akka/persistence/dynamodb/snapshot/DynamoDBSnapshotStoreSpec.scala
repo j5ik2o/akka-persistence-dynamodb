@@ -49,7 +49,7 @@ class DynamoDBSnapshotStoreSpec
              |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
              |}
          """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("snapshot-reference"))
     )
     with ScalaFutures
     with DynamoDBSpecSupport {

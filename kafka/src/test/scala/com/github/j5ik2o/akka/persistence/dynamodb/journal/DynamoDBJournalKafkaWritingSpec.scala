@@ -9,7 +9,7 @@ import akka.persistence.scalatest.{ MayVerb, OptionalTests }
 import akka.testkit.TestProbe
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.ConfigHelper
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka.ConfigHelper
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.kafka.dao.{
   KafkaJournalRowWriteDriver,
   KafkaToDynamoDBProjector
@@ -34,6 +34,7 @@ object DynamoDBJournalKafkaWritingSpec {
 class DynamoDBJournalKafkaWritingSpec
     extends PluginSpec(
       ConfigHelper.config(
+        "kafka-reference",
         legacyConfigFormat = false,
         legacyJournalMode = DynamoDBJournalKafkaWritingSpec.legacyJournalMode,
         dynamoDBPort = DynamoDBJournalKafkaWritingSpec.dynamoDBPort,

@@ -39,7 +39,7 @@ class DynamoDBJournalPerfSpec
         |}
         |
         """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("journal-reference"))
     )
     with BeforeAndAfterAll
     with ScalaFutures

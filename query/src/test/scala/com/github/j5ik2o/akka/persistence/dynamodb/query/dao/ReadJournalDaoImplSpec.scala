@@ -46,7 +46,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 import scala.concurrent.duration._
 
 class ReadJournalDaoImplSpec
-    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load()))
+    extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load("query-reference")))
     with FreeSpecLike
     with Matchers
     with ScalaFutures

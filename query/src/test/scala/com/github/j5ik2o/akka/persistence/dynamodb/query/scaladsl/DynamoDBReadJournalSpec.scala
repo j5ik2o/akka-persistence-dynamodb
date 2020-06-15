@@ -76,7 +76,7 @@ class DynamoDBReadJournalSpec
              |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
              |}
              """.stripMargin
-          ).withFallback(ConfigFactory.load())
+          ).withFallback(ConfigFactory.load("query-reference"))
       )
     )
     with FreeSpecLike

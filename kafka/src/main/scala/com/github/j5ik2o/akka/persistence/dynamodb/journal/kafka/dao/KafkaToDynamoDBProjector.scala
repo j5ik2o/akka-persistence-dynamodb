@@ -157,27 +157,11 @@ class KafkaToDynamoDBProjector(system: ActorSystem, journalPluginConfig: Journal
     control = Consumer
       .committablePartitionedSource(consumerSettings, Subscriptions.topics(topics: _*))
       .log("kafka source")
-      .mapAsyncUnordered(parallelism) {
-        case (topicPartition, source) =>
-          //system.log.debug(s">>> topicPartition = $topicPartition, source = $source")
-          source
-          //.log("sub source")
-            .via(projectionFlow)
-            //.log("projectionFlow")
-            .via(Committer.flow(committerSettings))
-            //.log("committerFlow")
-            .addAttributes(
-              Attributes.logLevels(
-                onElement = Attributes.LogLevels.Info,
-                onFinish = Attributes.LogLevels.Info,
-                onFailure = Attributes.LogLevels.Error
-              )
-            )
-            .runWith(Sink.ignore)
-      }
-      //.log("mapAsyncUnordered")
+      .flatMapMerge(parallelism, _._2)
+      .via(projectionFlow)
+      .via(Committer.flow(committerSettings))
       .toMat(Sink.ignore)(Keep.both)
-      .mapMaterializedValue(DrainingControl.apply)
+      .mapMaterializedValue(DrainingControl(_))
       .addAttributes(
         Attributes.logLevels(
           onElement = Attributes.LogLevels.Info,

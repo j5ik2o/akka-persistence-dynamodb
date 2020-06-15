@@ -69,7 +69,7 @@ class DynamoDBCurrentEventsByTagTest1
            |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTest1.dynamoDBPort}/"
            |}
            """.stripMargin
-        ).withFallback(ConfigFactory.load())
+        ).withFallback(ConfigFactory.load("query-reference"))
     )
     with DynamoDBSpecSupport {
 

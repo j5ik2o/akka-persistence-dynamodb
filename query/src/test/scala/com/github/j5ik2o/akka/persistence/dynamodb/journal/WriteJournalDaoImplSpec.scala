@@ -34,7 +34,7 @@ import software.amazon.awssdk.services.dynamodb.{
 import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
-    extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load()))
+    extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load("query-reference")))
     with FreeSpecLike
     with Matchers
     with ScalaFutures

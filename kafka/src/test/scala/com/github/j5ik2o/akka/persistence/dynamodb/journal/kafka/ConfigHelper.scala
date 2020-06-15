@@ -126,7 +126,7 @@ object ConfigHelper {
       .parseString(
         configString
       ).withFallback(ConfigFactory.load(defaultResource))
-    println(ConfigRenderUtils.renderConfigToString(config))
+    // println(ConfigRenderUtils.renderConfigToString(config))
     config
   }
 }

@@ -105,7 +105,7 @@ trait DynamoDBSpecSupport
       )
       .build()
     val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
-    println("listTablesResult = " + listTablesResult)
+    // println("listTablesResult = " + listTablesResult)
     if (!listTablesResult.tableNames.asScala.contains(snapshotTableName)) {
       val createResponse = dynamoDbAsyncClient.createTable(createRequest).futureValue
       createResponse.sdkHttpResponse().isSuccessful shouldBe true
@@ -191,7 +191,7 @@ trait DynamoDBSpecSupport
       )
       .build()
     val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
-    println("listTablesResult = " + listTablesResult)
+    //  println("listTablesResult = " + listTablesResult)
     if (!listTablesResult.tableNames.asScala.contains(journalTableName)) {
       val createResponse = dynamoDbAsyncClient
         .createTable(createRequest).futureValue
@@ -282,7 +282,7 @@ trait DynamoDBSpecSupport
       )
       .build()
     val listTablesResult = dynamoDbAsyncClient.listTables(2).futureValue
-    println("listTablesResult = " + listTablesResult)
+    // println("listTablesResult = " + listTablesResult)
     if (!listTablesResult.tableNames.asScala.contains(journalTableName)) {
       val createResponse = dynamoDbAsyncClient.createTable(createRequest).futureValue
       createResponse.sdkHttpResponse().isSuccessful shouldBe true

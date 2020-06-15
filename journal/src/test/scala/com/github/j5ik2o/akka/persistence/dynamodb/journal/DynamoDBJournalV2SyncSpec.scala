@@ -52,8 +52,14 @@ class DynamoDBJournalV2SyncSpec
 
   override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
-  before { createTable() }
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    createTable()
+  }
 
-  after { deleteTable() }
+  override def afterAll(): Unit = {
+    deleteTable()
+    super.afterAll()
+  }
 
 }

@@ -291,54 +291,10 @@ lazy val query = (project in file("query"))
       )
   ).dependsOn(journal % "test->test;compile->compile", snapshot % "test->compile")
 
-val `kafka-write-adaptor` = (project in file("kafka"))
-  .settings(baseSettings)
-  .settings(deploySettings)
-  .settings(
-    name := "akka-persistence-dynamodb-kafka-write-adaptor",
-    libraryDependencies ++= Seq(
-        "com.typesafe.akka"       %% "akka-stream-kafka" % alpakkaKafkaVersion,
-        "ch.qos.logback"          % "logback-classic"    % "1.2.3" % Test,
-        "io.github.embeddedkafka" %% "embedded-kafka"    % kafkaVersion % Test
-      ),
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2L, scalaMajor)) if scalaMajor == 13 =>
-          Seq(
-            "com.typesafe.akka" %% "akka-testkit"         % akka26Version      % Test,
-            "com.typesafe.akka" %% "akka-stream-testkit"  % akka26Version      % Test,
-            "com.typesafe.akka" %% "akka-persistence-tck" % akka26Version      % Test,
-            "org.scalatest"     %% "scalatest"            % scalaTest31Version % Test
-          )
-        case Some((2L, scalaMajor)) if scalaMajor == 12 =>
-          Seq(
-            "com.typesafe.akka" %% "akka-testkit"         % akka26Version      % Test,
-            "com.typesafe.akka" %% "akka-stream-testkit"  % akka26Version      % Test,
-            "com.typesafe.akka" %% "akka-persistence-tck" % akka26Version      % Test,
-            "org.scalatest"     %% "scalatest"            % scalaTest31Version % Test
-          )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
-          Seq(
-            "com.typesafe.akka" %% "akka-testkit"         % akka25Version      % Test,
-            "com.typesafe.akka" %% "akka-stream-testkit"  % akka25Version      % Test,
-            "com.typesafe.akka" %% "akka-persistence-tck" % akka25Version      % Test,
-            "org.scalatest"     %% "scalatest"            % scalaTest30Version % Test
-          )
-      }
-    },
-    dependencyOverrides ++= Seq(
-        "io.netty"               % "netty-codec-http"    % nettyVersion,
-        "io.netty"               % "netty-transport"     % nettyVersion,
-        "io.netty"               % "netty-handler"       % nettyVersion,
-        "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
-        "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-      )
-  ).dependsOn(journal % "test->test;compile->compile", snapshot % "test->compile")
-
 lazy val root = (project in file("."))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
     skip in publish := true
   )
-  .aggregate(journal, snapshot, query, `kafka-write-adaptor`)
+  .aggregate(journal, snapshot, query)

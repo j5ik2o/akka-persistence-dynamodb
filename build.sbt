@@ -297,4 +297,4 @@ lazy val root = (project in file("."))
   .settings(
     skip in publish := true
   )
-  .aggregate(journal, snapshot, query)
+  .aggregate(base, journal, snapshot, query)

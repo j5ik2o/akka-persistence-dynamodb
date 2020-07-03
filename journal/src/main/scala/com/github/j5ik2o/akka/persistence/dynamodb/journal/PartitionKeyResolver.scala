@@ -87,14 +87,13 @@ object PartitionKeyResolver {
       extends PartitionKeyResolver
       with ToPersistenceIdOps {
 
-    private val md5 = MessageDigest.getInstance("MD5")
-    private val df  = new DecimalFormat("0000000000000000000000000000000000000000")
-
     override def separator: String =
       journalPluginConfig.sourceConfig.getOrElse[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
+      val md5          = MessageDigest.getInstance("MD5")
+      val df           = new DecimalFormat("0000000000000000000000000000000000000000")
       val bytes        = persistenceId.asString.reverse.getBytes(StandardCharsets.UTF_8)
       val hash         = BigInt(md5.digest(bytes))
       val mod          = (hash.abs % journalPluginConfig.shardCount) + 1

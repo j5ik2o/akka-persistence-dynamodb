@@ -13,7 +13,7 @@ val ficusVersion        = "1.4.7"
 val awsSdkV1Version     = "1.11.816"
 val awsSdkV1DaxVersion  = "1.0.205917.0"
 val awsSdkV2Version     = "2.13.50"
-val reactiveAwsDynamoDB = "1.2.3"
+val reactiveAwsDynamoDB = "1.2.6"
 
 val scalaTest31Version      = "3.1.1"
 val scalaTest30Version      = "3.0.8"

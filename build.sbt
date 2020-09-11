@@ -2,7 +2,7 @@ val scala211Version = "2.11.12"
 val scala212Version = "2.12.10"
 val scala213Version = "2.13.1"
 
-val scalaCollectionCompatVersion = "2.1.6"
+val scalaCollectionCompatVersion = "2.2.0"
 
 val akka25Version = "2.5.31"
 val akka26Version = "2.6.7"

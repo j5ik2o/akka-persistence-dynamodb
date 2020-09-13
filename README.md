@@ -510,7 +510,7 @@ Assuming the default values are used (adjust as necessary if not):
 |table | Journal | `pkey` (String) | `skey` (String) | Provision capacity as necessary for your application. |
 |index | GetJournalRowsIndex (GSI) | `persistence-id` (String) | `sequence-nr` (Number) | Index for replaying actors. |
 |index | TagsIndex (GSI) | `tags` (String) | - | Index for queries using tags. |
-|table | Snapshots | `persistence-id` (String) | `sequence-nr` (Number) | No indices necessary. |
+|table | Snapshot | `persistence-id` (String) | `sequence-nr` (Number) | No indices necessary. |
 
 
 As the access to the DynamoDB instance is via the AWS Java SDK, use the methods for the SDK, which are documented at [docs.aws.amazon.com](https://docs.aws.amazon.com/sdk-for-java/v2/developer-guide/credentials.html)

@@ -21,6 +21,8 @@ trait WriteJournalDao extends JournalDaoWithReadMessages {
 
   def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed]
 
+  def dispose(): Unit
+
 }
 
 trait JournalDaoWithUpdates extends WriteJournalDao {

@@ -18,7 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
-import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy, QueueOfferResult }
+import akka.stream.{ ActorMaterializer, Attributes, KillSwitches, OverflowStrategy, QueueOfferResult, UniqueKillSwitch }
 import akka.{ Done, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
@@ -86,23 +86,28 @@ class WriteJournalDaoImpl(
       .runWith(Sink.ignore)
   }
 
-  private def putQueue: SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
-    Source
+  private def putQueue: (SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])], UniqueKillSwitch) = {
+    val result = Source
       .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
+      .viaMat(KillSwitches.single)(Keep.both)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           internalPutStream(promise, rows)
       }
-      .toMat(Sink.ignore)(Keep.left)
+      .toMat(Sink.ignore)(Keep.both)
       .withAttributes(logLevels)
       .run()
+    (result._1._1, result._1._2)
+  }
 
-  private val putQueues = for (_ <- 1 to queueParallelism) yield putQueue
+  private val putQueues: Seq[(SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])], UniqueKillSwitch)] =
+    for (_ <- 1 to queueParallelism)
+      yield putQueue
 
   private def queueIdFrom(persistenceId: PersistenceId): Int = Math.abs(persistenceId.asString.##) % queueParallelism
 
   private def selectPutQueue(persistenceId: PersistenceId): SourceQueueWithComplete[(Promise[Long], Seq[JournalRow])] =
-    putQueues(queueIdFrom(persistenceId))
+    putQueues(queueIdFrom(persistenceId))._1
 
   private def internalDeleteStream(promise: Promise[Long], rows: Seq[PersistenceIdWithSeqNr]) = {
     val s =
@@ -123,22 +128,32 @@ class WriteJournalDaoImpl(
       .runWith(Sink.ignore)
   }
 
-  private def deleteQueue: SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] =
-    Source
+  private def deleteQueue: (SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])], UniqueKillSwitch) = {
+    val result = Source
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](queueBufferSize, queueOverflowStrategy)
+      .viaMat(KillSwitches.single)(Keep.both)
       .mapAsync(writeParallelism) {
         case (promise, rows) =>
           internalDeleteStream(promise, rows)
       }
-      .toMat(Sink.ignore)(Keep.left)
+      .toMat(Sink.ignore)(Keep.both)
       .withAttributes(logLevels)
       .run()
+    (result._1._1, result._1._2)
+  }
 
-  private val deleteQueues = for (_ <- 1 to queueParallelism) yield deleteQueue
+  private val deleteQueues
+      : Seq[(SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])], UniqueKillSwitch)] =
+    for (_ <- 1 to queueParallelism) yield deleteQueue
+
+  override def dispose(): Unit = {
+    putQueues.foreach { case (_, sw)    => sw.shutdown() }
+    deleteQueues.foreach { case (_, sw) => sw.shutdown() }
+  }
 
   private def selectDeleteQueue(
       persistenceId: PersistenceId
-  ): SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] = deleteQueues(queueIdFrom(persistenceId))
+  ): SourceQueueWithComplete[(Promise[Long], Seq[PersistenceIdWithSeqNr])] = deleteQueues(queueIdFrom(persistenceId))._1
 
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     journalRowDriver.updateMessage(journalRow)

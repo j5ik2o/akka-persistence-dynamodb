@@ -1,3 +1,5 @@
+import Dependencies._
+
 val scala211Version = "2.11.12"
 val scala212Version = "2.12.10"
 val scala213Version = "2.13.1"
@@ -105,9 +107,10 @@ lazy val base = (project in file("base"))
         "software.amazon.awssdk" % "dynamodb"                     % awsSdkV2Version,
         "com.github.j5ik2o"      %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
         "com.github.j5ik2o"      %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
-        "com.github.j5ik2o"      %% "reactive-aws-dynamodb-test"  % reactiveAwsDynamoDB % Test,
-        "ch.qos.logback"         % "logback-classic"              % logbackVersion % Test,
-        "org.slf4j"              % "jul-to-slf4j"                 % slf4jVersion % Test
+        //       "com.github.j5ik2o"                  %% "reactive-aws-dynamodb-test" % reactiveAwsDynamoDB % Test,
+        "ch.qos.logback"                     % "logback-classic" % logbackVersion % Test,
+        "org.slf4j"                          % "jul-to-slf4j" % slf4jVersion % Test,
+        dimafeng.testcontainerScalaScalaTest % Test
       ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {

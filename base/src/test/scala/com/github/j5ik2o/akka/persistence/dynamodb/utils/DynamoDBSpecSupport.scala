@@ -16,7 +16,7 @@ trait DynamoDBSpecSupport
     with Eventually
     with BeforeAndAfter
     with ScalaFutures
-    with DynamoDBEmbeddedSpecSupport {
+    with DynamoDBContainerSpecSupport {
   this: Suite =>
   private implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 

@@ -225,7 +225,7 @@ class DynamoDBReadJournalSpec
 //      // sub.expectComplete()
 //    }
     "currentEventsByPersistenceId" in {
-      implicit val to = Timeout(10 seconds)
+      implicit val to = Timeout(30 seconds)
       val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
       val maxSize     = 500
       val futures = for (n <- 1 to maxSize) yield {

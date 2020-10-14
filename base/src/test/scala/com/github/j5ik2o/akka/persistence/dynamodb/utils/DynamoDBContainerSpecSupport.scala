@@ -3,10 +3,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
 import com.dimafeng.testcontainers.{ FixedHostPortGenericContainer, ForAllTestContainer }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 import org.testcontainers.containers.wait.strategy.Wait
+import scala.jdk.CollectionConverters._
+import scala.concurrent.duration._
 
 trait DynamoDBContainerSpecSupport extends ForAllTestContainer with BeforeAndAfterAll {
   this: Suite =>
@@ -29,7 +32,7 @@ trait DynamoDBContainerSpecSupport extends ForAllTestContainer with BeforeAndAft
     dynamoDBImageName,
     exposedHostPort = dynamoDBPort,
     exposedContainerPort = 8000,
-    command = Seq("-jar", "DynamoDBLocal.jar", "-dbPath", ".", "-sharedDb"),
+    command = Seq("-Xmx256m", "-jar", "DynamoDBLocal.jar", "-dbPath", ".", "-sharedDb"),
     waitStrategy = Wait.forListeningPort()
   )
 
@@ -47,4 +50,24 @@ trait DynamoDBContainerSpecSupport extends ForAllTestContainer with BeforeAndAft
       ).build()
   }
 
+  protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500 milliseconds
+
+  protected val MaxCount = 10
+
+  protected def waitDynamoDBLocal(tableNames: Seq[String]): Unit = {
+    var isWaken: Boolean = false
+    var counter          = 0
+    while (counter < MaxCount && !isWaken) {
+      try {
+        val listTablesResult = dynamoDBClient.listTables(2)
+        if (tableNames.forall(s => listTablesResult.getTableNames.asScala.contains(s))) {
+          isWaken = true
+        }
+      } catch {
+        case _: ResourceNotFoundException =>
+          counter += 1
+          Thread.sleep(waitIntervalForDynamoDBLocal.toMillis)
+      }
+    }
+  }
 }

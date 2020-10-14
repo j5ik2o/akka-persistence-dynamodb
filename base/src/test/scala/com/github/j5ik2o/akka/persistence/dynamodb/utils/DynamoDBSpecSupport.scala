@@ -66,7 +66,7 @@ trait DynamoDBSpecSupport
     else
       createJournalTable()
     createSnapshotTable()
-    Thread.sleep(500)
+    waitDynamoDBLocal(Seq(journalTableName, snapshotTableName))
   }
 
   def createSnapshotTable(): Unit = {

@@ -30,6 +30,8 @@ object SnapshotPluginConfig extends LoggingSupport {
   val metricsReporterClassNameKey         = "metrics-reporter-class-name"
   val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
   val dynamoDbClientKey                   = "dynamo-db-client"
+  val writeBackoffKey                     = "write-backoff"
+  val readBackoffKey                      = "write-backoff"
 
   val DefaultLegacyConfigFormat: Boolean              = false
   val DefaultLegacyConfigLayoutKey: Boolean           = false
@@ -58,6 +60,8 @@ object SnapshotPluginConfig extends LoggingSupport {
         val className = config.getAs[String](metricsReporterClassNameKey) // , DefaultMetricsReporterClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
+      writeBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](writeBackoffKey, ConfigFactory.empty())),
+      readBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](readBackoffKey, ConfigFactory.empty())),
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.getOrElse[Config](dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
@@ -75,6 +79,8 @@ final case class SnapshotPluginConfig(
     consistentRead: Boolean,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
+    writeBackoffConfig: BackoffConfig,
+    readBackoffConfig: BackoffConfig,
     clientConfig: DynamoDBClientConfig
 ) extends PluginConfig {
   override val configRootPath: String = "j5ik2o.dynamo-db-snapshot"

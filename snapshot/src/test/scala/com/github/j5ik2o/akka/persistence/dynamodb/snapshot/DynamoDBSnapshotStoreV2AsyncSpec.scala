@@ -28,26 +28,31 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 
 import scala.concurrent.duration._
 
-object DynamoDBSnapshotStoreSpec {
+object DynamoDBSnapshotStoreV2AsyncSpec {
   val dynamoDBPort = RandomPortUtil.temporaryServerPort()
 }
 
-class DynamoDBSnapshotStoreSpec
+class DynamoDBSnapshotStoreV2AsyncSpec
     extends SnapshotStoreSpec(
       ConfigFactory
         .parseString(
           s"""
-             |j5ik2o.dynamo-db-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
-             |}
-             |
-             |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
-             |}
-             |
-             |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreSpec.dynamoDBPort}/"
-             |}
+           |j5ik2o.dynamo-db-journal.dynamo-db-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+           |}
+           |
+           |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+           |  region = "ap-northeast-1"
+           |  access-key-id = "x"
+           |  secret-key = "x"
+           |  client-version = "v2"
+           |  client-type = "async"
+           |}
+           |
+           |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
+           |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+           |}
          """.stripMargin
         ).withFallback(ConfigFactory.load("snapshot-reference"))
     )
@@ -56,7 +61,7 @@ class DynamoDBSnapshotStoreSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreSpec.dynamoDBPort
+  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
 
   val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
@@ -69,8 +74,12 @@ class DynamoDBSnapshotStoreSpec
 
   override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
-  before { createTable }
+  before {
+    createTable
+  }
 
-  after { deleteTable }
+  after {
+    deleteTable
+  }
 
 }

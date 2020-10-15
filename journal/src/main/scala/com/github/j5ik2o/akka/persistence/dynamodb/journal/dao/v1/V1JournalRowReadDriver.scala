@@ -180,10 +180,9 @@ final class V1JournalRowReadDriver(
         case (Some(c), None) =>
           val flow = Flow[QueryRequest]
             .map { request =>
-              val sw     = Stopwatch.start()
-              val result = c.query(request)
-              metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-              result
+              val sw = Stopwatch.start()
+              try c.query(request)
+              finally metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
             }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>

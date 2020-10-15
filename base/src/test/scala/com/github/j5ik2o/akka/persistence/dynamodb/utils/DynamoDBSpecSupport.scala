@@ -16,7 +16,7 @@ trait DynamoDBSpecSupport
     with Eventually
     with BeforeAndAfter
     with ScalaFutures
-    with DynamoDBEmbeddedSpecSupport {
+    with DynamoDBContainerSpecSupport {
   this: Suite =>
   private implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
@@ -66,7 +66,7 @@ trait DynamoDBSpecSupport
     else
       createJournalTable()
     createSnapshotTable()
-    Thread.sleep(500)
+    waitDynamoDBLocal(Seq(journalTableName, snapshotTableName))
   }
 
   def createSnapshotTable(): Unit = {

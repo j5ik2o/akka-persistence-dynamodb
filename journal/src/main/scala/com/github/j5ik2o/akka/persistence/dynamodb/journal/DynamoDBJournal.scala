@@ -317,6 +317,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def postStop(): Unit = {
+    journalDao.dispose()
     if (javaAsyncClientV2 != null)
       javaAsyncClientV2.close()
     if (javaSyncClientV2 != null)

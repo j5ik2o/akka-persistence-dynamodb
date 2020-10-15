@@ -7,7 +7,7 @@ jobs:
     environment:
       - JAVA_OPTS: "-XX:ReservedCodeCacheSize=256M -Xms1g -Xmx3g -Xss2m"
       - AWS_REGION: "ap-northeast-1"
-      - SBT_TEST_TIME_FACTOR: "2"
+      - SBT_TEST_TIME_FACTOR: "3"
     machine: true
     steps:
       - run:
@@ -27,8 +27,6 @@ jobs:
           key: scala-library-dependencies-{{ checksum "build.sbt" }}
       - run:
           command: |
-            sbt clean ++"2.11.12" test
-            sbt clean ++"2.12.10" test
             sbt clean ++"2.13.1" test
           no_output_timeout: 1h
       - save_cache:

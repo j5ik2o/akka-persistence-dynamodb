@@ -22,13 +22,24 @@ import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionC
 import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
+import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DynamoDbClientBuilderUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  ClientUtils,
+  V1DaxClientBuilderUtils,
+  V1DynamoDBClientBuilderUtils,
+  V2DynamoDbClientBuilderUtils
+}
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import com.typesafe.config.Config
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -45,16 +56,67 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   implicit val ec: ExecutionContext        = context.dispatcher
   implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
   implicit val mat                         = ActorMaterializer()
+  implicit val _log                        = log
+
+  private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
 
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  protected val javaClient: JavaDynamoDbAsyncClient =
-    V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig).build()
-  protected val asyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(javaClient)
+  protected var javaAsyncClient: JavaDynamoDbAsyncClient = _
+  protected var javaSyncClient: JavaDynamoDbSyncClient   = _
 
-  protected val snapshotDao: SnapshotDao =
-    new SnapshotDaoImpl(asyncClient, serialization, pluginConfig)
+  protected var v1JavaAsyncClient: AmazonDynamoDBAsync = _
+  protected var v1JavaSyncClient: AmazonDynamoDB       = _
+
+  protected val metricsReporter: Option[MetricsReporter] = {
+    val metricsReporterProvider = MetricsReporterProvider.create(dynamicAccess, pluginConfig)
+    metricsReporterProvider.create
+  }
+
+  override def postStop(): Unit = {
+    if (javaAsyncClient != null)
+      javaAsyncClient.close()
+    if (javaSyncClient != null)
+      javaSyncClient.close()
+    super.postStop()
+  }
+
+  protected val snapshotDao: SnapshotDao = {
+    pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V2 =>
+        pluginConfig.clientConfig.clientType match {
+          case ClientType.Async =>
+            javaAsyncClient = V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig).build()
+            val scalaAsyncClient = DynamoDbAsyncClient(javaAsyncClient)
+            new V2SnapshotDaoImpl(Some(scalaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+          case ClientType.Sync =>
+            javaSyncClient = V2DynamoDbClientBuilderUtils.setupSync(system.dynamicAccess, pluginConfig).build()
+            val scalaSyncClient = DynamoDbSyncClient(javaSyncClient)
+            new V2SnapshotDaoImpl(None, Some(scalaSyncClient), serialization, pluginConfig, metricsReporter)
+        }
+      case ClientVersion.V1 =>
+        pluginConfig.clientConfig.clientType match {
+          case ClientType.Async =>
+            v1JavaAsyncClient = ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
+            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+          case ClientType.Sync =>
+            v1JavaSyncClient =
+              ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
+            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+        }
+      case ClientVersion.V1Dax =>
+        pluginConfig.clientConfig.clientType match {
+          case ClientType.Async =>
+            v1JavaAsyncClient = ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
+            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+          case ClientType.Sync =>
+            v1JavaSyncClient = ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
+            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+        }
+
+    }
+  }
 
   override def loadAsync(
       persistenceId: String,

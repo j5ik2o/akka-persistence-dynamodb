@@ -22,22 +22,8 @@ import akka.NotUsed
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.scaladsl.{ Flow, RestartFlow, Source }
+import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.amazonaws.services.dynamodbv2.model.{
-  AttributeValue,
-  BatchWriteItemRequest,
-  BatchWriteItemResult,
-  DeleteItemRequest,
-  DeleteItemResult,
-  DeleteRequest,
-  PutItemRequest,
-  PutItemResult,
-  QueryRequest,
-  QueryResult,
-  UpdateItemRequest,
-  UpdateItemResult,
-  WriteRequest
-}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
@@ -48,13 +34,19 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 class V1SnapshotDaoImpl(
-    val asyncClient: Option[AmazonDynamoDBAsync],
-    val syncClient: Option[AmazonDynamoDB],
+    asyncClient: Option[AmazonDynamoDBAsync],
+    syncClient: Option[AmazonDynamoDB],
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig,
-    val metricsReporter: Option[MetricsReporter]
+    metricsReporter: Option[MetricsReporter]
 )(implicit ec: ExecutionContext)
     extends SnapshotDao {
+  (asyncClient, syncClient) match {
+    case (None, None) =>
+      throw new IllegalArgumentException("aws clients is both None")
+    case _ =>
+  }
+
   import pluginConfig._
 
   private val serializer = new ByteArraySnapshotSerializer(serialization)

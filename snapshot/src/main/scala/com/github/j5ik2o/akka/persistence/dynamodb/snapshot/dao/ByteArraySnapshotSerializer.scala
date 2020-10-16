@@ -48,11 +48,11 @@ class ByteArraySnapshotSerializer(serialization: Serialization) extends Snapshot
   override def deserialize(snapshotRow: SnapshotRow): Either[Throwable, (SnapshotMetadata, Any)] = {
     serialization
       .deserialize(snapshotRow.snapshot, classOf[Snapshot])
-      .map(snapshot => {
+      .map { snapshot =>
         val snapshotMetadata =
           SnapshotMetadata(snapshotRow.persistenceId.asString, snapshotRow.sequenceNumber.value, snapshotRow.created)
         (snapshotMetadata, snapshot.data)
-      }) match {
+      } match {
       case Success(value) => Right(value)
       case Failure(ex)    => Left(ex)
     }

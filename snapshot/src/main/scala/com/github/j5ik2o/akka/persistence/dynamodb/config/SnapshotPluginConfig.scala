@@ -31,7 +31,7 @@ object SnapshotPluginConfig extends LoggingSupport {
   val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
   val dynamoDbClientKey                   = "dynamo-db-client"
   val writeBackoffKey                     = "write-backoff"
-  val readBackoffKey                      = "write-backoff"
+  val readBackoffKey                      = "read-backoff"
 
   val DefaultLegacyConfigFormat: Boolean              = false
   val DefaultLegacyConfigLayoutKey: Boolean           = false

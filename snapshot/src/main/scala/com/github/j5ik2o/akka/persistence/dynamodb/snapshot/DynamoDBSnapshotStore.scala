@@ -28,13 +28,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, C
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  ClientUtils,
-  V1DaxClientBuilderUtils,
-  V1DynamoDBClientBuilderUtils,
-  V2DynamoDbClientBuilderUtils
-}
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -48,6 +42,7 @@ object DynamoDBSnapshotStore {
   def toSelectedSnapshot(tupled: (SnapshotMetadata, Any)): SelectedSnapshot = tupled match {
     case (meta: SnapshotMetadata, snapshot: Any) => SelectedSnapshot(meta, snapshot)
   }
+
 }
 
 class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
@@ -63,8 +58,8 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  protected var javaAsyncClient: JavaDynamoDbAsyncClient = _
-  protected var javaSyncClient: JavaDynamoDbSyncClient   = _
+  protected var v2JavaAsyncClient: JavaDynamoDbAsyncClient = _
+  protected var v2JavaSyncClient: JavaDynamoDbSyncClient   = _
 
   protected var v1JavaAsyncClient: AmazonDynamoDBAsync = _
   protected var v1JavaSyncClient: AmazonDynamoDB       = _
@@ -75,10 +70,10 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   }
 
   override def postStop(): Unit = {
-    if (javaAsyncClient != null)
-      javaAsyncClient.close()
-    if (javaSyncClient != null)
-      javaSyncClient.close()
+    if (v2JavaAsyncClient != null)
+      v2JavaAsyncClient.close()
+    if (v2JavaSyncClient != null)
+      v2JavaSyncClient.close()
     super.postStop()
   }
 
@@ -87,13 +82,13 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V2 =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
-            javaAsyncClient = V2DynamoDbClientBuilderUtils.setupAsync(system.dynamicAccess, pluginConfig).build()
-            val scalaAsyncClient = DynamoDbAsyncClient(javaAsyncClient)
-            new V2SnapshotDaoImpl(Some(scalaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+            val client =
+              ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaAsyncClient = c)
+            new V2SnapshotDaoImpl(Some(client), None, serialization, pluginConfig, metricsReporter)
           case ClientType.Sync =>
-            javaSyncClient = V2DynamoDbClientBuilderUtils.setupSync(system.dynamicAccess, pluginConfig).build()
-            val scalaSyncClient = DynamoDbSyncClient(javaSyncClient)
-            new V2SnapshotDaoImpl(None, Some(scalaSyncClient), serialization, pluginConfig, metricsReporter)
+            val client =
+              ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaSyncClient = c)
+            new V2SnapshotDaoImpl(None, Some(client), serialization, pluginConfig, metricsReporter)
         }
       case ClientVersion.V1 =>
         pluginConfig.clientConfig.clientType match {

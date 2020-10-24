@@ -27,9 +27,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 
@@ -38,184 +38,18 @@ class V2SnapshotDaoImpl(
     syncClient: Option[DynamoDbSyncClient],
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig,
-    val metricsReporter: Option[MetricsReporter]
+    metricsReporter: Option[MetricsReporter]
 ) extends SnapshotDao {
+  (asyncClient, syncClient) match {
+    case (None, None) =>
+      throw new IllegalArgumentException("aws clients is both None")
+    case _ =>
+  }
+
   import pluginConfig._
 
   private val serializer   = new ByteArraySnapshotSerializer(serialization)
   private val streamClient = asyncClient.map(DynamoDbAkkaClient(_))
-
-  private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (None, Some(c)) =>
-        val flow = Flow[QueryRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.query(request)
-          metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-          result match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        Flow[QueryRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[QueryRequest, Stopwatch]())
-              val zip   = b.add(Zip[QueryResponse, Stopwatch]())
-              unzip.out0 ~> c.queryFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-                response
-            }
-        }
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("query")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[PutItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[PutItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[PutItemResponse, Stopwatch]())
-              unzip.out0 ~> c.putItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-                response
-            }
-        }
-      case (None, Some(c)) =>
-        val flow = Flow[PutItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.putItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-          result match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("putItem")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[DeleteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[DeleteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[DeleteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.deleteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-                response
-            }
-        }
-      case (None, Some(c)) =>
-        val flow = Flow[DeleteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.deleteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-          result match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("deleteItem")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[BatchWriteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[BatchWriteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[BatchWriteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.batchWriteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-                response
-            }
-        }
-      case (None, Some(c)) =>
-        val flow = Flow[BatchWriteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.batchWriteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-          result match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("batchWriteItem")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
     val req = DeleteItemRequest
@@ -227,45 +61,6 @@ class V2SnapshotDaoImpl(
         )
       ).build()
     Source.single(req).via(deleteItemFlow).map(_ => ())
-  }
-
-  private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
-    Source
-      .single(queryRequest).via(queryFlow).map {
-        _.itemsAsScala.getOrElse(Seq.empty)
-      }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
-        rows.map { row =>
-          SnapshotRow(
-            persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-            sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-            snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-            created = row(columnsDefConfig.createdColumnName).n.toLong
-          )
-        }
-      }.map { rows =>
-        BatchWriteItemRequest
-          .builder().requestItemsAsScala(
-            Map(
-              tableName -> rows.map { row =>
-                WriteRequest
-                  .builder().deleteRequest(
-                    DeleteRequest
-                      .builder()
-                      .keyAsScala(
-                        Map(
-                          columnsDefConfig.persistenceIdColumnName -> AttributeValue
-                            .builder()
-                            .s(row.persistenceId.asString).build(),
-                          columnsDefConfig.sequenceNrColumnName -> AttributeValue
-                            .builder()
-                            .n(row.sequenceNumber.asString).build()
-                        )
-                      ).build()
-                  ).build()
-              }
-            )
-          ).build()
-      }.via(batchWriteItemFlow).map(_ => ())
   }
 
   override def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed] = {
@@ -394,9 +189,8 @@ class V2SnapshotDaoImpl(
                 created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ) match {
-            case Right(value) =>
-              value
-            case Left(ex) => throw ex
+            case Right(value) => value
+            case Left(ex)     => throw ex
           }
         }
       }
@@ -447,9 +241,8 @@ class V2SnapshotDaoImpl(
                 created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ) match {
-            case Right(value) =>
-              value
-            case Left(ex) => throw ex
+            case Right(value) => value
+            case Left(ex)     => throw ex
           }
         }
       }
@@ -494,9 +287,8 @@ class V2SnapshotDaoImpl(
                 created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ) match {
-            case Right(value) =>
-              value
-            case Left(ex) => throw ex
+            case Right(value) => value
+            case Left(ex)     => throw ex
           }
         }
       }
@@ -548,9 +340,8 @@ class V2SnapshotDaoImpl(
                 created = row(columnsDefConfig.createdColumnName).n.toLong
               )
             ) match {
-            case Right(value) =>
-              value
-            case Left(ex) => throw ex
+            case Right(value) => value
+            case Left(ex)     => throw ex
           }
         }
       }
@@ -580,6 +371,217 @@ class V2SnapshotDaoImpl(
       case Left(ex) =>
         Source.failed(ex)
     }
-
   }
+
+  private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
+    Source
+      .single(queryRequest).via(queryFlow).map {
+        _.itemsAsScala.getOrElse(Seq.empty)
+      }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
+        rows.map { row =>
+          SnapshotRow(
+            persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+            sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+            snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+            created = row(columnsDefConfig.createdColumnName).n.toLong
+          )
+        }
+      }.map { rows =>
+        BatchWriteItemRequest
+          .builder().requestItemsAsScala(
+            Map(
+              tableName -> rows.map { row =>
+                WriteRequest
+                  .builder().deleteRequest(
+                    DeleteRequest
+                      .builder()
+                      .keyAsScala(
+                        Map(
+                          columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                            .builder()
+                            .s(row.persistenceId.asString).build(),
+                          columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                            .builder()
+                            .n(row.sequenceNumber.asString).build()
+                        )
+                      ).build()
+                  ).build()
+              }
+            )
+          ).build()
+      }.via(batchWriteItemFlow).map(_ => ())
+  }
+
+  private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
+    val flow = ((streamClient, syncClient) match {
+      case (None, Some(c)) =>
+        val flow = Flow[QueryRequest].map { request =>
+          val sw     = Stopwatch.start()
+          val result = c.query(request)
+          metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
+          result match {
+            case Right(value) => value
+            case Left(ex)     => throw ex
+          }
+        }
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
+      case (Some(c), None) =>
+        Flow[QueryRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[QueryRequest, Stopwatch]())
+              val zip   = b.add(Zip[QueryResponse, Stopwatch]())
+              unzip.out0 ~> c.queryFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
+                response
+            }
+        }
+      case _ =>
+        throw new IllegalStateException("invalid state")
+    }).log("query")
+    if (pluginConfig.readBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
+
+  private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
+    val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        Flow[PutItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[PutItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[PutItemResponse, Stopwatch]())
+              unzip.out0 ~> c.putItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
+                response
+            }
+        }
+      case (None, Some(c)) =>
+        val flow = Flow[PutItemRequest].map { request =>
+          val sw     = Stopwatch.start()
+          val result = c.putItem(request)
+          metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
+          result match {
+            case Right(value) => value
+            case Left(ex)     => throw ex
+          }
+        }
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
+      case _ =>
+        throw new IllegalStateException("invalid state")
+    }).log("putItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
+
+  private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
+    val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        Flow[DeleteItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[DeleteItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[DeleteItemResponse, Stopwatch]())
+              unzip.out0 ~> c.deleteItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
+                response
+            }
+        }
+      case (None, Some(c)) =>
+        val flow = Flow[DeleteItemRequest].map { request =>
+          val sw     = Stopwatch.start()
+          val result = c.deleteItem(request)
+          metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
+          result match {
+            case Right(value) => value
+            case Left(ex)     => throw ex
+          }
+        }
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
+      case _ =>
+        throw new IllegalStateException("invalid state")
+    }).log("deleteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
+
+  private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
+    val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        Flow[BatchWriteItemRequest].flatMapConcat { request =>
+          Source
+            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
+              import GraphDSL.Implicits._
+              val unzip = b.add(Unzip[BatchWriteItemRequest, Stopwatch]())
+              val zip   = b.add(Zip[BatchWriteItemResponse, Stopwatch]())
+              unzip.out0 ~> c.batchWriteItemFlow(1) ~> zip.in0
+              unzip.out1 ~> zip.in1
+              FlowShape(unzip.in, zip.out)
+            })).map {
+              case (response, sw) =>
+                metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
+                response
+            }
+        }
+      case (None, Some(c)) =>
+        val flow = Flow[BatchWriteItemRequest].map { request =>
+          val sw     = Stopwatch.start()
+          val result = c.batchWriteItem(request)
+          metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
+          result match {
+            case Right(value) => value
+            case Left(ex)     => throw ex
+          }
+        }
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
+      case _ =>
+        throw new IllegalStateException("invalid state")
+    }).log("batchWriteItem")
+    if (pluginConfig.writeBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
+          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
+          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
+          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+  }
+
 }

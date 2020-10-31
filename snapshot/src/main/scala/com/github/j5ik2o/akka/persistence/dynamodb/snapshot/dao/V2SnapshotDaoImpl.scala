@@ -414,33 +414,16 @@ class V2SnapshotDaoImpl(
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        c.queryFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[QueryRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.query(request)
-          metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-          result match {
+          c.query(request) match {
             case Right(value) => value
             case Left(ex)     => throw ex
           }
         }
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        Flow[QueryRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[QueryRequest, Stopwatch]())
-              val zip   = b.add(Zip[QueryResponse, Stopwatch]())
-              unzip.out0 ~> c.queryFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-                response
-            }
-        }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("query")
@@ -457,28 +440,10 @@ class V2SnapshotDaoImpl(
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[PutItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[PutItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[PutItemResponse, Stopwatch]())
-              unzip.out0 ~> c.putItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-                response
-            }
-        }
+      case (Some(c), None) => c.putItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[PutItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.putItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-          result match {
+          c.putItem(request) match {
             case Right(value) => value
             case Left(ex)     => throw ex
           }
@@ -500,28 +465,10 @@ class V2SnapshotDaoImpl(
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[DeleteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[DeleteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[DeleteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.deleteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-                response
-            }
-        }
+      case (Some(c), None) => c.deleteItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[DeleteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.deleteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-          result match {
+          c.deleteItem(request) match {
             case Right(value) => value
             case Left(ex)     => throw ex
           }
@@ -543,28 +490,10 @@ class V2SnapshotDaoImpl(
 
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        Flow[BatchWriteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[BatchWriteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[BatchWriteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.batchWriteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-                response
-            }
-        }
+      case (Some(c), None) => c.batchWriteItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[BatchWriteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.batchWriteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-          result match {
+          c.batchWriteItem(request) match {
             case Right(value) => value
             case Left(ex)     => throw ex
           }

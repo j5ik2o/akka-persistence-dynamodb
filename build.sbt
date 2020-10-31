@@ -100,14 +100,13 @@ lazy val base = (project in file("base"))
   .settings(
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
-        "org.slf4j"              % "slf4j-api"                    % slf4jVersion,
-        "com.iheart"             %% "ficus"                       % ficusVersion,
-        "com.amazonaws"          % "aws-java-sdk-dynamodb"        % awsSdkV1Version,
-        "com.amazonaws"          % "amazon-dax-client"            % awsSdkV1DaxVersion,
-        "software.amazon.awssdk" % "dynamodb"                     % awsSdkV2Version,
-        "com.github.j5ik2o"      %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
-        "com.github.j5ik2o"      %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
-        //       "com.github.j5ik2o"                  %% "reactive-aws-dynamodb-test" % reactiveAwsDynamoDB % Test,
+        "org.slf4j"                          % "slf4j-api" % slf4jVersion,
+        "com.iheart"                         %% "ficus" % ficusVersion,
+        "com.amazonaws"                      % "aws-java-sdk-dynamodb" % awsSdkV1Version,
+        "com.amazonaws"                      % "amazon-dax-client" % awsSdkV1DaxVersion,
+        "software.amazon.awssdk"             % "dynamodb" % awsSdkV2Version,
+        "com.github.j5ik2o"                  %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
+        "com.github.j5ik2o"                  %% "reactive-aws-dynamodb-akka" % reactiveAwsDynamoDB,
         "ch.qos.logback"                     % "logback-classic" % logbackVersion % Test,
         "org.slf4j"                          % "jul-to-slf4j" % slf4jVersion % Test,
         dimafeng.testcontainerScalaScalaTest % Test

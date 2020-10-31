@@ -345,20 +345,10 @@ final class V1JournalRowWriteDriver(
     val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[PutItemRequest]
-          .map { request =>
-            val sw     = Stopwatch.start()
-            val result = c.putItem(request)
-            metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-            result
-          }
+          .map { request => c.putItem(request) }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
-        Flow[PutItemRequest].mapAsync(1) { request =>
-          val sw     = Stopwatch.start()
-          val future = c.putItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed())) }
-          future
-        }
+        Flow[PutItemRequest].mapAsync(1) { request => c.putItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("putItem")
@@ -377,20 +367,10 @@ final class V1JournalRowWriteDriver(
     val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[BatchWriteItemRequest]
-          .map { request =>
-            val sw     = Stopwatch.start()
-            val result = c.batchWriteItem(request)
-            metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-            result
-          }
+          .map { request => c.batchWriteItem(request) }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
-        Flow[BatchWriteItemRequest].mapAsync(1) { request =>
-          val sw     = Stopwatch.start()
-          val future = c.batchWriteItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed())) }
-          future
-        }
+        Flow[BatchWriteItemRequest].mapAsync(1) { request => c.batchWriteItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("batchWriteItem")
@@ -410,20 +390,10 @@ final class V1JournalRowWriteDriver(
       (syncClient, asyncClient) match {
         case (Some(c), None) =>
           val flow = Flow[UpdateItemRequest]
-            .map { request =>
-              val sw     = Stopwatch.start()
-              val result = c.updateItem(request)
-              metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
-              result
-            }
+            .map { request => c.updateItem(request) }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>
-          Flow[UpdateItemRequest].mapAsync(1) { request =>
-            val sw     = Stopwatch.start()
-            val future = c.updateItemAsync(request).toScala
-            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed())) }
-            future
-          }
+          Flow[UpdateItemRequest].mapAsync(1) { request => c.updateItemAsync(request).toScala }
         case _ =>
           throw new IllegalStateException("invalid state")
       }
@@ -444,20 +414,10 @@ final class V1JournalRowWriteDriver(
       (syncClient, asyncClient) match {
         case (Some(c), None) =>
           val flow = Flow[DeleteItemRequest]
-            .map { request =>
-              val sw     = Stopwatch.start()
-              val result = c.deleteItem(request)
-              metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-              result
-            }
+            .map { request => c.deleteItem(request) }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>
-          Flow[DeleteItemRequest].mapAsync(1) { request =>
-            val sw     = Stopwatch.start()
-            val future = c.deleteItemAsync(request).toScala
-            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed())) }
-            future
-          }
+          Flow[DeleteItemRequest].mapAsync(1) { request => c.deleteItemAsync(request).toScala }
         case _ =>
           throw new IllegalStateException("invalid state")
       }

@@ -39,33 +39,16 @@ final class V2JournalRowReadDriver(
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        c.queryFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[QueryRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.query(request)
-          metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-          result match {
+          c.query(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
         }
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        Flow[QueryRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[QueryRequest, Stopwatch]())
-              val zip   = b.add(Zip[QueryResponse, Stopwatch]())
-              unzip.out0 ~> c.queryFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-                response
-            }
-        }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("query")

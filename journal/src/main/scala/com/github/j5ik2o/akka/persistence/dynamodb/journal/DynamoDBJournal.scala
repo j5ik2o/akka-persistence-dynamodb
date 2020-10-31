@@ -33,7 +33,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriver
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -243,6 +243,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
+    metricsReporter.foreach(_.beforeJournalAsyncWriteMessages())
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
@@ -274,20 +275,37 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         }
     val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
-    future.onComplete { _ => self ! WriteFinished(persistenceId, future) }
+    future.onComplete { result: Try[Seq[Try[Unit]]] =>
+      self ! WriteFinished(persistenceId, future)
+      result match {
+        case Success(_) =>
+          metricsReporter.foreach(_.afterJournalAsyncWriteMessages())
+        case Failure(ex) =>
+          metricsReporter.foreach(_.errorJournalAsyncWriteMessages(ex))
+      }
+    }
     future
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    journalDao
+    metricsReporter.foreach(_.beforeJournalAsyncDeleteMessagesTo())
+    val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterJournalAsyncDeleteMessagesTo())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalAsyncDeleteMessagesTo(ex))
+    }
+    future
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
   ): Future[Unit] = {
-    journalDao
+    metricsReporter.foreach(_.beforeJournalAsyncReplayMessages())
+    val future = journalDao
       .getMessagesAsPersistentReprWithBatch(
         persistenceId,
         fromSequenceNr,
@@ -299,9 +317,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterJournalAsyncReplayMessages())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalAsyncReplayMessages(ex))
+    }
+    future
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
+    metricsReporter.foreach(_.beforeJournalAsyncReadHighestSequenceNr())
     def fetchHighestSeqNr(): Future[Long] = {
       journalDao
         .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
@@ -312,6 +338,12 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         // we must fetch the highest sequence number after the previous write has completed
         // If the previous write failed then we can ignore this
         f.recover { case _ => () }.flatMap(_ => fetchHighestSeqNr())
+    }
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterJournalAsyncReadHighestSequenceNr())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalAsyncReadHighestSequenceNr(ex))
     }
     future
   }
@@ -334,6 +366,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   private def asyncUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef): Future[Done] = {
+    metricsReporter.foreach(_.beforeJournalAsyncUpdateEvent())
     val write = PersistentRepr(message, sequenceNumber, persistenceId)
     val serializedRow: JournalRow = serializer.serialize(write) match {
       case Right(row) => row
@@ -342,6 +375,13 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNumber]"
         )
     }
-    journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
+    val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterJournalAsyncUpdateEvent())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(ex))
+    }
+    future
   }
 }

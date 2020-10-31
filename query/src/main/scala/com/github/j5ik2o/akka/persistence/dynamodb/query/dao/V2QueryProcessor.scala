@@ -36,33 +36,16 @@ class V2QueryProcessor(
 
   private def scanFlow: Flow[ScanRequest, ScanResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
+      case (Some(c), None) =>
+        c.scanFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[ScanRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.scan(request)
-          metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
-          result match {
+          c.scan(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
         }
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        Flow[ScanRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[ScanRequest, Stopwatch]())
-              val zip   = b.add(Zip[ScanResponse, Stopwatch]())
-              unzip.out0 ~> c.scanFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
-                response
-            }
-        }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("scan")

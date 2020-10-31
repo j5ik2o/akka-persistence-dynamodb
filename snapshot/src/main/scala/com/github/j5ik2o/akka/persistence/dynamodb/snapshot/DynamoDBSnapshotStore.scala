@@ -36,6 +36,7 @@ import software.amazon.awssdk.services.dynamodb.{
 }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 object DynamoDBSnapshotStore {
 
@@ -94,20 +95,20 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
-            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig)
           case ClientType.Sync =>
             v1JavaSyncClient =
               ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
-            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig)
         }
       case ClientVersion.V1Dax =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig)
           case ClientType.Sync =>
             v1JavaSyncClient = ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig)
         }
 
     }
@@ -117,6 +118,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       persistenceId: String,
       criteria: SnapshotSelectionCriteria
   ): Future[Option[SelectedSnapshot]] = {
+    metricsReporter.foreach(_.beforeSnapshotStoreLoadAsync())
     val result = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.latestSnapshot(PersistenceId(persistenceId))
@@ -132,21 +134,47 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         )
       case _ => Source.empty
     }
-    result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
+    val future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterSnapshotStoreLoadAsync())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorSnapshotStoreLoadAsync(ex))
+    }
+    future
   }
 
-  override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] =
-    snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+  override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
+    metricsReporter.foreach(_.beforeSnapshotStoreSaveAsync())
+    val future = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterSnapshotStoreSaveAsync())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorSnapshotStoreSaveAsync(ex))
+    }
+    future
+  }
 
-  override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] =
-    snapshotDao
+  override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] = {
+    metricsReporter.foreach(_.beforeSnapshotStoreDeleteAsync())
+    val future = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(ex))
+    }
+    future
+  }
 
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
+    metricsReporter.foreach(_.beforeSnapshotStoreDeleteAsync())
     val pid = PersistenceId(persistenceId)
-    criteria match {
+    val future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
       case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
@@ -161,6 +189,13 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           ).map(_ => ())
       case _ => Future.successful(())
     }
+    future.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync())
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(ex))
+    }
+    future
   }
 
 }

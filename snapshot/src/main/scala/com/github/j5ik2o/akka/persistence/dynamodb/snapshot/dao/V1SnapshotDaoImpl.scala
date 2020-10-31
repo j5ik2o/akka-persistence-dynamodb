@@ -37,8 +37,7 @@ class V1SnapshotDaoImpl(
     asyncClient: Option[AmazonDynamoDBAsync],
     syncClient: Option[AmazonDynamoDB],
     serialization: Serialization,
-    pluginConfig: SnapshotPluginConfig,
-    metricsReporter: Option[MetricsReporter]
+    pluginConfig: SnapshotPluginConfig
 )(implicit ec: ExecutionContext)
     extends SnapshotDao {
   (asyncClient, syncClient) match {
@@ -402,19 +401,10 @@ class V1SnapshotDaoImpl(
       (syncClient, asyncClient) match {
         case (Some(c), None) =>
           val flow = Flow[QueryRequest]
-            .map { request =>
-              val sw = Stopwatch.start()
-              try c.query(request)
-              finally metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-            }
+            .map { request => c.query(request) }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>
-          Flow[QueryRequest].mapAsync(1) { request =>
-            val sw     = Stopwatch.start()
-            val future = c.queryAsync(request).toScala
-            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed())) }
-            future
-          }
+          Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
         case _ =>
           throw new IllegalStateException("invalid state")
       }
@@ -434,19 +424,10 @@ class V1SnapshotDaoImpl(
     val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[PutItemRequest]
-          .map { request =>
-            val sw = Stopwatch.start()
-            try c.putItem(request)
-            finally metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-          }
+          .map { request => c.putItem(request) }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
-        Flow[PutItemRequest].mapAsync(1) { request =>
-          val sw     = Stopwatch.start()
-          val future = c.putItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed())) }
-          future
-        }
+        Flow[PutItemRequest].mapAsync(1) { request => c.putItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("putItem")
@@ -465,19 +446,10 @@ class V1SnapshotDaoImpl(
     val flow = ((syncClient, asyncClient) match {
       case (Some(c), None) =>
         val flow = Flow[BatchWriteItemRequest]
-          .map { request =>
-            val sw = Stopwatch.start()
-            try c.batchWriteItem(request)
-            finally metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-          }
+          .map { request => c.batchWriteItem(request) }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (None, Some(c)) =>
-        Flow[BatchWriteItemRequest].mapAsync(1) { request =>
-          val sw     = Stopwatch.start()
-          val future = c.batchWriteItemAsync(request).toScala
-          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed())) }
-          future
-        }
+        Flow[BatchWriteItemRequest].mapAsync(1) { request => c.batchWriteItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("batchWriteItem")
@@ -497,19 +469,10 @@ class V1SnapshotDaoImpl(
       (syncClient, asyncClient) match {
         case (Some(c), None) =>
           val flow = Flow[DeleteItemRequest]
-            .map { request =>
-              val sw = Stopwatch.start()
-              try c.deleteItem(request)
-              finally metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-            }
+            .map { request => c.deleteItem(request) }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>
-          Flow[DeleteItemRequest].mapAsync(1) { request =>
-            val sw     = Stopwatch.start()
-            val future = c.deleteItemAsync(request).toScala
-            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed())) }
-            future
-          }
+          Flow[DeleteItemRequest].mapAsync(1) { request => c.deleteItemAsync(request).toScala }
         case _ =>
           throw new IllegalStateException("invalid state")
       }

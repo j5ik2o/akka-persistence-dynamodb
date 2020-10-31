@@ -4,7 +4,7 @@ import java.time.{ Duration => JavaDuration }
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.ExecutionInterceptorsProvider
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ MetricPublishersProvider, RetryPolicyProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 
@@ -45,6 +45,9 @@ object V2ClientOverrideConfigurationBuilderUtils {
     }
     // defaultProfileFile
     // defaultProfileName
+    val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
+    val metricPublishers         = metricPublishersProvider.create
+    clientOverrideConfigurationBuilder.metricPublishers(metricPublishers.asJava)
     clientOverrideConfigurationBuilder
   }
 }

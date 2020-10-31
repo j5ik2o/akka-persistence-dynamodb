@@ -61,8 +61,7 @@ trait DaoSupport {
       max: Long,
       deleted: Option[Boolean] = Some(false)
   ): Source[Try[PersistentRepr], NotUsed] = {
-    journalRowDriver
-      .getJournalRows(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
+    getMessagesAsJournalRow(persistenceId, fromSequenceNr, toSequenceNr, max, deleted)
       .via(serializer.deserializeFlowWithoutTagsAsTry)
   }
 
@@ -111,9 +110,8 @@ trait DaoSupport {
             }
           }
           control match {
-            case Stop => Future.successful(None)
-            case Continue =>
-              retrieveNextBatch()
+            case Stop     => Future.successful(None)
+            case Continue => retrieveNextBatch()
             case ContinueDelayed =>
               val (delay, scheduler) = refreshInterval.get
               akka.pattern.after(delay, scheduler)(retrieveNextBatch())

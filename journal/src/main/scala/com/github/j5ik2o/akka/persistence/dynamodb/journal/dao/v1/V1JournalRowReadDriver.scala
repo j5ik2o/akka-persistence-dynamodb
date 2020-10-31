@@ -179,19 +179,10 @@ final class V1JournalRowReadDriver(
       (syncClient, asyncClient) match {
         case (Some(c), None) =>
           val flow = Flow[QueryRequest]
-            .map { request =>
-              val sw = Stopwatch.start()
-              try c.query(request)
-              finally metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed()))
-            }
+            .map { request => c.query(request) }
           DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
         case (None, Some(c)) =>
-          Flow[QueryRequest].mapAsync(1) { request =>
-            val sw     = Stopwatch.start()
-            val future = c.queryAsync(request).toScala
-            future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientQueryDuration(sw.elapsed())) }
-            future
-          }
+          Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
         case _ =>
           throw new IllegalStateException("invalid state")
       }

@@ -16,13 +16,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.ExecutionInterceptorsProvider
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ MetricPublishersProvider, RetryPolicyProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 import net.ceedubs.ficus.Ficus._
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 import software.amazon.awssdk.core.retry.RetryMode
+import software.amazon.awssdk.metrics.MetricPublisher
 
 import scala.collection.immutable._
 import scala.concurrent.duration.FiniteDuration
@@ -39,6 +40,8 @@ object DynamoDBClientV2Config extends LoggingSupport {
   val executionInterceptorProviderClassNameKey = "execution-interceptor-provider-class-name"
   val apiCallTimeoutKey                        = "api-call-timeout"
   val apiCallAttemptTimeoutKey                 = "api-call-attempt-timeout"
+  val metricPublisherProviderClassNameKey      = "metric-publishers-provider-class-names"
+  val metricPublisherClassNameKey              = "metric-publisher-class-names"
 
   val keyNames: Seq[String] =
     Seq(dispatcherNameKey, asyncKey, syncKey, retryModeKey, apiCallTimeoutKey, apiCallAttemptTimeoutKey)
@@ -66,16 +69,12 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       syncClientConfig = SyncClientConfig.fromConfig(config.getOrElse[Config](syncKey, ConfigFactory.empty())),
       headers = config.getOrElse[Map[String, Seq[String]]](headersKey, Map.empty),
-      retryMode = config.getAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
       retryPolicyProviderClassName = {
         val className = config
           .getAs[String](retryPolicyProviderClassNameKey).orElse(Some(classOf[RetryPolicyProvider.Default].getName))
         ClassCheckUtils.requireClass(classOf[RetryPolicyProvider], className)
       },
-      executionInterceptorClassNames = {
-        val classNames = config.getOrElse[Seq[String]](executionInterceptorClassNamesKey, Seq.empty)
-        classNames.map(s => ClassCheckUtils.requireClass(classOf[ExecutionInterceptor], s))
-      },
+      retryMode = config.getAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
       executionInterceptorsProviderClassName = {
         val className = config.getOrElse[String](
           executionInterceptorProviderClassNameKey,
@@ -83,8 +82,23 @@ object DynamoDBClientV2Config extends LoggingSupport {
         )
         ClassCheckUtils.requireClass(classOf[ExecutionInterceptorsProvider], className)
       },
+      executionInterceptorClassNames = {
+        val classNames = config.getOrElse[Seq[String]](executionInterceptorClassNamesKey, Seq.empty)
+        classNames.map(s => ClassCheckUtils.requireClass(classOf[ExecutionInterceptor], s))
+      },
       apiCallTimeout = config.getAs[FiniteDuration](apiCallTimeoutKey),
-      apiCallAttemptTimeout = config.getAs[FiniteDuration](apiCallAttemptTimeoutKey)
+      apiCallAttemptTimeout = config.getAs[FiniteDuration](apiCallAttemptTimeoutKey),
+      metricPublishersProviderClassName = {
+        val className = config.getOrElse[String](
+          metricPublisherProviderClassNameKey,
+          classOf[MetricPublishersProvider.Default].getName
+        )
+        ClassCheckUtils.requireClass(classOf[MetricPublishersProvider], className)
+      },
+      metricPublisherClassNames = {
+        val classNames = config.getOrElse[Seq[String]](metricPublisherClassNameKey, Seq.empty)
+        classNames.map(s => ClassCheckUtils.requireClass(classOf[MetricPublisher], s))
+      }
     )
     logger.debug("result = {}", result)
     result
@@ -97,10 +111,12 @@ case class DynamoDBClientV2Config(
     asyncClientConfig: AsyncClientConfig,
     syncClientConfig: SyncClientConfig,
     headers: Map[String, Seq[String]],
-    retryMode: Option[RetryMode],
     retryPolicyProviderClassName: Option[String],
-    executionInterceptorClassNames: Seq[String],
+    retryMode: Option[RetryMode],
     executionInterceptorsProviderClassName: String,
+    executionInterceptorClassNames: Seq[String],
     apiCallTimeout: Option[FiniteDuration],
-    apiCallAttemptTimeout: Option[FiniteDuration]
+    apiCallAttemptTimeout: Option[FiniteDuration],
+    metricPublishersProviderClassName: String,
+    metricPublisherClassNames: Seq[String]
 )

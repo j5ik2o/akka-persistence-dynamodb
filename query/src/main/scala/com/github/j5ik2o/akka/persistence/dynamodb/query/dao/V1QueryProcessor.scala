@@ -31,20 +31,10 @@ class V1QueryProcessor(
   private def scanFlow: Flow[ScanRequest, ScanResult, NotUsed] = {
     val flow = ((asyncClient, syncClient) match {
       case (None, Some(c)) =>
-        val flow = Flow[ScanRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.scan(request)
-          metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed()))
-          result
-        }
+        val flow = Flow[ScanRequest].map { request => c.scan(request) }
         DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
       case (Some(c), None) =>
-        Flow[ScanRequest].mapAsync(1) { request =>
-          val sw     = Stopwatch.start()
-          val future = c.scanAsync(request).toScala
-          future.onComplete { _ => metricsReporter.foreach(_.setDynamoDBClientScanDuration(sw.elapsed())) }
-          future
-        }
+        Flow[ScanRequest].mapAsync(1) { request => c.scanAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
     }).log("scan")

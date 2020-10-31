@@ -18,8 +18,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import akka.actor.DynamicAccess
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
+import com.amazonaws.monitoring.CsmConfigurationProvider
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
+  CsmConfigurationProviderProvider,
   MonitoringListenerProvider,
   RequestHandlersProvider,
   RequestMetricCollectorProvider
@@ -31,14 +33,15 @@ object V1DynamoDBClientBuilderUtils {
   def setupSync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBClientBuilder = {
     val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
 
-    val monitoringListenerProvider     = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
-    val requestHandlersProvider        = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
-    val requestMetricCollectorProvider = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
+    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
 
     val builder = AmazonDynamoDBClientBuilder
       .standard().withClientConfiguration(cc)
 
-    //    builder.setClientSideMonitoringConfigurationProvider()
+    csmConfigurationProviderProvider.create.foreach { c => builder.setClientSideMonitoringConfigurationProvider(c) }
     monitoringListenerProvider.create.foreach { m => builder.setMonitoringListener(m) }
     builder.setRequestHandlers(requestHandlersProvider.create: _*)
     requestMetricCollectorProvider.create.foreach { r => builder.setMetricsCollector(r) }

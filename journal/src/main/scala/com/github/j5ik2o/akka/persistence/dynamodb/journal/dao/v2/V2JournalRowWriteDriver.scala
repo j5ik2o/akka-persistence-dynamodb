@@ -348,27 +348,10 @@ final class V2JournalRowWriteDriver(
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        Flow[DeleteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[DeleteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[DeleteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.deleteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-                response
-            }
-        }
+        c.deleteItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[DeleteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.deleteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientDeleteItemDuration(sw.elapsed()))
-          result match {
+          c.deleteItem(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -391,27 +374,10 @@ final class V2JournalRowWriteDriver(
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        Flow[BatchWriteItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[BatchWriteItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[BatchWriteItemResponse, Stopwatch]())
-              unzip.out0 ~> c.batchWriteItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-                response
-            }
-        }
+        c.batchWriteItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[BatchWriteItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.batchWriteItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientBatchWriteItemDuration(sw.elapsed()))
-          result match {
+          c.batchWriteItem(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -434,27 +400,10 @@ final class V2JournalRowWriteDriver(
   private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        Flow[PutItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[PutItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[PutItemResponse, Stopwatch]())
-              unzip.out0 ~> c.putItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-                response
-            }
-        }
+        c.putItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[PutItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.putItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientPutItemDuration(sw.elapsed()))
-          result match {
+          c.putItem(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }
@@ -477,27 +426,10 @@ final class V2JournalRowWriteDriver(
   private def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        Flow[UpdateItemRequest].flatMapConcat { request =>
-          Source
-            .single((request, Stopwatch.start())).via(Flow.fromGraph(GraphDSL.create() { implicit b =>
-              import GraphDSL.Implicits._
-              val unzip = b.add(Unzip[UpdateItemRequest, Stopwatch]())
-              val zip   = b.add(Zip[UpdateItemResponse, Stopwatch]())
-              unzip.out0 ~> c.updateItemFlow(1) ~> zip.in0
-              unzip.out1 ~> zip.in1
-              FlowShape(unzip.in, zip.out)
-            })).map {
-              case (response, sw) =>
-                metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
-                response
-            }
-        }
+        c.updateItemFlow(1)
       case (None, Some(c)) =>
         val flow = Flow[UpdateItemRequest].map { request =>
-          val sw     = Stopwatch.start()
-          val result = c.updateItem(request)
-          metricsReporter.foreach(_.setDynamoDBClientUpdateItemDuration(sw.elapsed()))
-          result match {
+          c.updateItem(request) match {
             case Right(r) => r
             case Left(ex) => throw ex
           }

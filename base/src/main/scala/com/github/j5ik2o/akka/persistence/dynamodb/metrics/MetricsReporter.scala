@@ -6,26 +6,73 @@ import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 
 import scala.concurrent.duration.Duration
 import scala.collection.immutable._
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 trait MetricsReporter {
-  def setDynamoDBClientPutItemDuration(duration: Duration): Unit
-  def setDynamoDBClientBatchWriteItemDuration(duration: Duration): Unit
-  def setDynamoDBClientUpdateItemDuration(duration: Duration): Unit
-  def setDynamoDBClientDeleteItemDuration(duration: Duration): Unit
-  def setDynamoDBClientQueryDuration(duration: Duration): Unit
-  def setDynamoDBClientScanDuration(duration: Duration): Unit
+
+  def beforeJournalAsyncWriteMessages(): Unit
+  def beforeJournalAsyncDeleteMessagesTo(): Unit
+  def beforeJournalAsyncReplayMessages(): Unit
+  def beforeJournalAsyncReadHighestSequenceNr(): Unit
+  def beforeJournalAsyncUpdateEvent(): Unit
+
+  def afterJournalAsyncWriteMessages(): Unit
+  def afterJournalAsyncDeleteMessagesTo(): Unit
+  def afterJournalAsyncReplayMessages(): Unit
+  def afterJournalAsyncReadHighestSequenceNr(): Unit
+  def afterJournalAsyncUpdateEvent(): Unit
+
+  def errorJournalAsyncWriteMessages(ex: Throwable): Unit
+  def errorJournalAsyncDeleteMessagesTo(ex: Throwable): Unit
+  def errorJournalAsyncReplayMessages(ex: Throwable): Unit
+  def errorJournalAsyncReadHighestSequenceNr(ex: Throwable): Unit
+  def errorJournalAsyncUpdateEvent(ex: Throwable): Unit
+
+  def beforeSnapshotStoreLoadAsync(): Unit
+  def afterSnapshotStoreLoadAsync(): Unit
+  def errorSnapshotStoreLoadAsync(ex: Throwable): Unit
+
+  def beforeSnapshotStoreSaveAsync(): Unit
+  def afterSnapshotStoreSaveAsync(): Unit
+  def errorSnapshotStoreSaveAsync(ex: Throwable): Unit
+
+  def beforeSnapshotStoreDeleteAsync(): Unit
+  def afterSnapshotStoreDeleteAsync(): Unit
+  def errorSnapshotStoreDeleteAsync(ex: Throwable): Unit
 }
 
 object MetricsReporter {
 
   class None(pluginConfig: PluginConfig) extends MetricsReporter {
-    override def setDynamoDBClientPutItemDuration(duration: Duration): Unit        = {}
-    override def setDynamoDBClientBatchWriteItemDuration(duration: Duration): Unit = {}
-    override def setDynamoDBClientUpdateItemDuration(duration: Duration): Unit     = {}
-    override def setDynamoDBClientDeleteItemDuration(duration: Duration): Unit     = {}
-    override def setDynamoDBClientQueryDuration(duration: Duration): Unit          = {}
-    override def setDynamoDBClientScanDuration(duration: Duration): Unit           = {}
+    override def beforeJournalAsyncWriteMessages(): Unit         = {}
+    override def beforeJournalAsyncDeleteMessagesTo(): Unit      = {}
+    override def beforeJournalAsyncReplayMessages(): Unit        = {}
+    override def beforeJournalAsyncReadHighestSequenceNr(): Unit = {}
+    override def beforeJournalAsyncUpdateEvent(): Unit           = {}
+
+    override def afterJournalAsyncWriteMessages(): Unit         = {}
+    override def afterJournalAsyncDeleteMessagesTo(): Unit      = {}
+    override def afterJournalAsyncReplayMessages(): Unit        = {}
+    override def afterJournalAsyncReadHighestSequenceNr(): Unit = {}
+    override def afterJournalAsyncUpdateEvent(): Unit           = {}
+
+    override def errorJournalAsyncWriteMessages(ex: Throwable): Unit         = {}
+    override def errorJournalAsyncDeleteMessagesTo(ex: Throwable): Unit      = {}
+    override def errorJournalAsyncReplayMessages(ex: Throwable): Unit        = {}
+    override def errorJournalAsyncReadHighestSequenceNr(ex: Throwable): Unit = {}
+    override def errorJournalAsyncUpdateEvent(ex: Throwable): Unit           = {}
+
+    override def beforeSnapshotStoreLoadAsync(): Unit   = {}
+    override def beforeSnapshotStoreSaveAsync(): Unit   = {}
+    override def beforeSnapshotStoreDeleteAsync(): Unit = {}
+
+    override def afterSnapshotStoreLoadAsync(): Unit   = {}
+    override def afterSnapshotStoreSaveAsync(): Unit   = {}
+    override def afterSnapshotStoreDeleteAsync(): Unit = {}
+
+    override def errorSnapshotStoreLoadAsync(ex: Throwable): Unit   = {}
+    override def errorSnapshotStoreSaveAsync(ex: Throwable): Unit   = {}
+    override def errorSnapshotStoreDeleteAsync(ex: Throwable): Unit = {}
   }
 
 }

@@ -17,7 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
 import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.metrics.RequestMetricCollector
-import com.amazonaws.monitoring.MonitoringListener
+import com.amazonaws.monitoring.{ CsmConfigurationProvider, MonitoringListener }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -27,14 +27,16 @@ import scala.collection.immutable._
 
 object DynamoDBClientV1Config extends LoggingSupport {
 
-  val dispatcherNameKey                          = "dispatcher-name"
-  val clientConfigurationKey                     = "client-configuration"
-  val requestMetricCollectorProviderClassNameKey = "request-metric-collector-provider-class-name"
-  val requestMetricCollectorClassNameKey         = "request-metric-collector-class-name"
-  val monitoringListenerProviderClassNameKey     = "monitoring-listener-provider-class-name"
-  val monitoringListenerClassNameKey             = "monitoring-listener-class-name"
-  val requestHandlersProviderClassNameKey        = "request-handlers-provider-class-name"
-  val requestHandlerClassNamesKey                = "request-handler-class-names"
+  val dispatcherNameKey                            = "dispatcher-name"
+  val clientConfigurationKey                       = "client-configuration"
+  val requestMetricCollectorProviderClassNameKey   = "request-metric-collector-provider-class-name"
+  val requestMetricCollectorClassNameKey           = "request-metric-collector-class-name"
+  val monitoringListenerProviderClassNameKey       = "monitoring-listener-provider-class-name"
+  val monitoringListenerClassNameKey               = "monitoring-listener-class-name"
+  val requestHandlersProviderClassNameKey          = "request-handlers-provider-class-name"
+  val requestHandlerClassNamesKey                  = "request-handler-class-names"
+  val csmConfigurationProviderProviderClassNameKey = "csm-configuration-provider-provider-class-name"
+  val csmConfigurationProviderClassNameKey         = "csm-configuration-provider-class-name"
 
   val DefaultRequestMetricCollectorProviderClassName: String = classOf[RequestMetricCollectorProvider.Default].getName
   val DefaultMonitoringListenerProviderClassName: String     = classOf[MonitoringListenerProvider.Default].getName
@@ -72,6 +74,18 @@ object DynamoDBClientV1Config extends LoggingSupport {
       requestHandlerClassNames = {
         val classNames = config.getOrElse[Seq[String]](requestHandlerClassNamesKey, Seq.empty)
         classNames.map { className => ClassCheckUtils.requireClass(classOf[RequestHandler2], className) }
+      },
+      csmConfigurationProviderProviderClassName = {
+        val className = config
+          .getOrElse[String](
+            csmConfigurationProviderProviderClassNameKey,
+            classOf[CsmConfigurationProviderProvider.Default].getName
+          )
+        ClassCheckUtils.requireClass(classOf[CsmConfigurationProviderProvider], className)
+      },
+      csmConfigurationProviderClassName = {
+        val className = config.getAs[String](csmConfigurationProviderClassNameKey)
+        ClassCheckUtils.requireClass(classOf[CsmConfigurationProvider], className)
       }
     )
     logger.debug("result = {}", result)
@@ -88,5 +102,7 @@ case class DynamoDBClientV1Config(
     monitoringListenerProviderClassName: String,
     monitoringListenerClassName: Option[String],
     requestHandlersProviderClassName: String,
-    requestHandlerClassNames: Seq[String]
+    requestHandlerClassNames: Seq[String],
+    csmConfigurationProviderProviderClassName: String,
+    csmConfigurationProviderClassName: Option[String]
 )

@@ -3,8 +3,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import java.time.{ Duration => JavaDuration }
 
 import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.ExecutionInterceptorsProvider
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ MetricPublishersProvider, RetryPolicyProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
+  ExecutionInterceptorsProvider,
+  MetricPublishersProvider,
+  RetryPolicyProvider
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 

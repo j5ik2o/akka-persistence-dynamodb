@@ -1,4 +1,4 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
+package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig

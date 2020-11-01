@@ -15,16 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import java.net.URI
-
 import akka.persistence.snapshot.SnapshotStoreSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -62,17 +56,6 @@ class DynamoDBSnapshotStoreV2AsyncSpec
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
-
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   before {
     createTable

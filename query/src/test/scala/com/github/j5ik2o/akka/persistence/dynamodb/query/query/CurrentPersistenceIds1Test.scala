@@ -88,21 +88,6 @@ class DynamoDBCurrentPersistenceIds1Test
 
   override protected lazy val dynamoDBPort: Int = DynamoDBCurrentPersistenceIds1Test.dynamoDBPort
 
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
-
-  override def afterAll(): Unit = {
-    underlying.close()
-    super.afterAll()
-  }
-
   before { createTable }
 
   after { deleteTable }

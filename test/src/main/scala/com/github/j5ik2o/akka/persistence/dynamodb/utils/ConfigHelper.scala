@@ -1,7 +1,5 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.journal
+package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigRenderUtils
 import com.typesafe.config.{ Config, ConfigFactory }
 
 object ConfigHelper {
@@ -11,10 +9,9 @@ object ConfigHelper {
       legacyConfigFormat: Boolean,
       legacyJournalMode: Boolean,
       dynamoDBPort: Int,
-      clientVersion: ClientVersion.Value,
-      clientType: ClientType.Value,
-      journalRowDriverWrapperClassName: Option[String],
-      kafkaPort: Option[Int]
+      clientVersion: String,
+      clientType: String,
+      journalRowDriverWrapperClassName: Option[String] = None
   ): Config = {
     val configString = s"""
        |akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
@@ -31,8 +28,8 @@ object ConfigHelper {
        |  dynamo-db-client {
        |    region = "ap-northeast-1"
        |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
-       |    client-version = "${clientVersion.toString.toLowerCase}"
-       |    client-type = "${clientType.toString.toLowerCase()}"
+       |    client-version = "${clientVersion.toLowerCase}"
+       |    client-type = "${clientType.toLowerCase()}"
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {
                             s"""journal-row-driver-wrapper-class-name = "${journalRowDriverWrapperClassName.get}" """

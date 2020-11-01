@@ -415,7 +415,7 @@ class V2SnapshotDaoImpl(
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
     val flow = ((streamClient, syncClient) match {
       case (Some(c), None) =>
-        c.queryFlow(1)
+        c.queryFlow(1).log("async")
       case (None, Some(c)) =>
         val flow = Flow[QueryRequest].map { request =>
           c.query(request) match {
@@ -423,10 +423,10 @@ class V2SnapshotDaoImpl(
             case Left(ex)     => throw ex
           }
         }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
+        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow).log("sync")
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("query")
+    }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

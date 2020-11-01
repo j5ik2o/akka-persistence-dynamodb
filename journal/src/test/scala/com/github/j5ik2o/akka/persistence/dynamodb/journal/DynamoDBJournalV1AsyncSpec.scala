@@ -1,15 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import java.net.URI
-
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.concurrent.ScalaFutures
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -28,9 +23,8 @@ class DynamoDBJournalV1AsyncSpec
           legacyConfigFormat = false,
           legacyJournalMode = DynamoDBJournalV1AsyncSpec.legacyJournalMode,
           dynamoDBPort = DynamoDBJournalV1AsyncSpec.dynamoDBPort,
-          clientVersion = ClientVersion.V1,
-          clientType = ClientType.Async,
-          None,
+          clientVersion = ClientVersion.V1.toString,
+          clientType = ClientType.Async.toString,
           None
         )
     )
@@ -43,16 +37,6 @@ class DynamoDBJournalV1AsyncSpec
   override protected lazy val dynamoDBPort: Int = DynamoDBJournalV1AsyncSpec.dynamoDBPort
 
   override val legacyJournalTable: Boolean = DynamoDBJournalV1AsyncSpec.legacyJournalMode
-
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

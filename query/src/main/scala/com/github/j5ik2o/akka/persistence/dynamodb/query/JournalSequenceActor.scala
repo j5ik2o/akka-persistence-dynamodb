@@ -78,7 +78,7 @@ object JournalSequenceActor {
       val b      = new Breaks
       var result = true
       b.breakable {
-        val itr = elements.toIterator
+        val itr = elements.iterator
         while (itr.hasNext) {
           val v = itr.next()
           if (v.nonEmpty) {

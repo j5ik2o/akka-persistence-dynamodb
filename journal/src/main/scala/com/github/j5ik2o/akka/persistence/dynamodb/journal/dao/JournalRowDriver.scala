@@ -11,10 +11,6 @@ trait JournalRowDriver {
 
   def system: ActorSystem
 
-  protected val startTimeSource: Source[Long, NotUsed] =
-    SourceUtils
-      .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
-
   protected val logLevels: Attributes = Attributes.logLevels(
     onElement = Attributes.LogLevels.Debug,
     onFailure = Attributes.LogLevels.Error,

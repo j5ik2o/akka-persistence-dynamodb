@@ -24,10 +24,10 @@ class DynamoDBJournalPerfSpec
         .parseString(
           s"""
         |j5ik2o.dynamo-db-journal {
-        |  shard-count = 2
+        |  shard-count = 64
         |  queue-buffer-size = 1024
-        |  queue-parallelism = 1
-        |  write-parallelism = 1
+        |  queue-parallelism = 64
+        |  write-parallelism = 64
         |  query-batch-size = 1024
         |  dynamo-db-client {
         |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"

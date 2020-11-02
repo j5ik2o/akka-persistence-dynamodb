@@ -16,7 +16,7 @@ object DynamoDBJournalV2SyncSpec {
 class DynamoDBJournalV2SyncSpec
     extends JournalSpec(
       ConfigHelper.config(
-        "journal-reference",
+        Some("journal-reference"),
         legacyConfigFormat = false,
         legacyJournalMode = DynamoDBJournalV2AsyncSpec.legacyJournalMode,
         dynamoDBPort = DynamoDBJournalV2AsyncSpec.dynamoDBPort,

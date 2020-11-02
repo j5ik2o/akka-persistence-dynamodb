@@ -6,7 +6,7 @@
             <level>debug</level>
         </filter>
         <encoder>
-            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %logger{36} - %msg%n</pattern>
+            <pattern>%-5level>>> %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 

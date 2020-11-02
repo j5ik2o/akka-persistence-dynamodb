@@ -310,9 +310,22 @@ lazy val benchmark = (project in file("benchmark"))
     name := "akka-persistence-dynamodb-benchmark",
     libraryDependencies ++= Seq(
         "ch.qos.logback" % "logback-classic" % logbackVersion,
+        "org.slf4j"      % "slf4j-api"       % slf4jVersion,
         "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion,
         dimafeng.testcontainerScala
-      )
+      ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            "com.typesafe.akka" %% "akka-slf4j" % akka26Version
+          )
+        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+          Seq(
+            "com.typesafe.akka" %% "akka-slf4j" % akka25Version
+          )
+      }
+    }
   )
   .dependsOn(test, journal, snapshot)
   .enablePlugins(JmhPlugin)

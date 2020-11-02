@@ -21,6 +21,7 @@ import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientB
 import com.dimafeng.testcontainers.FixedHostPortGenericContainer
 import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
+import org.slf4j.LoggerFactory
 import org.testcontainers.containers.wait.strategy.Wait
 
 import scala.concurrent.Await
@@ -28,6 +29,8 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
 trait DynamoDBContainerHelper {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   protected lazy val region: Regions = Regions.AP_NORTHEAST_1
 
   protected lazy val accessKeyId: String = "x"
@@ -100,6 +103,7 @@ trait DynamoDBContainerHelper {
   val legacyJournalTable = false
 
   def createTable(): Unit = synchronized {
+    logger.debug("createTable: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
     Thread.sleep(500)
     if (legacyJournalTable)
       createLegacyJournalTable()

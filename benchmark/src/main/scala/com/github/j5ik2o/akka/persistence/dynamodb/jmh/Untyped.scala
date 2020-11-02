@@ -2,29 +2,29 @@ package com.github.j5ik2o.akka.persistence.dynamodb.jmh
 
 import java.util.concurrent.TimeUnit
 
+import akka.pattern.ask
+import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UserPersistentActor.Increment
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.RandomPortUtil
 import org.openjdk.jmh.annotations._
 
-@OutputTimeUnit(TimeUnit.SECONDS)
-@BenchmarkMode(Array(Mode.Throughput))
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 @State(Scope.Benchmark)
+@BenchmarkMode(Array(Mode.All))
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Untyped extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    ref ! Increment(1)
+    implicit val to = Timeout(10 seconds)
+    val future      = ref ? Increment(1)
+    try {
+      Await.result(future, Duration.Inf)
+    } catch {
+      case ex =>
+        ex.printStackTrace()
+    }
   }
 
-}
-
-object TestMain extends BenchmarkHelper with App {
-
-  override protected lazy val dynamoDBPort = RandomPortUtil.temporaryServerPort()
-
-  setup()
-
-  ref ! Increment(1)
-
-  tearDown()
 }

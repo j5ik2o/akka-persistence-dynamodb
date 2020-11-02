@@ -3,7 +3,14 @@ package com.github.j5ik2o.akka.persistence.dynamodb.jmh
 import java.util.UUID
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.persistence.{ PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer }
+import akka.persistence.{
+  PersistentActor,
+  RecoveryCompleted,
+  SaveSnapshotFailure,
+  SaveSnapshotSuccess,
+  SnapshotMetadata,
+  SnapshotOffer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UserPersistentActor.{ Increment, IncrementReply, Incremented }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBContainerHelper }
 import org.openjdk.jmh.annotations.{ Setup, TearDown }
@@ -31,8 +38,10 @@ class UserPersistentActor(id: UUID) extends PersistentActor {
   override def receiveCommand: Receive = {
     case Increment(n) =>
       persist(n) { _ => sender() ! IncrementReply() }
-//      if (lastSequenceNr % 100 == 0)
-//        saveSnapshot(counter)
+      if (lastSequenceNr % 100 == 0)
+        saveSnapshot(counter)
+    case SaveSnapshotSuccess(_)    =>
+    case SaveSnapshotFailure(_, _) =>
   }
 
 }
@@ -48,7 +57,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
     dynamoDbLocalContainer.start()
     Thread.sleep(1000)
     createTable()
-    system = ActorSystem("benchmark", config)
+    system = ActorSystem("benchmark-" + UUID.randomUUID().toString, config)
     val props = Props(new UserPersistentActor(UUID.randomUUID()))
     ref = system.actorOf(props)
   }

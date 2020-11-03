@@ -93,10 +93,14 @@ object DynamoDBJournal {
       partitionKeyResolver: PartitionKeyResolver,
       sortKeyResolver: SortKeyResolver,
       metricsReporter: Option[MetricsReporter]
-  )(f1: JavaDynamoDbSyncClient => Unit, f2: JavaDynamoDbAsyncClient => Unit): V2JournalRowWriteDriver = {
+  )(
+      f1: JavaDynamoDbSyncClient => Unit,
+      f2: JavaDynamoDbAsyncClient => Unit
+  )(implicit log: LoggingAdapter): V2JournalRowWriteDriver = {
     val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val client = ClientUtils.createV2SyncClient(dynamicAccess, journalPluginConfig)(f1)
+        val client =
+          ClientUtils.createV2SyncClient(dynamicAccess, journalPluginConfig.configRootPath, journalPluginConfig)(f1)
         (Some(client), None)
       case ClientType.Async =>
         val client = ClientUtils.createV2AsyncClient(dynamicAccess, journalPluginConfig)(f2)

@@ -90,7 +90,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
             new V2SnapshotDaoImpl(Some(client), None, serialization, pluginConfig, metricsReporter)
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaSyncClient = c)
+              ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)(c =>
+                v2JavaSyncClient = c
+              )
             new V2SnapshotDaoImpl(None, Some(client), serialization, pluginConfig, metricsReporter)
         }
       case ClientVersion.V1 =>

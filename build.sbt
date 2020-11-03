@@ -6,7 +6,7 @@ val scala213Version = "2.13.1"
 
 val scalaCollectionCompatVersion = "2.1.6"
 
-val akka25Version = "2.5.31"
+val akka25Version = "2.5.32"
 val akka26Version = "2.6.7"
 
 val logbackVersion      = "1.2.3"

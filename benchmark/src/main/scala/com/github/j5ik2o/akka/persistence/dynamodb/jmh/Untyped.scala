@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.pattern.ask
 import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.jmh.Counter.Increment
+import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UntypedCounter.Increment
 import org.openjdk.jmh.annotations._
 
 import scala.concurrent.Await
@@ -18,7 +18,7 @@ class Untyped extends BenchmarkHelper {
   @Benchmark
   def increment(): Unit = {
     implicit val to = Timeout(10 seconds)
-    val future      = ref ? Increment(1)
+    val future      = untypedRef ? Increment(1)
     try {
       Await.result(future, Duration.Inf)
     } catch {

@@ -51,7 +51,7 @@ final class V2JournalRowReadDriver(
         DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("query")
+    }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

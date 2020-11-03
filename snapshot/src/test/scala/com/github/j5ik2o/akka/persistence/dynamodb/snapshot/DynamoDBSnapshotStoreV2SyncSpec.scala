@@ -63,17 +63,6 @@ class DynamoDBSnapshotStoreV2SyncSpec
 
   override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
 
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .httpClient(NettyNioAsyncHttpClient.builder().maxConcurrency(1).build())
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
-
   before { createTable }
 
   after { deleteTable }

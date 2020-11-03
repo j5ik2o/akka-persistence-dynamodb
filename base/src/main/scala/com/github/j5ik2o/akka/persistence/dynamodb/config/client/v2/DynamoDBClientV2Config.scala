@@ -53,13 +53,13 @@ object DynamoDBClientV2Config extends LoggingSupport {
     keyNames.map(v => (v, config.exists(v))).toMap
   }
 
-  def fromConfig(config: Config, legacy: Boolean): DynamoDBClientV2Config = {
+  def fromConfig(config: Config, legacyConfigFormat: Boolean): DynamoDBClientV2Config = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV2Config(
       sourceConfig = config,
       dispatcherName = config.getAs[String](dispatcherNameKey),
       asyncClientConfig = {
-        if (legacy) {
+        if (legacyConfigFormat) {
           logger.warn(
             "<<<!!!CAUTION: PLEASE MIGRATE TO NEW CONFIG FORMAT!!!>>>\n" +
             "\tThe configuration items of AWS-SDK V2 client remain with the old key names: (j5ik2o.dynamo-db-journal.dynamo-db-client).\n" +

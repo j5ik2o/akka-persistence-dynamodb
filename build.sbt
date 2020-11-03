@@ -94,6 +94,19 @@ lazy val baseSettings = Seq(
     )
 )
 
+lazy val test = (project in file("test"))
+  .settings(baseSettings)
+  .settings(deploySettings)
+  .settings(
+    name := "akka-persistence-dynamodb-test",
+    libraryDependencies ++= Seq(
+        "com.amazonaws"     % "aws-java-sdk-dynamodb"        % awsSdkV1Version,
+        "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
+        "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB,
+        dimafeng.testcontainerScala
+      )
+  )
+
 lazy val base = (project in file("base"))
   .settings(baseSettings)
   .settings(deploySettings)
@@ -148,7 +161,7 @@ lazy val base = (project in file("base"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  )
+  ).dependsOn(test % "test->test")
 
 lazy val journal = (project in file("journal"))
   .settings(baseSettings)
@@ -290,6 +303,32 @@ lazy val query = (project in file("query"))
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
   ).dependsOn(journal % "test->test;compile->compile", snapshot % "test->compile")
+
+lazy val benchmark = (project in file("benchmark"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-benchmark",
+    libraryDependencies ++= Seq(
+        "ch.qos.logback" % "logback-classic" % logbackVersion,
+        "org.slf4j"      % "slf4j-api"       % slf4jVersion,
+        "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion,
+        dimafeng.testcontainerScala
+      ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            "com.typesafe.akka" %% "akka-slf4j" % akka26Version
+          )
+        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+          Seq(
+            "com.typesafe.akka" %% "akka-slf4j" % akka25Version
+          )
+      }
+    }
+  )
+  .dependsOn(test, journal, snapshot)
+  .enablePlugins(JmhPlugin)
 
 lazy val root = (project in file("."))
   .settings(baseSettings)

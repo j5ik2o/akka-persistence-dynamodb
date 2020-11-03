@@ -41,7 +41,7 @@ object DynamoDBClientConfig extends LoggingSupport {
   val DefaultBatchGetItemLimit                  = 100
   val DefaultBatchWriteItemLimit                = 25
 
-  def fromConfig(config: Config, legacy: Boolean): DynamoDBClientConfig = {
+  def fromConfig(config: Config, legacyConfigFormat: Boolean): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientConfig(
       sourceConfig = config,
@@ -54,16 +54,16 @@ object DynamoDBClientConfig extends LoggingSupport {
       clientType = config.getAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(DefaultClientType),
       DynamoDBClientV1Config.fromConfig(config.getOrElse[Config](v1Key, ConfigFactory.empty())),
       DynamoDBClientV1DaxConfig.fromConfig(config.getOrElse[Config](v1DaxKey, ConfigFactory.empty())), {
-        if (legacy) {
+        if (legacyConfigFormat) {
           logger.warn(
             "<<<!!!CAUTION: PLEASE MIGRATE TO NEW CONFIG FORMAT!!!>>>\n" +
             "\tThe configuration items of AWS-SDK V2 client remain with the old key names: (j5ik2o.dynamo-db-journal.dynamo-db-client).\n" +
             "\tPlease change current key name to the new key name: (j5ik2o.dynamo-db-journal.dynamo-db-client.v2). \n\t" +
             DynamoDBClientV2Config.existsKeyNames(config).filter(_._2).keys.mkString("child-keys = [ ", ", ", " ]")
           )
-          DynamoDBClientV2Config.fromConfig(config, legacy)
+          DynamoDBClientV2Config.fromConfig(config, legacyConfigFormat)
         } else
-          DynamoDBClientV2Config.fromConfig(config.getOrElse[Config](v2Key, ConfigFactory.empty()), legacy)
+          DynamoDBClientV2Config.fromConfig(config.getOrElse[Config](v2Key, ConfigFactory.empty()), legacyConfigFormat)
       },
       batchGetItemLimit = config.getOrElse[Int](batchGetItemLimitKey, DefaultBatchGetItemLimit),
       batchWriteItemLimit = config.getOrElse[Int](batchWriteItemLimitKey, DefaultBatchWriteItemLimit)

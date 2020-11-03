@@ -17,15 +17,10 @@
 
 package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
-import java.net.URI
-
 import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.{ Config, ConfigFactory }
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -110,21 +105,6 @@ class DynamoDBCurrentEventsByPersistenceIdDeleteEventsTest
   override implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByPersistenceIdDeleteEventsTest.dynamoDBPort
-
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
-
-  override def afterAll(): Unit = {
-    underlying.close()
-    super.afterAll()
-  }
 
   before { createTable }
 

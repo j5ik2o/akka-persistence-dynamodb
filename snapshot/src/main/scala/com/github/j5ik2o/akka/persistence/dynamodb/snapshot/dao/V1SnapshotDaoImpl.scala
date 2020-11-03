@@ -408,7 +408,7 @@ class V1SnapshotDaoImpl(
         case _ =>
           throw new IllegalStateException("invalid state")
       }
-    ).log("query")
+    ).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

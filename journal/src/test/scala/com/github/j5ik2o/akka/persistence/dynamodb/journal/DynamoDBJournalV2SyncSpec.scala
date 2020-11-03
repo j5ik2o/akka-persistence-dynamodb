@@ -1,16 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import java.net.URI
-
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
-import com.typesafe.config.ConfigFactory
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.concurrent.ScalaFutures
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 
@@ -22,13 +16,12 @@ object DynamoDBJournalV2SyncSpec {
 class DynamoDBJournalV2SyncSpec
     extends JournalSpec(
       ConfigHelper.config(
-        "journal-reference",
+        Some("journal-reference"),
         legacyConfigFormat = false,
         legacyJournalMode = DynamoDBJournalV2AsyncSpec.legacyJournalMode,
         dynamoDBPort = DynamoDBJournalV2AsyncSpec.dynamoDBPort,
-        clientVersion = ClientVersion.V2,
-        clientType = ClientType.Sync,
-        None,
+        clientVersion = ClientVersion.V2.toString,
+        clientType = ClientType.Sync.toString,
         None
       )
     )
@@ -41,16 +34,6 @@ class DynamoDBJournalV2SyncSpec
   override protected lazy val dynamoDBPort: Int = DynamoDBJournalV2AsyncSpec.dynamoDBPort
 
   override val legacyJournalTable: Boolean = DynamoDBJournalV2AsyncSpec.legacyJournalMode
-
-  val underlying: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
-    .builder()
-    .credentialsProvider(
-      StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKeyId, secretAccessKey))
-    )
-    .endpointOverride(URI.create(dynamoDBEndpoint))
-    .build()
-
-  override def dynamoDbAsyncClient: DynamoDbAsyncClient = DynamoDbAsyncClient(underlying)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

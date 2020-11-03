@@ -176,7 +176,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator, metricsReporter)
   private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
 
@@ -243,7 +243,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
 
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
-    metricsReporter.foreach(_.beforeJournalAsyncWriteMessages())
+    val persistenceId = atomicWrites.head.persistenceId
+    val pid           = PersistenceId(persistenceId)
+    val context       = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext    = metricsReporter.fold(context)(_.beforeJournalAsyncWriteMessages(context))
+
     val serializedTries: Seq[Either[Throwable, Seq[JournalRow]]] = serializer.serialize(atomicWrites)
     val rowsToWrite: Seq[JournalRow] = for {
       serializeTry <- serializedTries
@@ -273,30 +277,31 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
             case Left(ex)     => Failure(ex)
           }.toVector
         }
-    val persistenceId = atomicWrites.head.persistenceId
     writeInProgress.put(persistenceId, future)
     future.onComplete { result: Try[Seq[Try[Unit]]] =>
       self ! WriteFinished(persistenceId, future)
       result match {
         case Success(_) =>
-          metricsReporter.foreach(_.afterJournalAsyncWriteMessages())
+          metricsReporter.foreach(_.afterJournalAsyncWriteMessages(newContext))
         case Failure(ex) =>
-          metricsReporter.foreach(_.errorJournalAsyncWriteMessages(ex))
+          metricsReporter.foreach(_.errorJournalAsyncWriteMessages(newContext, ex))
       }
     }
     future
   }
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
-    metricsReporter.foreach(_.beforeJournalAsyncDeleteMessagesTo())
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncDeleteMessagesTo(context))
     val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterJournalAsyncDeleteMessagesTo())
+        metricsReporter.foreach(_.afterJournalAsyncDeleteMessagesTo(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorJournalAsyncDeleteMessagesTo(ex))
+        metricsReporter.foreach(_.errorJournalAsyncDeleteMessagesTo(newContext, ex))
     }
     future
   }
@@ -304,7 +309,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
   ): Future[Unit] = {
-    metricsReporter.foreach(_.beforeJournalAsyncReplayMessages())
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReplayMessages(context))
     val future = journalDao
       .getMessagesAsPersistentReprWithBatch(
         persistenceId,
@@ -319,15 +326,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       .map(_ => ())
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterJournalAsyncReplayMessages())
+        metricsReporter.foreach(_.afterJournalAsyncReplayMessages(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorJournalAsyncReplayMessages(ex))
+        metricsReporter.foreach(_.errorJournalAsyncReplayMessages(newContext, ex))
     }
     future
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
-    metricsReporter.foreach(_.beforeJournalAsyncReadHighestSequenceNr())
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReadHighestSequenceNr(context))
     def fetchHighestSeqNr(): Future[Long] = {
       journalDao
         .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
@@ -341,9 +350,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     }
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterJournalAsyncReadHighestSequenceNr())
+        metricsReporter.foreach(_.afterJournalAsyncReadHighestSequenceNr(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorJournalAsyncReadHighestSequenceNr(ex))
+        metricsReporter.foreach(_.errorJournalAsyncReadHighestSequenceNr(newContext, ex))
     }
     future
   }
@@ -366,8 +375,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   private def asyncUpdateEvent(persistenceId: String, sequenceNumber: Long, message: AnyRef): Future[Done] = {
-    metricsReporter.foreach(_.beforeJournalAsyncUpdateEvent())
-    val write = PersistentRepr(message, sequenceNumber, persistenceId)
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncUpdateEvent(context))
+    val write      = PersistentRepr(message, sequenceNumber, persistenceId)
     val serializedRow: JournalRow = serializer.serialize(write) match {
       case Right(row) => row
       case Left(_) =>
@@ -378,9 +389,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterJournalAsyncUpdateEvent())
+        metricsReporter.foreach(_.afterJournalAsyncUpdateEvent(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(ex))
+        metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(newContext, ex))
     }
     future
   }

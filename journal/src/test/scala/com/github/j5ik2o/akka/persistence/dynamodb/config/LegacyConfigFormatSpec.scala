@@ -1,12 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PartitionKey, PartitionKeyResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ Context, MetricsReporter }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.{ FreeSpec, Matchers }
-
-import scala.concurrent.duration.Duration
 
 class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
@@ -16,37 +14,7 @@ class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
 }
 
-class MetricsReporterImpl extends MetricsReporter {
-  override def beforeJournalAsyncWriteMessages(): Unit         = {}
-  override def beforeJournalAsyncDeleteMessagesTo(): Unit      = {}
-  override def beforeJournalAsyncReplayMessages(): Unit        = {}
-  override def beforeJournalAsyncReadHighestSequenceNr(): Unit = {}
-  override def beforeJournalAsyncUpdateEvent(): Unit           = {}
-
-  override def afterJournalAsyncWriteMessages(): Unit         = {}
-  override def afterJournalAsyncDeleteMessagesTo(): Unit      = {}
-  override def afterJournalAsyncReplayMessages(): Unit        = {}
-  override def afterJournalAsyncReadHighestSequenceNr(): Unit = {}
-  override def afterJournalAsyncUpdateEvent(): Unit           = {}
-
-  override def errorJournalAsyncWriteMessages(ex: Throwable): Unit         = {}
-  override def errorJournalAsyncDeleteMessagesTo(ex: Throwable): Unit      = {}
-  override def errorJournalAsyncReplayMessages(ex: Throwable): Unit        = {}
-  override def errorJournalAsyncReadHighestSequenceNr(ex: Throwable): Unit = {}
-  override def errorJournalAsyncUpdateEvent(ex: Throwable): Unit           = {}
-
-  override def beforeSnapshotStoreLoadAsync(): Unit   = {}
-  override def beforeSnapshotStoreSaveAsync(): Unit   = {}
-  override def beforeSnapshotStoreDeleteAsync(): Unit = {}
-
-  override def afterSnapshotStoreLoadAsync(): Unit   = {}
-  override def afterSnapshotStoreSaveAsync(): Unit   = {}
-  override def afterSnapshotStoreDeleteAsync(): Unit = {}
-
-  override def errorSnapshotStoreLoadAsync(ex: Throwable): Unit   = {}
-  override def errorSnapshotStoreSaveAsync(ex: Throwable): Unit   = {}
-  override def errorSnapshotStoreDeleteAsync(ex: Throwable): Unit = {}
-}
+class MetricsReporterImpl extends MetricsReporter
 
 class LegacyConfigFormatSpec extends FreeSpec with Matchers {
   "config" - {

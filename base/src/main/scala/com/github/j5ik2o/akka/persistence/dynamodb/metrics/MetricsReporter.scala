@@ -1,78 +1,130 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
+import java.util.UUID
+
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 
-import scala.concurrent.duration.Duration
 import scala.collection.immutable._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
+
+trait Context {
+  def id: UUID
+  def persistenceId: PersistenceId
+  def data: Option[Any]
+  def withData(value: Option[Any]): Context
+}
 
 trait MetricsReporter {
 
-  def beforeJournalAsyncWriteMessages(): Unit
-  def beforeJournalAsyncDeleteMessagesTo(): Unit
-  def beforeJournalAsyncReplayMessages(): Unit
-  def beforeJournalAsyncReadHighestSequenceNr(): Unit
-  def beforeJournalAsyncUpdateEvent(): Unit
+  def beforeJournalAsyncWriteMessages(context: Context): Context            = { context }
+  def afterJournalAsyncWriteMessages(context: Context): Unit                = {}
+  def errorJournalAsyncWriteMessages(context: Context, ex: Throwable): Unit = {}
 
-  def afterJournalAsyncWriteMessages(): Unit
-  def afterJournalAsyncDeleteMessagesTo(): Unit
-  def afterJournalAsyncReplayMessages(): Unit
-  def afterJournalAsyncReadHighestSequenceNr(): Unit
-  def afterJournalAsyncUpdateEvent(): Unit
+  def beforeJournalAsyncDeleteMessagesTo(context: Context): Context            = { context }
+  def afterJournalAsyncDeleteMessagesTo(context: Context): Unit                = {}
+  def errorJournalAsyncDeleteMessagesTo(context: Context, ex: Throwable): Unit = {}
 
-  def errorJournalAsyncWriteMessages(ex: Throwable): Unit
-  def errorJournalAsyncDeleteMessagesTo(ex: Throwable): Unit
-  def errorJournalAsyncReplayMessages(ex: Throwable): Unit
-  def errorJournalAsyncReadHighestSequenceNr(ex: Throwable): Unit
-  def errorJournalAsyncUpdateEvent(ex: Throwable): Unit
+  def beforeJournalAsyncReplayMessages(context: Context): Context            = { context }
+  def afterJournalAsyncReplayMessages(context: Context): Unit                = {}
+  def errorJournalAsyncReplayMessages(context: Context, ex: Throwable): Unit = {}
 
-  def beforeSnapshotStoreLoadAsync(): Unit
-  def afterSnapshotStoreLoadAsync(): Unit
-  def errorSnapshotStoreLoadAsync(ex: Throwable): Unit
+  def beforeJournalAsyncReadHighestSequenceNr(context: Context): Context            = { context }
+  def afterJournalAsyncReadHighestSequenceNr(context: Context): Unit                = {}
+  def errorJournalAsyncReadHighestSequenceNr(context: Context, ex: Throwable): Unit = {}
 
-  def beforeSnapshotStoreSaveAsync(): Unit
-  def afterSnapshotStoreSaveAsync(): Unit
-  def errorSnapshotStoreSaveAsync(ex: Throwable): Unit
+  def beforeJournalAsyncUpdateEvent(context: Context): Context            = { context }
+  def afterJournalAsyncUpdateEvent(context: Context): Unit                = {}
+  def errorJournalAsyncUpdateEvent(context: Context, ex: Throwable): Unit = {}
 
-  def beforeSnapshotStoreDeleteAsync(): Unit
-  def afterSnapshotStoreDeleteAsync(): Unit
-  def errorSnapshotStoreDeleteAsync(ex: Throwable): Unit
+  def beforeJournalSerializeJournal(context: Context): Context            = { context }
+  def afterJournalSerializeJournal(context: Context): Unit                = {}
+  def errorJournalSerializeJournal(context: Context, ex: Throwable): Unit = {}
+
+  def beforeJournalDeserializeJournal(context: Context): Context            = { context }
+  def afterJournalDeserializeJournal(context: Context): Unit                = {}
+  def errorJournalDeserializeJournal(context: Context, ex: Throwable): Unit = {}
+
+  def beforeSnapshotStoreLoadAsync(context: Context): Context            = { context }
+  def afterSnapshotStoreLoadAsync(context: Context): Unit                = {}
+  def errorSnapshotStoreLoadAsync(context: Context, ex: Throwable): Unit = {}
+
+  def beforeSnapshotStoreSaveAsync(context: Context): Context            = { context }
+  def afterSnapshotStoreSaveAsync(context: Context): Unit                = {}
+  def errorSnapshotStoreSaveAsync(context: Context, ex: Throwable): Unit = {}
+
+  def beforeSnapshotStoreDeleteAsync(context: Context): Context            = { context }
+  def afterSnapshotStoreDeleteAsync(context: Context): Unit                = {}
+  def errorSnapshotStoreDeleteAsync(context: Context, ex: Throwable): Unit = {}
+
+  def beforeSnapshotStoreSerializeSnapshot(context: Context): Context            = { context }
+  def afterSnapshotStoreSerializeSnapshot(context: Context): Unit                = {}
+  def errorSnapshotStoreSerializeSnapshot(context: Context, ex: Throwable): Unit = {}
+
+  def beforeSnapshotStoreDeserializeSnapshot(context: Context): Context            = { context }
+  def afterSnapshotStoreDeserializeSnapshot(context: Context): Unit                = {}
+  def errorSnapshotStoreDeserializeSnapshot(context: Context, ex: Throwable): Unit = {}
 }
 
 object MetricsReporter {
 
+  case class DefaultContext(id: UUID, persistenceId: PersistenceId, data: Option[Any]) extends Context {
+    override def withData(value: Option[Any]): Context = copy(data = value)
+  }
+
+  def newContext(id: UUID, persistenceId: PersistenceId, data: Option[Any] = None): Context =
+    DefaultContext(id, persistenceId, data)
+
   class None(pluginConfig: PluginConfig) extends MetricsReporter {
-    override def beforeJournalAsyncWriteMessages(): Unit         = {}
-    override def beforeJournalAsyncDeleteMessagesTo(): Unit      = {}
-    override def beforeJournalAsyncReplayMessages(): Unit        = {}
-    override def beforeJournalAsyncReadHighestSequenceNr(): Unit = {}
-    override def beforeJournalAsyncUpdateEvent(): Unit           = {}
+    override def beforeJournalAsyncWriteMessages(context: Context): Context            = { context }
+    override def afterJournalAsyncWriteMessages(context: Context): Unit                = {}
+    override def errorJournalAsyncWriteMessages(context: Context, ex: Throwable): Unit = {}
 
-    override def afterJournalAsyncWriteMessages(): Unit         = {}
-    override def afterJournalAsyncDeleteMessagesTo(): Unit      = {}
-    override def afterJournalAsyncReplayMessages(): Unit        = {}
-    override def afterJournalAsyncReadHighestSequenceNr(): Unit = {}
-    override def afterJournalAsyncUpdateEvent(): Unit           = {}
+    override def beforeJournalAsyncDeleteMessagesTo(context: Context): Context            = { context }
+    override def afterJournalAsyncDeleteMessagesTo(context: Context): Unit                = {}
+    override def errorJournalAsyncDeleteMessagesTo(context: Context, ex: Throwable): Unit = {}
 
-    override def errorJournalAsyncWriteMessages(ex: Throwable): Unit         = {}
-    override def errorJournalAsyncDeleteMessagesTo(ex: Throwable): Unit      = {}
-    override def errorJournalAsyncReplayMessages(ex: Throwable): Unit        = {}
-    override def errorJournalAsyncReadHighestSequenceNr(ex: Throwable): Unit = {}
-    override def errorJournalAsyncUpdateEvent(ex: Throwable): Unit           = {}
+    override def beforeJournalAsyncReplayMessages(context: Context): Context            = { context }
+    override def afterJournalAsyncReplayMessages(context: Context): Unit                = {}
+    override def errorJournalAsyncReplayMessages(context: Context, ex: Throwable): Unit = {}
 
-    override def beforeSnapshotStoreLoadAsync(): Unit   = {}
-    override def beforeSnapshotStoreSaveAsync(): Unit   = {}
-    override def beforeSnapshotStoreDeleteAsync(): Unit = {}
+    override def beforeJournalAsyncReadHighestSequenceNr(context: Context): Context            = { context }
+    override def afterJournalAsyncReadHighestSequenceNr(context: Context): Unit                = {}
+    override def errorJournalAsyncReadHighestSequenceNr(context: Context, ex: Throwable): Unit = {}
 
-    override def afterSnapshotStoreLoadAsync(): Unit   = {}
-    override def afterSnapshotStoreSaveAsync(): Unit   = {}
-    override def afterSnapshotStoreDeleteAsync(): Unit = {}
+    override def beforeJournalAsyncUpdateEvent(context: Context): Context            = { context }
+    override def afterJournalAsyncUpdateEvent(context: Context): Unit                = {}
+    override def errorJournalAsyncUpdateEvent(context: Context, ex: Throwable): Unit = {}
 
-    override def errorSnapshotStoreLoadAsync(ex: Throwable): Unit   = {}
-    override def errorSnapshotStoreSaveAsync(ex: Throwable): Unit   = {}
-    override def errorSnapshotStoreDeleteAsync(ex: Throwable): Unit = {}
+    override def beforeJournalSerializeJournal(context: Context): Context            = { context }
+    override def afterJournalSerializeJournal(context: Context): Unit                = {}
+    override def errorJournalSerializeJournal(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeJournalDeserializeJournal(context: Context): Context            = { context }
+    override def afterJournalDeserializeJournal(context: Context): Unit                = {}
+    override def errorJournalDeserializeJournal(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeSnapshotStoreLoadAsync(context: Context): Context            = { context }
+    override def afterSnapshotStoreLoadAsync(context: Context): Unit                = {}
+    override def errorSnapshotStoreLoadAsync(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeSnapshotStoreSaveAsync(context: Context): Context            = { context }
+    override def afterSnapshotStoreSaveAsync(context: Context): Unit                = {}
+    override def errorSnapshotStoreSaveAsync(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeSnapshotStoreDeleteAsync(context: Context): Context            = { context }
+    override def afterSnapshotStoreDeleteAsync(context: Context): Unit                = {}
+    override def errorSnapshotStoreDeleteAsync(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeSnapshotStoreSerializeSnapshot(context: Context): Context            = { context }
+    override def afterSnapshotStoreSerializeSnapshot(context: Context): Unit                = {}
+    override def errorSnapshotStoreSerializeSnapshot(context: Context, ex: Throwable): Unit = {}
+
+    override def beforeSnapshotStoreDeserializeSnapshot(context: Context): Context            = { context }
+    override def afterSnapshotStoreDeserializeSnapshot(context: Context): Unit                = {}
+    override def errorSnapshotStoreDeserializeSnapshot(context: Context, ex: Throwable): Unit = {}
   }
 
 }

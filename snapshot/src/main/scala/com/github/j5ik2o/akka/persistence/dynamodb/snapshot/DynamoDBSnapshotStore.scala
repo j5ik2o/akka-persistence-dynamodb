@@ -16,6 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
+import java.util.UUID
+
 import akka.actor.ExtendedActorSystem
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
@@ -118,7 +120,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       persistenceId: String,
       criteria: SnapshotSelectionCriteria
   ): Future[Option[SelectedSnapshot]] = {
-    metricsReporter.foreach(_.beforeSnapshotStoreLoadAsync())
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreLoadAsync(context))
     val result = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.latestSnapshot(PersistenceId(persistenceId))
@@ -137,43 +141,48 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterSnapshotStoreLoadAsync())
+        metricsReporter.foreach(_.afterSnapshotStoreLoadAsync(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorSnapshotStoreLoadAsync(ex))
+        metricsReporter.foreach(_.errorSnapshotStoreLoadAsync(newContext, ex))
     }
     future
   }
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
-    metricsReporter.foreach(_.beforeSnapshotStoreSaveAsync())
-    val future = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+    val pid        = PersistenceId(metadata.persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
+    val future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterSnapshotStoreSaveAsync())
+        metricsReporter.foreach(_.afterSnapshotStoreSaveAsync(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorSnapshotStoreSaveAsync(ex))
+        metricsReporter.foreach(_.errorSnapshotStoreSaveAsync(newContext, ex))
     }
     future
   }
 
   override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] = {
-    metricsReporter.foreach(_.beforeSnapshotStoreDeleteAsync())
+    val pid        = PersistenceId(metadata.persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
     val future = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync())
+        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(ex))
+        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(newContext, ex))
     }
     future
   }
 
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
-    metricsReporter.foreach(_.beforeSnapshotStoreDeleteAsync())
-    val pid = PersistenceId(persistenceId)
+    val pid        = PersistenceId(persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
     val future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
@@ -191,9 +200,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     }
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync())
+        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(ex))
+        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(newContext, ex))
     }
     future
   }

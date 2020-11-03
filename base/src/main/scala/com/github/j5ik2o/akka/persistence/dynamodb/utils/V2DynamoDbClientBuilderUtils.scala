@@ -35,8 +35,6 @@ import software.amazon.awssdk.services.dynamodb.{
 
 object V2DynamoDbClientBuilderUtils {
 
-  private val logger = LoggerFactory.getLogger(getClass)
-
   def setupSync(
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
@@ -63,7 +61,6 @@ object V2DynamoDbClientBuilderUtils {
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
   ): DynamoDbAsyncClientBuilder = {
-    logger.debug("new DynamoDbAsyncClientBuilder")
     val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
@@ -72,16 +69,12 @@ object V2DynamoDbClientBuilderUtils {
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
-        logger.debug(s"a, s = $a, $s")
         builder = builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
     }
-    pluginConfig.clientConfig.endpoint.foreach { ep =>
-      logger.debug(s"endpoint = $ep")
-      builder = builder.endpointOverride(URI.create(ep))
-    }
+    pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
     pluginConfig.clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
     builder
   }

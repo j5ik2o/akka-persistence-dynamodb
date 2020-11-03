@@ -10,9 +10,9 @@ import akka.persistence.{
   SnapshotMetadata,
   SnapshotOffer
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.jmh.Counter.{ Increment, IncrementReply }
+import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UntypedCounter.{ Increment, IncrementReply }
 
-object Counter {
+object UntypedCounter {
   sealed trait Command
   trait Reply
   case class Increment(n: Int) extends Command
@@ -21,7 +21,7 @@ object Counter {
   case class Incremented(n: Int) extends Event
 }
 
-class Counter(id: UUID) extends PersistentActor {
+class UntypedCounter(id: UUID) extends PersistentActor {
   private var counter: Int           = 0
   override def persistenceId: String = "User-" + id.toString
 
@@ -35,8 +35,8 @@ class Counter(id: UUID) extends PersistentActor {
   override def receiveCommand: Receive = {
     case Increment(n) =>
       persist(n) { _ => sender() ! IncrementReply() }
-      if (lastSequenceNr % 100 == 0)
-        saveSnapshot(counter)
+//      if (lastSequenceNr % 100 == 0)
+//        saveSnapshot(counter)
     case SaveSnapshotSuccess(_)    =>
     case SaveSnapshotFailure(_, _) =>
   }

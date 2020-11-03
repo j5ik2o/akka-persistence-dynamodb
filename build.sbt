@@ -288,11 +288,13 @@ lazy val benchmark = (project in file("benchmark"))
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
-            "com.typesafe.akka" %% "akka-slf4j" % akka26Version
+            "com.typesafe.akka" %% "akka-slf4j"             % akka26Version,
+            "com.typesafe.akka" %% "akka-persistence-typed" % akka26Version
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(
-            "com.typesafe.akka" %% "akka-slf4j" % akka25Version
+            "com.typesafe.akka" %% "akka-slf4j"             % akka25Version,
+            "com.typesafe.akka" %% "akka-persistence-typed" % akka25Version
           )
       }
     }

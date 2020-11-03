@@ -136,7 +136,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         val (maybeSyncClient, maybeAsyncClient) = queryPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV2SyncClient(dynamicAccess, queryPluginConfig)(v => javaSyncClientV2 = v)
+              ClientUtils.createV2SyncClient(dynamicAccess, queryPluginConfig.configRootPath, queryPluginConfig)(v =>
+                javaSyncClientV2 = v
+              )
             (Some(client), None)
           case ClientType.Async =>
             val client =

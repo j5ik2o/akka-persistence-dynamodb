@@ -333,7 +333,7 @@ final class V1JournalRowWriteDriver(
         Flow[PutItemRequest].mapAsync(1) { request => c.putItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("putItem")
+    }).log("putItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -355,7 +355,7 @@ final class V1JournalRowWriteDriver(
         Flow[BatchWriteItemRequest].mapAsync(1) { request => c.batchWriteItemAsync(request).toScala }
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("batchWriteItem")
+    }).log("batchWriteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -379,7 +379,7 @@ final class V1JournalRowWriteDriver(
         case _ =>
           throw new IllegalStateException("invalid state")
       }
-    ).log("updateItem")
+    ).log("updateItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -403,7 +403,7 @@ final class V1JournalRowWriteDriver(
         case _ =>
           throw new IllegalStateException("invalid state")
       }
-    ).log("deleteItem")
+    ).log("deleteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

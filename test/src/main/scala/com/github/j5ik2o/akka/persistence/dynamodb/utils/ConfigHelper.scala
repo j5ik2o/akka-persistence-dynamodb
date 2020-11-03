@@ -22,7 +22,7 @@ object ConfigHelper {
        |  queue-enable = true
        |  queue-overflow-strategy = backpressure 
        |  queue-buffer-size = 1024
-       |  queue-parallelism = 1
+       |  queue-parallelism = 32
        |  write-parallelism = 1
        |  query-batch-size = 1024
        |  dynamo-db-client {

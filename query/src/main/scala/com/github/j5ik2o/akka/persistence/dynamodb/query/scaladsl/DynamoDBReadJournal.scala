@@ -111,7 +111,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
   private val serialization: Serialization = SerializationExtension(system)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, queryPluginConfig.tagSeparator)
+    new ByteArrayJournalSerializer(serialization, queryPluginConfig.tagSeparator, metricsReporter)
 
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
   private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _

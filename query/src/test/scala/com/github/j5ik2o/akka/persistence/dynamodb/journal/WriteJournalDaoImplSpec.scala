@@ -81,7 +81,7 @@ class WriteJournalDaoImplSpec
   implicit val ec = system.dispatcher
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, ",")
+    new ByteArrayJournalSerializer(serialization, ",", None)
 
   val queryProcessor =
     new V2QueryProcessor(

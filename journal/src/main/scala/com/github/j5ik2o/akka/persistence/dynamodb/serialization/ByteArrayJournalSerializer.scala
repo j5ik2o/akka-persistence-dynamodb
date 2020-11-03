@@ -16,21 +16,30 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 
+import java.util.UUID
+
 import akka.persistence.PersistentRepr
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
 import scala.util.{ Failure, Success }
 
-class ByteArrayJournalSerializer(serialization: Serialization, separator: String)
-    extends FlowPersistentReprSerializer[JournalRow] {
+class ByteArrayJournalSerializer(
+    serialization: Serialization,
+    separator: String,
+    metricsReporter: Option[MetricsReporter]
+) extends FlowPersistentReprSerializer[JournalRow] {
 
   override def serialize(
       persistentRepr: PersistentRepr,
       tags: Set[String],
       index: Option[Int]
   ): Either[Throwable, JournalRow] = {
+    val pid        = PersistenceId(persistentRepr.persistenceId)
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalSerializeJournal(context))
     serialization
       .serialize(persistentRepr)
       .map(
@@ -43,17 +52,28 @@ class ByteArrayJournalSerializer(serialization: Serialization, separator: String
           encodeTags(tags, separator)
         )
       ) match {
-      case Success(value) => Right(value)
-      case Failure(ex)    => Left(ex)
+      case Success(value) =>
+        metricsReporter.foreach(_.afterJournalSerializeJournal(newContext))
+        Right(value)
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalSerializeJournal(newContext, ex))
+        Left(ex)
     }
   }
 
   override def deserialize(journalRow: JournalRow): Either[Throwable, (PersistentRepr, Set[String], Long)] = {
+    val pid        = journalRow.persistenceId
+    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeJournalDeserializeJournal(context))
     serialization
       .deserialize(journalRow.message, classOf[PersistentRepr])
       .map((_, decodeTags(journalRow.tags, separator), journalRow.ordering)) match {
-      case Success(value) => Right(value)
-      case Failure(ex)    => Left(ex)
+      case Success(value) =>
+        metricsReporter.foreach(_.afterJournalDeserializeJournal(newContext))
+        Right(value)
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalDeserializeJournal(newContext, ex))
+        Left(ex)
     }
   }
 }

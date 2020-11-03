@@ -22,7 +22,7 @@ class Untyped extends BenchmarkHelper {
     try {
       Await.result(future, Duration.Inf)
     } catch {
-      case ex =>
+      case ex: Throwable =>
         ex.printStackTrace()
     }
   }

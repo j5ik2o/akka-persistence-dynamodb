@@ -4,14 +4,14 @@ import java.util.concurrent.TimeUnit
 
 import akka.pattern.ask
 import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UserPersistentActor.Increment
+import com.github.j5ik2o.akka.persistence.dynamodb.jmh.Counter.Increment
 import org.openjdk.jmh.annotations._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 @State(Scope.Benchmark)
-@BenchmarkMode(Array(Mode.All))
+@BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Untyped extends BenchmarkHelper {
 

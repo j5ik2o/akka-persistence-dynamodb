@@ -17,7 +17,7 @@ object ClassCheckUtils extends LoggingSupport {
       className
     } catch {
       case ex: ClassNotFoundException =>
-        logger.error("The class file of retryPolicyProviderClassName is not found", ex)
+        logger.error(s"The class file of ${clazz.getName} is not found", ex)
         throw ex
     }
   }

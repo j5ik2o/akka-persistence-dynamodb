@@ -59,6 +59,10 @@ trait MetricsReporter {
   def afterSnapshotStoreDeleteAsync(context: Context): Unit                = {}
   def errorSnapshotStoreDeleteAsync(context: Context, ex: Throwable): Unit = {}
 
+  def beforeSnapshotStoreDeleteWithCriteriaAsync(context: Context): Context            = { context }
+  def afterSnapshotStoreDeleteWithCriteriaAsync(context: Context): Unit                = {}
+  def errorSnapshotStoreDeleteWithCriteriaAsync(context: Context, ex: Throwable): Unit = {}
+
   def beforeSnapshotStoreSerializeSnapshot(context: Context): Context            = { context }
   def afterSnapshotStoreSerializeSnapshot(context: Context): Unit                = {}
   def errorSnapshotStoreSerializeSnapshot(context: Context, ex: Throwable): Unit = {}

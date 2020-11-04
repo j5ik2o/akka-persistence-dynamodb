@@ -184,7 +184,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
     val pid        = PersistenceId(persistenceId)
     val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
-    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
+    val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteWithCriteriaAsync(context))
     val future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
@@ -202,9 +202,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     }
     future.onComplete {
       case Success(_) =>
-        metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync(newContext))
+        metricsReporter.foreach(_.afterSnapshotStoreDeleteWithCriteriaAsync(newContext))
       case Failure(ex) =>
-        metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(newContext, ex))
+        metricsReporter.foreach(_.errorSnapshotStoreDeleteWithCriteriaAsync(newContext, ex))
     }
     future
   }

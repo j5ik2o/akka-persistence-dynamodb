@@ -32,6 +32,17 @@ object ConfigHelper {
        |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
        |    client-version = "${clientVersion.toLowerCase}"
        |    client-type = "${clientType.toLowerCase()}"
+       |    v2 {
+       |      dispatcher-name = "journal-blocking-io-dispatcher"
+       |      async {
+       |        max-concurrency = 64  
+       |      }
+       |    }
+       |    v1 {
+       |      dispatcher-name = "journal-blocking-io-dispatcher"
+       |      async {
+       |      }
+       |    } 
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {
                             s"""journal-row-driver-wrapper-class-name = "${journalRowDriverWrapperClassName.get}" """
@@ -47,6 +58,12 @@ object ConfigHelper {
        |    access-key-id = "x"
        |    secret-access-key = "x" 
        |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
+       |    v2 {
+       |      dispatcher-name = "snapshot-blocking-io-dispatcher" 
+       |    }
+       |    v1 {
+       |      dispatcher-name = "snapshot-blocking-io-dispatcher" 
+       |    }
        |  }
        |}
        |
@@ -58,6 +75,21 @@ object ConfigHelper {
        |  }
        |  columns-def {
        |    sort-key-column-name = ${if (legacyJournalMode) "sequence-nr" else "skey"}
+       |  }
+       |}
+       |
+       |journal-blocking-io-dispatcher {
+       |  type = "Dispatcher"
+       |  executor = "thread-pool-executor"
+       |  thread-pool-executor {
+       |    fixed-pool-size = 64
+       |  }
+       |}
+       |snapshot-blocking-io-dispatcher {
+       |  type = "Dispatcher"
+       |  executor = "thread-pool-executor"
+       |  thread-pool-executor {
+       |    fixed-pool-size = 64 
        |  }
        |}
        """.stripMargin

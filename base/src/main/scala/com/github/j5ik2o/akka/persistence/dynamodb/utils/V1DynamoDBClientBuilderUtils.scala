@@ -38,8 +38,7 @@ object V1DynamoDBClientBuilderUtils {
     val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
     val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
 
-    val builder = AmazonDynamoDBClientBuilder
-      .standard().withClientConfiguration(cc)
+    val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
 
     csmConfigurationProviderProvider.create.foreach { c => builder.setClientSideMonitoringConfigurationProvider(c) }
     monitoringListenerProvider.create.foreach { m => builder.setMonitoringListener(m) }
@@ -64,8 +63,20 @@ object V1DynamoDBClientBuilderUtils {
   }
 
   def setupAsync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBAsyncClientBuilder = {
-    val cc      = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
+    val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
+
+    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
+    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
+
+    csmConfigurationProviderProvider.create.foreach { c => builder.setClientSideMonitoringConfigurationProvider(c) }
+    monitoringListenerProvider.create.foreach { m => builder.setMonitoringListener(m) }
+    builder.setRequestHandlers(requestHandlersProvider.create: _*)
+    requestMetricCollectorProvider.create.foreach { r => builder.setMetricsCollector(r) }
+
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
         builder.setCredentials(

@@ -10,7 +10,7 @@ import org.openjdk.jmh.annotations.{ Setup, TearDown }
 trait BenchmarkHelper extends DynamoDBContainerHelper {
 
   val config =
-    ConfigHelper.config(None, legacyConfigFormat = false, legacyJournalMode = false, dynamoDBPort, "v2", "async")
+    ConfigHelper.config(None, legacyConfigFormat = false, legacyJournalMode = false, dynamoDBPort, "v2", "sync")
   var system: ActorSystem                            = _
   var untypedRef: ActorRef                           = _
   var typedRef: typed.ActorRef[TypedCounter.Command] = _

@@ -1,16 +1,9 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.jmh
+package com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped
 
 import java.util.UUID
 
-import akka.persistence.{
-  PersistentActor,
-  RecoveryCompleted,
-  SaveSnapshotFailure,
-  SaveSnapshotSuccess,
-  SnapshotMetadata,
-  SnapshotOffer
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.jmh.UntypedCounter.{ Increment, IncrementReply }
+import akka.persistence._
+import com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped.UntypedCounter.{ Increment, IncrementReply }
 
 object UntypedCounter {
   sealed trait Command

@@ -28,3 +28,4 @@ dump.rdb
 .credentials
 .gpgCredentials
 dumps/
+.bsp/

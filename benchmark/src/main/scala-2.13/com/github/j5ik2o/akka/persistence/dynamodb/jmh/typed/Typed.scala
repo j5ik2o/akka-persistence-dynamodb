@@ -1,12 +1,13 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.jmh
+package com.github.j5ik2o.akka.persistence.dynamodb.jmh.typed
 
 import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.jmh.TypedCounter.{ Increment, IncrementReply }
-import org.openjdk.jmh.annotations.{ Benchmark, BenchmarkMode, Mode, OutputTimeUnit, Scope, State }
 import akka.actor.typed.scaladsl.adapter._
+import akka.util.Timeout
+import com.github.j5ik2o.akka.persistence.dynamodb.jmh.typed.TypedCounter.{ Increment, IncrementReply }
+import org.openjdk.jmh.annotations._
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 

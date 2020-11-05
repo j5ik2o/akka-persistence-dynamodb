@@ -70,7 +70,6 @@ lazy val deploySettings = Seq(
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
   scalaVersion := scala213Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
   scalacOptions ++= (Seq(
       "-feature",
       "-deprecation",
@@ -99,6 +98,7 @@ lazy val test = (project in file("test"))
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-test",
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
         "com.amazonaws"     % "aws-java-sdk-dynamodb"        % awsSdkV1Version,
         "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB,
@@ -112,6 +112,7 @@ lazy val base = (project in file("base"))
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-base",
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
         "org.slf4j"                          % "slf4j-api" % slf4jVersion,
         "com.iheart"                         %% "ficus" % ficusVersion,
@@ -153,17 +154,17 @@ lazy val base = (project in file("base"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(test % "test->test")
+  ).dependsOn(test % "test->compile")
 
 lazy val journal = (project in file("journal"))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-journal",
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
-        "com.github.j5ik2o" %% "reactive-aws-dynamodb-test" % reactiveAwsDynamoDB % Test,
-        "ch.qos.logback"    % "logback-classic"             % logbackVersion      % Test,
-        "org.slf4j"         % "jul-to-slf4j"                % slf4jVersion        % Test
+        "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
+        "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
       ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -192,17 +193,17 @@ lazy val journal = (project in file("journal"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(base % "test->test;compile->compile", snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", snapshot % "test->compile")
 
 lazy val snapshot = (project in file("snapshot"))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-snapshot",
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
-        "com.github.j5ik2o" %% "reactive-aws-dynamodb-test" % reactiveAwsDynamoDB % Test,
-        "ch.qos.logback"    % "logback-classic"             % logbackVersion      % Test,
-        "org.slf4j"         % "jul-to-slf4j"                % slf4jVersion        % Test
+        "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
+        "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
       ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -231,17 +232,17 @@ lazy val snapshot = (project in file("snapshot"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(base % "test->test;compile->compile")
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile")
 
 lazy val query = (project in file("query"))
   .settings(baseSettings)
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-query",
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
-        "com.github.j5ik2o" %% "reactive-aws-dynamodb-test" % reactiveAwsDynamoDB % Test,
-        "ch.qos.logback"    % "logback-classic"             % logbackVersion      % Test,
-        "org.slf4j"         % "jul-to-slf4j"                % slf4jVersion        % Test
+        "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
+        "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
       ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -270,7 +271,7 @@ lazy val query = (project in file("query"))
         "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
         "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
       )
-  ).dependsOn(journal % "test->test;compile->compile", snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", journal % "test->test;compile->compile", snapshot % "test->compile")
 
 lazy val benchmark = (project in file("benchmark"))
   .settings(baseSettings)
@@ -278,6 +279,7 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(
     name := "akka-persistence-dynamodb-benchmark",
     skip in publish := true,
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
         "ch.qos.logback" % "logback-classic" % logbackVersion,
         "org.slf4j"      % "slf4j-api"       % slf4jVersion,
@@ -291,10 +293,10 @@ lazy val benchmark = (project in file("benchmark"))
             "com.typesafe.akka" %% "akka-slf4j"             % akka26Version,
             "com.typesafe.akka" %% "akka-persistence-typed" % akka26Version
           )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+        case _ =>
           Seq(
-            "com.typesafe.akka" %% "akka-slf4j"             % akka25Version,
-            "com.typesafe.akka" %% "akka-persistence-typed" % akka25Version
+            "com.typesafe.akka" %% "akka-slf4j"       % akka25Version,
+            "com.typesafe.akka" %% "akka-persistence" % akka25Version
           )
       }
     }
@@ -307,6 +309,7 @@ lazy val root = (project in file("."))
   .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-root",
-    skip in publish := true
+    skip in publish := true,
+    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version)
   )
-  .aggregate(base, journal, snapshot, query, benchmark)
+  .aggregate(test, base, journal, snapshot, query, benchmark)

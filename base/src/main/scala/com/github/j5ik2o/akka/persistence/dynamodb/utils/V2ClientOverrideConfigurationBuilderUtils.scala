@@ -23,9 +23,9 @@ object V2ClientOverrideConfigurationBuilderUtils {
     import pluginConfig.clientConfig.v2ClientConfig._
     var clientOverrideConfigurationBuilder = ClientOverrideConfiguration
       .builder()
-    headers.map {
+    headers.foreach {
       case (k, v) =>
-        clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
+        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
     }
     retryMode.foreach { v => clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(v) }
     RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { rp =>
@@ -50,7 +50,7 @@ object V2ClientOverrideConfigurationBuilderUtils {
     // defaultProfileName
     val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
     val metricPublishers         = metricPublishersProvider.create
-    clientOverrideConfigurationBuilder.metricPublishers(metricPublishers.asJava)
+    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(metricPublishers.asJava)
     clientOverrideConfigurationBuilder
   }
 }

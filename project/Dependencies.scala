@@ -76,7 +76,7 @@ object Dependencies {
   }
 
   object testcontainers {
-    val testcontainersVersion    = "1.15.0-rc2"
+    val testcontainersVersion    = "1.15.0"
     val testcontainers           = "org.testcontainers" % "testcontainers" % testcontainersVersion
     val testcontainersLocalStack = "org.testcontainers" % "localstack" % testcontainersVersion
     val testcontainersKafka      = "org.testcontainers" % "kafka" % testcontainersVersion

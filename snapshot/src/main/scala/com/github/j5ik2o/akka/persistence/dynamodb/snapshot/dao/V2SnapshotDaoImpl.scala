@@ -60,7 +60,15 @@ class V2SnapshotDaoImpl(
           columnsDefConfig.sequenceNrColumnName    -> AttributeValue.builder().n(sequenceNr.asString).build()
         )
       ).build()
-    Source.single(req).via(deleteItemFlow).map(_ => ())
+    Source.single(req).via(deleteItemFlow).flatMapConcat { response =>
+      if (response.sdkHttpResponse().isSuccessful)
+        Source.single(())
+      else {
+        val statusCode = response.sdkHttpResponse().statusCode()
+        val statusText = response.sdkHttpResponse().statusText()
+        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+      }
+    }
   }
 
   override def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed] = {
@@ -367,7 +375,15 @@ class V2SnapshotDaoImpl(
               columnsDefConfig.createdColumnName -> AttributeValue.builder().n(snapshotRow.created.toString).build()
             )
           ).build()
-        Source.single(req).via(putItemFlow).map(_ => ())
+        Source.single(req).via(putItemFlow).flatMapConcat { response =>
+          if (response.sdkHttpResponse().isSuccessful)
+            Source.single(())
+          else {
+            val statusCode = response.sdkHttpResponse().statusCode()
+            val statusText = response.sdkHttpResponse().statusText()
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          }
+        }
       case Left(ex) =>
         Source.failed(ex)
     }
@@ -409,7 +425,15 @@ class V2SnapshotDaoImpl(
               }
             )
           ).build()
-      }.via(batchWriteItemFlow).map(_ => ())
+      }.via(batchWriteItemFlow).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful)
+          Source.single(())
+        else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }
   }
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {

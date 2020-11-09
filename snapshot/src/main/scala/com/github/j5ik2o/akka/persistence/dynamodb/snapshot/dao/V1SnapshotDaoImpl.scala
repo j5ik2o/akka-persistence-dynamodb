@@ -334,7 +334,14 @@ class V1SnapshotDaoImpl(
           columnsDefConfig.sequenceNrColumnName    -> new AttributeValue().withN(sequenceNr.asString)
         ).asJava
       )
-    Source.single(req).via(deleteItemFlow).map(_ => ())
+    Source.single(req).via(deleteItemFlow).flatMapConcat { response =>
+      if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
+        Source.single(())
+      else {
+        val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+        Source.failed(new IOException(s"statusCode: $statusCode"))
+      }
+    }
   }
 
   override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any): Source[Unit, NotUsed] = {
@@ -352,7 +359,14 @@ class V1SnapshotDaoImpl(
               columnsDefConfig.createdColumnName    -> new AttributeValue().withN(snapshotRow.created.toString)
             ).asJava
           )
-        Source.single(req).via(putItemFlow).map(_ => ())
+        Source.single(req).via(putItemFlow).flatMapConcat { response =>
+          if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
+            Source.single(())
+          else {
+            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+            Source.failed(new IOException(s"statusCode: $statusCode"))
+          }
+        }
       case Left(ex) =>
         Source.failed(ex)
     }
@@ -393,7 +407,14 @@ class V1SnapshotDaoImpl(
               }.asJava
             ).asJava
           )
-      }.via(batchWriteItemFlow).map(_ => ())
+      }.via(batchWriteItemFlow).flatMapConcat { response =>
+        if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
+          Source.single(())
+        else {
+          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+          Source.failed(new IOException(s"statusCode: $statusCode"))
+        }
+      }
   }
 
   private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {

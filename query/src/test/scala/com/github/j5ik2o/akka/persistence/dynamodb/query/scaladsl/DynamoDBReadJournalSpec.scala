@@ -40,9 +40,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
@@ -113,16 +110,12 @@ class DynamoDBReadJournalSpec
 
   private val serialization = SerializationExtension(system)
 
-  val dynamoDbAsyncClient = DynamoDbAsyncClient(underlyingAsync)
-  val taskClient          = DynamoDbMonixClient(dynamoDbAsyncClient)
-  val streamClient        = DynamoDbAkkaClient(dynamoDbAsyncClient)
-
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, ",", None)
 
   val queryProcessor =
     new V2QueryProcessor(
-      Some(dynamoDbAsyncClient),
+      Some(underlyingAsync),
       None,
       queryPluginConfig,
       Some(new MetricsReporter.None(queryPluginConfig))
@@ -130,7 +123,7 @@ class DynamoDBReadJournalSpec
 
   val journalRowReadDriver = new V2JournalRowReadDriver(
     system,
-    Some(dynamoDbAsyncClient),
+    Some(underlyingAsync),
     None,
     journalPluginConfig,
     Some(new MetricsReporter.None(queryPluginConfig))
@@ -153,7 +146,7 @@ class DynamoDBReadJournalSpec
 
   val journalRowWriteDriver = new V2JournalRowWriteDriver(
     system,
-    Some(dynamoDbAsyncClient),
+    Some(underlyingAsync),
     None,
     journalPluginConfig,
     partitionKeyResolver,

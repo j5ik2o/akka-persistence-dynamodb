@@ -15,7 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2.SyncClientConfig.useConnectionReaperKey
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._

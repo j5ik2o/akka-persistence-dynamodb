@@ -1,5 +1,5 @@
+import Dependencies.Versions._
 import Dependencies._
-import Versions._
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -77,9 +77,8 @@ lazy val test = (project in file("test"))
     name := "akka-persistence-dynamodb-test",
     crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
+        iheart.ficus,
         amazonaws.dynamodb,
-        j5ik2o.reactiveAwsDynamoDBMonix,
-        j5ik2o.reactiveAwsDynamoDBAkka,
         testcontainers.testcontainers,
         dimafeng.testcontainerScala
       )
@@ -96,8 +95,6 @@ lazy val base = (project in file("base"))
         amazonaws.dynamodb,
         amazonaws.dax,
         softwareamazon.dynamodb,
-        j5ik2o.reactiveAwsDynamoDBMonix,
-        j5ik2o.reactiveAwsDynamoDBAkka,
         logback.classic                      % Test,
         slf4j.julToSlf4J                     % Test,
         dimafeng.testcontainerScalaScalaTest % Test

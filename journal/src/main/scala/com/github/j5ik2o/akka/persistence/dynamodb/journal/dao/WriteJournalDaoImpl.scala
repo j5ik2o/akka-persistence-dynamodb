@@ -18,14 +18,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
-import akka.stream.{ ActorMaterializer, Attributes, KillSwitches, OverflowStrategy, QueueOfferResult, UniqueKillSwitch }
+import akka.stream._
 import akka.{ Done, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
-import monix.execution.Scheduler
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -44,8 +43,6 @@ class WriteJournalDaoImpl(
   implicit val mat = ActorMaterializer()
 
   private val logger = LoggerFactory.getLogger(getClass)
-
-  private implicit val scheduler: Scheduler = Scheduler(ec)
 
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0

@@ -19,21 +19,26 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.dispatch.Dispatchers
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
+import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
 
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 class V1SnapshotDaoImpl(
+    system: ActorSystem,
     asyncClient: Option[AmazonDynamoDBAsync],
     syncClient: Option[AmazonDynamoDB],
     serialization: Serialization,
@@ -419,13 +424,13 @@ class V1SnapshotDaoImpl(
 
   private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {
     val flow = (
-      (syncClient, asyncClient) match {
+      (asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val flow = Flow[QueryRequest]
-            .map { request => c.query(request) }
-          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.queryAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>
-          Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
+          Flow[QueryRequest]
+            .map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
       }
@@ -442,16 +447,16 @@ class V1SnapshotDaoImpl(
   }
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResult, NotUsed] = {
-    val flow = ((syncClient, asyncClient) match {
+    val flow = ((asyncClient, syncClient) match {
       case (Some(c), None) =>
-        val flow = Flow[PutItemRequest]
-          .map { request => c.putItem(request) }
-        DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+        implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+        JavaFlow
+          .create[PutItemRequest]().mapAsync(1, { request => c.putItemAsync(request).toCompletableFuture }).asScala
       case (None, Some(c)) =>
-        Flow[PutItemRequest].mapAsync(1) { request => c.putItemAsync(request).toScala }
+        Flow[PutItemRequest].map { request => c.putItem(request) }.withV1Dispatcher(pluginConfig)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("putItem")
+    }).log("putItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -464,16 +469,19 @@ class V1SnapshotDaoImpl(
   }
 
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] = {
-    val flow = ((syncClient, asyncClient) match {
+    val flow = ((asyncClient, syncClient) match {
       case (Some(c), None) =>
-        val flow = Flow[BatchWriteItemRequest]
-          .map { request => c.batchWriteItem(request) }
-        DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+        implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+        JavaFlow
+          .create[BatchWriteItemRequest]().mapAsync(
+            1, { request => c.batchWriteItemAsync(request).toCompletableFuture }
+          ).asScala
       case (None, Some(c)) =>
-        Flow[BatchWriteItemRequest].mapAsync(1) { request => c.batchWriteItemAsync(request).toScala }
+        Flow[BatchWriteItemRequest]
+          .map { request => c.batchWriteItem(request) }.withV1Dispatcher(pluginConfig)
       case _ =>
         throw new IllegalStateException("invalid state")
-    }).log("batchWriteItem")
+    }).log("batchWriteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -487,17 +495,19 @@ class V1SnapshotDaoImpl(
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResult, NotUsed] = {
     val flow = (
-      (syncClient, asyncClient) match {
+      (asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val flow = Flow[DeleteItemRequest]
-            .map { request => c.deleteItem(request) }
-          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          JavaFlow
+            .create[DeleteItemRequest]().mapAsync(
+              1, { request => c.deleteItemAsync(request).toCompletableFuture }
+            ).asScala
         case (None, Some(c)) =>
-          Flow[DeleteItemRequest].mapAsync(1) { request => c.deleteItemAsync(request).toScala }
+          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
       }
-    ).log("deleteItem")
+    ).log("deleteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

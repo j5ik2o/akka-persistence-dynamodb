@@ -11,6 +11,7 @@ object ConfigHelper {
       dynamoDBPort: Int,
       clientVersion: String,
       clientType: String,
+      requestHandlerClassNames: Seq[String] = Seq.empty,
       journalRowDriverWrapperClassName: Option[String] = None
   ): Config = {
     val configString = s"""
@@ -39,6 +40,9 @@ object ConfigHelper {
        |      }
        |    }
        |    v1 {
+       |    ${if (requestHandlerClassNames.nonEmpty) {
+                            s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
+                          } else ""}
        |      dispatcher-name = "journal-blocking-io-dispatcher"
        |      async {
        |      }

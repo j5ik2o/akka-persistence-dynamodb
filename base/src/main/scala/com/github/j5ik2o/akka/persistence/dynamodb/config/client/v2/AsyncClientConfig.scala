@@ -15,19 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2.AsyncClientConfig.{
-  connectionTimeoutKey,
-  maxConcurrencyKey,
-  maxPendingConnectionAcquiresKey,
-  readTimeoutKey,
-  useHttp2Key
-}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.duration.{ Duration, _ }
+import scala.concurrent.duration._
 
 object AsyncClientConfig extends LoggingSupport {
   val maxConcurrencyKey               = "max-concurrency"

@@ -4,21 +4,25 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, ScanResult, Select }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 class V1QueryProcessor(
+    system: ActorSystem,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: QueryPluginConfig,
@@ -29,15 +33,17 @@ class V1QueryProcessor(
   val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
   private def scanFlow: Flow[ScanRequest, ScanResult, NotUsed] = {
-    val flow = ((asyncClient, syncClient) match {
-      case (None, Some(c)) =>
-        val flow = Flow[ScanRequest].map { request => c.scan(request) }
-        DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
-      case (Some(c), None) =>
-        Flow[ScanRequest].mapAsync(1) { request => c.scanAsync(request).toScala }
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("scan")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          JavaFlow
+            .create[ScanRequest]().mapAsync(1, { request => c.scanAsync(request).toCompletableFuture }).asScala
+        case (None, Some(c)) =>
+          Flow[ScanRequest].map { request => c.scan(request) }.withV1Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("scanFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

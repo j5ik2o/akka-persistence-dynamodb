@@ -21,21 +21,25 @@ import java.io.IOException
 import akka.NotUsed
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{ Flow, GraphDSL, RestartFlow, Source, Unzip, Zip }
+import akka.stream.javadsl.{ Flow => JavaFlow }
+import akka.stream.scaladsl.{ Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
+
+import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 class V2SnapshotDaoImpl(
-    asyncClient: Option[DynamoDbAsyncClient],
-    syncClient: Option[DynamoDbSyncClient],
+    asyncClient: Option[JavaDynamoDbAsyncClient],
+    syncClient: Option[JavaDynamoDbSyncClient],
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig,
     metricsReporter: Option[MetricsReporter]
@@ -48,17 +52,16 @@ class V2SnapshotDaoImpl(
 
   import pluginConfig._
 
-  private val serializer   = new ByteArraySnapshotSerializer(serialization)
-  private val streamClient = asyncClient.map(DynamoDbAkkaClient(_))
+  private val serializer = new ByteArraySnapshotSerializer(serialization)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
     val req = DeleteItemRequest
       .builder()
-      .tableName(tableName).keyAsScala(
+      .tableName(tableName).key(
         Map(
           columnsDefConfig.persistenceIdColumnName -> AttributeValue.builder().s(persistenceId.asString).build(),
           columnsDefConfig.sequenceNrColumnName    -> AttributeValue.builder().n(sequenceNr.asString).build()
-        )
+        ).asJava
       ).build()
     Source.single(req).via(deleteItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful)
@@ -66,7 +69,7 @@ class V2SnapshotDaoImpl(
       else {
         val statusCode = response.sdkHttpResponse().statusCode()
         val statusText = response.sdkHttpResponse().statusText()
-        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
       }
     }
   }
@@ -76,14 +79,14 @@ class V2SnapshotDaoImpl(
       .builder()
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
-      .expressionAttributeNamesAsScala(
-        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
-      ).expressionAttributeValuesAsScala(
+      .expressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
-        )
+        ).asJava
       ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
@@ -96,14 +99,14 @@ class V2SnapshotDaoImpl(
       .builder()
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
-      .expressionAttributeNamesAsScala(
-        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
-      ).expressionAttributeValuesAsScala(
+      .expressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
-        )
+        ).asJava
       ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
@@ -114,19 +117,19 @@ class V2SnapshotDaoImpl(
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
       .filterExpression("#created <= :maxTimestamp")
-      .expressionAttributeNamesAsScala(
+      .expressionAttributeNames(
         Map(
           "#pid"     -> columnsDefConfig.persistenceIdColumnName,
           "#snr"     -> columnsDefConfig.sequenceNrColumnName,
           "#created" -> columnsDefConfig.createdColumnName
-        )
-      ).expressionAttributeValuesAsScala(
+        ).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min"          -> AttributeValue.builder().n(0.toString).build(),
           ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
-        )
+        ).asJava
       ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
@@ -141,19 +144,19 @@ class V2SnapshotDaoImpl(
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
       .filterExpression("#created <= :maxTimestamp")
-      .expressionAttributeNamesAsScala(
+      .expressionAttributeNames(
         Map(
           "#pid"     -> columnsDefConfig.persistenceIdColumnName,
           "#snr"     -> columnsDefConfig.sequenceNrColumnName,
           "#created" -> columnsDefConfig.createdColumnName
-        )
-      ).expressionAttributeValuesAsScala(
+        ).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min"          -> AttributeValue.builder().n(0.toString).build(),
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
-        )
+        ).asJava
       ).consistentRead(consistentRead).build()
     queryDelete(queryRequest)
   }
@@ -163,14 +166,14 @@ class V2SnapshotDaoImpl(
       .builder()
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
-      .expressionAttributeNamesAsScala(
-        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
-      ).expressionAttributeValuesAsScala(
+      .expressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
-        )
+        ).asJava
       )
       .scanIndexForward(false)
       .limit(1)
@@ -180,14 +183,15 @@ class V2SnapshotDaoImpl(
       .single(queryRequest).via(queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.map { rows =>
-        rows.map { row =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           serializer
             .deserialize(
               SnapshotRow(
@@ -213,33 +217,34 @@ class V2SnapshotDaoImpl(
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
       .filterExpression("#created <= :maxTimestamp")
-      .expressionAttributeNamesAsScala(
+      .expressionAttributeNames(
         Map(
           "#pid"     -> columnsDefConfig.persistenceIdColumnName,
           "#snr"     -> columnsDefConfig.sequenceNrColumnName,
           "#created" -> columnsDefConfig.createdColumnName
-        )
-      ).expressionAttributeValuesAsScala(
+        ).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min"          -> AttributeValue.builder().n(0.toString).build(),
           ":max"          -> AttributeValue.builder().n(Long.MaxValue.toString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
-        )
+        ).asJava
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.map { rows =>
-        rows.map { row =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           serializer
             .deserialize(
               SnapshotRow(
@@ -264,28 +269,29 @@ class V2SnapshotDaoImpl(
       .builder()
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
-      .expressionAttributeNamesAsScala(
-        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName)
-      ).expressionAttributeValuesAsScala(
+      .expressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min" -> AttributeValue.builder().n(0.toString).build(),
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
-        )
+        ).asJava
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.map { rows =>
-        rows.map { row =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           serializer
             .deserialize(
               SnapshotRow(
@@ -312,33 +318,34 @@ class V2SnapshotDaoImpl(
       .tableName(tableName)
       .keyConditionExpression("#pid = :pid and #snr between :min and :max")
       .filterExpression("#created <= :maxTimestamp")
-      .expressionAttributeNamesAsScala(
+      .expressionAttributeNames(
         Map(
           "#pid"     -> columnsDefConfig.persistenceIdColumnName,
           "#snr"     -> columnsDefConfig.sequenceNrColumnName,
           "#created" -> columnsDefConfig.createdColumnName
-        )
-      ).expressionAttributeValuesAsScala(
+        ).asJava
+      ).expressionAttributeValues(
         Map(
           ":pid"          -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min"          -> AttributeValue.builder().n(0.toString).build(),
           ":max"          -> AttributeValue.builder().n(maxSequenceNr.asString).build(),
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
-        )
+        ).asJava
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
     Source
       .single(queryRequest).via(queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(response.itemsAsScala.getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.map { rows =>
-        rows.map { row =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           serializer
             .deserialize(
               SnapshotRow(
@@ -362,7 +369,7 @@ class V2SnapshotDaoImpl(
         val req = PutItemRequest
           .builder()
           .tableName(tableName)
-          .itemAsScala(
+          .item(
             Map(
               columnsDefConfig.persistenceIdColumnName -> AttributeValue
                 .builder()
@@ -373,7 +380,7 @@ class V2SnapshotDaoImpl(
               columnsDefConfig.snapshotColumnName -> AttributeValue
                 .builder().b(SdkBytes.fromByteArray(snapshotRow.snapshot)).build(),
               columnsDefConfig.createdColumnName -> AttributeValue.builder().n(snapshotRow.created.toString).build()
-            )
+            ).asJava
           ).build()
         Source.single(req).via(putItemFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful)
@@ -381,7 +388,7 @@ class V2SnapshotDaoImpl(
           else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
           }
         }
       case Left(ex) =>
@@ -391,10 +398,11 @@ class V2SnapshotDaoImpl(
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
     Source
-      .single(queryRequest).via(queryFlow).map {
-        _.itemsAsScala.getOrElse(Seq.empty)
+      .single(queryRequest).via(queryFlow).map { response =>
+        Option(response.items).map(_.asScala).getOrElse(Seq.empty)
       }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
-        rows.map { row =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           SnapshotRow(
             persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
             sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
@@ -404,14 +412,14 @@ class V2SnapshotDaoImpl(
         }
       }.map { rows =>
         BatchWriteItemRequest
-          .builder().requestItemsAsScala(
+          .builder().requestItems(
             Map(
               tableName -> rows.map { row =>
                 WriteRequest
                   .builder().deleteRequest(
                     DeleteRequest
                       .builder()
-                      .keyAsScala(
+                      .key(
                         Map(
                           columnsDefConfig.persistenceIdColumnName -> AttributeValue
                             .builder()
@@ -419,11 +427,11 @@ class V2SnapshotDaoImpl(
                           columnsDefConfig.sequenceNrColumnName -> AttributeValue
                             .builder()
                             .n(row.sequenceNumber.asString).build()
-                        )
+                        ).asJava
                       ).build()
                   ).build()
-              }
-            )
+              }.asJava
+            ).asJava
           ).build()
       }.via(batchWriteItemFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
@@ -431,26 +439,21 @@ class V2SnapshotDaoImpl(
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
   }
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.queryFlow(1).log("async")
-      case (None, Some(c)) =>
-        val flow = Flow[QueryRequest].map { request =>
-          c.query(request) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow).log("sync")
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("queryFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.query(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -463,19 +466,15 @@ class V2SnapshotDaoImpl(
   }
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) => c.putItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[PutItemRequest].map { request =>
-          c.putItem(request) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("putItem")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[PutItemRequest]().mapAsync(1, { request => c.putItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("putItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -488,19 +487,16 @@ class V2SnapshotDaoImpl(
   }
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) => c.deleteItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[DeleteItemRequest].map { request =>
-          c.deleteItem(request) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("deleteItem")
+    val flow = (
+      (asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[DeleteItemRequest]().mapAsync(1, { request => c.deleteItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }
+    ).log("deleteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -513,19 +509,15 @@ class V2SnapshotDaoImpl(
   }
 
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) => c.batchWriteItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[BatchWriteItemRequest].map { request =>
-          c.batchWriteItem(request) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("batchWriteItem")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[BatchWriteItemRequest]().mapAsync(1, { request => c.batchWriteItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("batchWriteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

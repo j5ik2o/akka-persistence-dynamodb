@@ -99,20 +99,20 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
-            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig)
+            new V1SnapshotDaoImpl(system, Some(v1JavaAsyncClient), None, serialization, pluginConfig)
           case ClientType.Sync =>
             v1JavaSyncClient =
               ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
-            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig)
+            new V1SnapshotDaoImpl(system, None, Some(v1JavaSyncClient), serialization, pluginConfig)
         }
       case ClientVersion.V1Dax =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(Some(v1JavaAsyncClient), None, serialization, pluginConfig)
+            new V1SnapshotDaoImpl(system, Some(v1JavaAsyncClient), None, serialization, pluginConfig)
           case ClientType.Sync =>
             v1JavaSyncClient = ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(None, Some(v1JavaSyncClient), serialization, pluginConfig)
+            new V1SnapshotDaoImpl(system, None, Some(v1JavaSyncClient), serialization, pluginConfig)
         }
 
     }

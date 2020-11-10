@@ -55,11 +55,6 @@ object Dependencies {
     val dax      = "com.amazonaws" % "amazon-dax-client"     % awsSdkV1DaxVersion
   }
 
-  object j5ik2o {
-    val reactiveAwsDynamoDBMonix = "com.github.j5ik2o" %% "reactive-aws-dynamodb-monix" % reactiveAwsDynamoDB
-    val reactiveAwsDynamoDBAkka  = "com.github.j5ik2o" %% "reactive-aws-dynamodb-akka"  % reactiveAwsDynamoDB
-  }
-
   object akka {
     def slf4j(version: String)            = "com.typesafe.akka" %% "akka-slf4j"             % version
     def stream(version: String)           = "com.typesafe.akka" %% "akka-stream"            % version

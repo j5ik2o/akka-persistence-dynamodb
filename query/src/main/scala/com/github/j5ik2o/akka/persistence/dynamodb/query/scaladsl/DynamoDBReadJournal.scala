@@ -176,7 +176,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
             queryPluginConfig,
             metricsReporter
           ),
-          new V1QueryProcessor(maybeAsyncClient, maybeSyncClient, queryPluginConfig, metricsReporter)
+          new V1QueryProcessor(system, maybeAsyncClient, maybeSyncClient, queryPluginConfig, metricsReporter)
         )
       case ClientVersion.V1Dax =>
         val (maybeSyncClient, maybeAsyncClient) = queryPluginConfig.clientConfig.clientType match {
@@ -196,7 +196,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
             queryPluginConfig,
             metricsReporter
           ),
-          new V1QueryProcessor(maybeAsyncClient, maybeSyncClient, queryPluginConfig, metricsReporter)
+          new V1QueryProcessor(system, maybeAsyncClient, maybeSyncClient, queryPluginConfig, metricsReporter)
         )
     }
   }

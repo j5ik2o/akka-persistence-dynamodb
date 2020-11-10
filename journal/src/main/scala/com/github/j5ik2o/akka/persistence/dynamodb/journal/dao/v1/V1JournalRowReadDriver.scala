@@ -8,9 +8,9 @@ import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
@@ -40,31 +40,8 @@ final class V1JournalRowReadDriver(
       toSequenceNr: SequenceNumber,
       deleted: Boolean
   ): Source[Seq[JournalRow], NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted, lastEvaluatedKey)
-      Source
-        .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val items =
-              Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-            Source.failed(new IOException(s"statusCode: $statusCode"))
-          }
-        }
-    }
-    loop(None, Source.empty, 0, 1)
+    val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted)
+    recursiveQuery(queryRequest, None)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
       .map(_.toList)
@@ -78,42 +55,17 @@ final class V1JournalRowReadDriver(
       max: Long,
       deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val queryRequest =
-        createGSIRequest(
-          persistenceId,
-          fromSequenceNr,
-          toSequenceNr,
-          deleted,
-          pluginConfig.queryBatchSize,
-          lastEvaluatedKey
-        )
-      Source
-        .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val items            = Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && (count + response.getCount) < max) {
-              logger.debug("next loop: count = {}, response.count = {}", count, response.getCount)
-              loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-            Source.failed(new IOException(s"statusCode: $statusCode"))
-          }
-        }
-    }
     if (max == 0L || fromSequenceNr > toSequenceNr)
       Source.empty
     else {
-      loop(None, Source.empty, 0L, 1)
+      val queryRequest = createGSIRequest(
+        persistenceId,
+        fromSequenceNr,
+        toSequenceNr,
+        deleted,
+        pluginConfig.queryBatchSize
+      )
+      recursiveQuery(queryRequest, Some(max))
         .map(convertToJournalRow)
         .take(max)
         .withAttributes(logLevels)
@@ -174,6 +126,37 @@ final class V1JournalRowReadDriver(
       .withLimit(1)
   }
 
+  private def recursiveQuery(
+      queryRequest: QueryRequest,
+      maxOpt: Option[Long],
+      lastEvaluatedKey: Option[Map[String, AttributeValue]] = None,
+      acc: Source[Map[String, AttributeValue], NotUsed] = Source.empty,
+      count: Long = 0,
+      index: Int = 1
+  ): Source[Map[String, AttributeValue], NotUsed] = {
+    val newQueryRequest = lastEvaluatedKey match {
+      case None => queryRequest
+      case Some(_) =>
+        queryRequest.withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
+    }
+    Source
+      .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
+        if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
+          val items            = Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
+          val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
+          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+          if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.getCount) < max }) {
+            logger.debug("next loop: count = {}, response.count = {}", count, response.getCount)
+            recursiveQuery(queryRequest, maxOpt, lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
+          } else
+            combinedSource
+        } else {
+          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+          Source.failed(new IOException(s"statusCode: $statusCode"))
+        }
+      }
+  }
+
   private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {
     val flow = (
       (syncClient, asyncClient) match {
@@ -201,8 +184,7 @@ final class V1JournalRowReadDriver(
   private def createGSIRequest(
       persistenceId: PersistenceId,
       toSequenceNr: SequenceNumber,
-      deleted: Boolean,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
+      deleted: Boolean
   ): QueryRequest = {
     new QueryRequest()
       .withTableName(pluginConfig.tableName)
@@ -224,7 +206,6 @@ final class V1JournalRowReadDriver(
         ).asJava
       )
       .withLimit(pluginConfig.queryBatchSize)
-      .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
   }
 
   private def createGSIRequest(
@@ -232,8 +213,7 @@ final class V1JournalRowReadDriver(
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       deleted: Option[Boolean],
-      limit: Int,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
+      limit: Int
   ): QueryRequest = {
     new QueryRequest()
       .withTableName(pluginConfig.tableName).withIndexName(pluginConfig.getJournalRowsIndexName).withKeyConditionExpression(
@@ -253,7 +233,6 @@ final class V1JournalRowReadDriver(
           ":max" -> new AttributeValue().withN(toSequenceNr.asString)
         ) ++ deleted.map(b => Map(":flg" -> new AttributeValue().withBOOL(b))).getOrElse(Map.empty)).asJava
       ).withLimit(limit)
-      .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
   }
 
   protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {

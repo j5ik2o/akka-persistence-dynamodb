@@ -68,31 +68,8 @@ final class V2JournalRowReadDriver(
       toSequenceNr: SequenceNumber,
       deleted: Boolean
   ): Source[Seq[JournalRow], NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted, lastEvaluatedKey)
-      Source
-        .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-          if (response.sdkHttpResponse().isSuccessful) {
-            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.sdkHttpResponse().statusCode()
-            val statusText = response.sdkHttpResponse().statusText()
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-          }
-        }
-    }
-    loop(None, Source.empty, 0, 1)
+    val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted)
+    recursiveQuery(queryRequest, None)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
       .map(_.toList)
@@ -106,80 +83,21 @@ final class V2JournalRowReadDriver(
       max: Long,
       deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val queryRequest =
-        createGSIRequest(
-          persistenceId,
-          fromSequenceNr,
-          toSequenceNr,
-          deleted,
-          pluginConfig.queryBatchSize,
-          lastEvaluatedKey
-        )
-      Source
-        .single(queryRequest).via(queryFlow).flatMapConcat { response =>
-          if (response.sdkHttpResponse().isSuccessful) {
-            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-              logger.debug("next loop: count = {}, response.count = {}", count, response.count())
-              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.sdkHttpResponse().statusCode()
-            val statusText = response.sdkHttpResponse().statusText()
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
-          }
-        }
-    }
     if (max == 0L || fromSequenceNr > toSequenceNr)
       Source.empty
     else {
-      loop(None, Source.empty, 0L, 1)
+      val queryRequest = createGSIRequest(
+        persistenceId,
+        fromSequenceNr,
+        toSequenceNr,
+        deleted,
+        pluginConfig.queryBatchSize
+      )
+      recursiveQuery(queryRequest, Some(max))
         .map(convertToJournalRow)
         .take(max)
         .withAttributes(logLevels)
     }
-  }
-
-  private def createGSIRequest(
-      persistenceId: PersistenceId,
-      toSequenceNr: SequenceNumber,
-      deleted: Boolean,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
-  ): QueryRequest = {
-    QueryRequest
-      .builder()
-      .tableName(pluginConfig.tableName)
-      .indexName(pluginConfig.getJournalRowsIndexName)
-      .keyConditionExpression("#pid = :pid and #snr <= :snr")
-      .filterExpression("#d = :flg")
-      .expressionAttributeNamesAsScala(
-        Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
-          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName,
-          "#d"   -> pluginConfig.columnsDefConfig.deletedColumnName
-        )
-      )
-      .expressionAttributeValuesAsScala(
-        Some(
-          Map(
-            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-            ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
-            ":flg" -> AttributeValue.builder().bool(deleted).build()
-          )
-        )
-      )
-      .limit(pluginConfig.queryBatchSize)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
-      .build()
   }
 
   def highestSequenceNr(
@@ -217,13 +135,76 @@ final class V2JournalRowReadDriver(
     )
   }
 
+  private def recursiveQuery(
+      queryRequest: QueryRequest,
+      maxOpt: Option[Long],
+      lastEvaluatedKey: Option[Map[String, AttributeValue]] = None,
+      acc: Source[Map[String, AttributeValue], NotUsed] = Source.empty,
+      count: Long = 0,
+      index: Int = 1
+  ): Source[Map[String, AttributeValue], NotUsed] = {
+    val newQueryRequest = lastEvaluatedKey match {
+      case None =>
+        queryRequest
+      case Some(_) =>
+        queryRequest.toBuilder.exclusiveStartKeyAsScala(lastEvaluatedKey).build()
+    }
+    Source
+      .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
+        if (response.sdkHttpResponse().isSuccessful) {
+          val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
+          val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+          if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.count()) < max }) {
+            logger.debug("next loop: count = {}, response.count = {}", count, response.count())
+            recursiveQuery(queryRequest, maxOpt, lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+          } else
+            combinedSource
+        } else {
+          val statusCode = response.sdkHttpResponse().statusCode()
+          val statusText = response.sdkHttpResponse().statusText()
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        }
+      }
+  }
+
+  private def createGSIRequest(
+      persistenceId: PersistenceId,
+      toSequenceNr: SequenceNumber,
+      deleted: Boolean
+  ): QueryRequest = {
+    QueryRequest
+      .builder()
+      .tableName(pluginConfig.tableName)
+      .indexName(pluginConfig.getJournalRowsIndexName)
+      .keyConditionExpression("#pid = :pid and #snr <= :snr")
+      .filterExpression("#d = :flg")
+      .expressionAttributeNamesAsScala(
+        Map(
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName,
+          "#d"   -> pluginConfig.columnsDefConfig.deletedColumnName
+        )
+      )
+      .expressionAttributeValuesAsScala(
+        Some(
+          Map(
+            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+            ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
+            ":flg" -> AttributeValue.builder().bool(deleted).build()
+          )
+        )
+      )
+      .limit(pluginConfig.queryBatchSize)
+      .build()
+  }
+
   private def createGSIRequest(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber,
       toSequenceNr: SequenceNumber,
       deleted: Option[Boolean],
-      limit: Int,
-      lastEvaluatedKey: Option[Map[String, AttributeValue]]
+      limit: Int
   ): QueryRequest = {
     QueryRequest
       .builder()
@@ -247,7 +228,6 @@ final class V2JournalRowReadDriver(
         ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
       )
       .limit(limit)
-      .exclusiveStartKeyAsScala(lastEvaluatedKey)
       .build()
   }
 

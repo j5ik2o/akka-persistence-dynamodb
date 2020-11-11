@@ -56,7 +56,9 @@ object DispatcherUtils extends LoggingSupport {
 
   def getV2DispatcherName(pluginConfig: PluginConfig): Option[String] = pluginConfig.clientConfig.clientVersion match {
     case ClientVersion.V2 =>
-      pluginConfig.clientConfig.v2ClientConfig.dispatcherName
+      pluginConfig.clientConfig.v2ClientConfig.dispatcherName.orElse(
+        pluginConfig.clientConfig.v2ClientConfig.syncClientConfig.dispatcherName
+      )
     case _ =>
       throw new IllegalArgumentException("Invalid the client version")
   }

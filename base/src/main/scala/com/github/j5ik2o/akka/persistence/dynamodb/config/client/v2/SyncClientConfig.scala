@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 
 object SyncClientConfig extends LoggingSupport {
 
+  val dispatcherNameKey               = "dispatcher-name"
   val socketTimeoutKey                = "socket-timeout"
   val connectionTimeoutKey            = "connection-timeout"
   val connectionAcquisitionTimeoutKey = "connection-acquisition-timeout"
@@ -45,6 +46,7 @@ object SyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = SyncClientConfig(
       sourceConfig = config,
+      dispatcherName = config.getAs[String](dispatcherNameKey),
       socketTimeout = config.getOrElse[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
       connectionTimeout = config.getOrElse[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
       connectionAcquisitionTimeout =
@@ -64,6 +66,7 @@ object SyncClientConfig extends LoggingSupport {
 
 case class SyncClientConfig(
     sourceConfig: Config,
+    dispatcherName: Option[String],
     socketTimeout: FiniteDuration,
     connectionTimeout: FiniteDuration,
     connectionAcquisitionTimeout: FiniteDuration,

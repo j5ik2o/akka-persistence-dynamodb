@@ -1,6 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.util.concurrent.{ CompletableFuture, ExecutionException, Executor, ForkJoinPool, Future }
+import java.util.function.Supplier
 
 import scala.concurrent._
 
@@ -25,20 +26,22 @@ object CompletableFutureUtils {
       }
     } else {
       CompletableFuture.supplyAsync(
-        { () =>
-          try {
-            if (future.isDone)
-              future.get()
-            else
-              blocking {
+        new Supplier[T] {
+          override def get(): T = {
+            try {
+              if (future.isDone)
                 future.get()
-              }
-          } catch {
-            case ex: ExecutionException =>
-              throw ex.getCause
-            case ex: InterruptedException =>
-              Thread.currentThread().interrupt()
-              throw ex
+              else
+                blocking {
+                  future.get()
+                }
+            } catch {
+              case ex: ExecutionException =>
+                throw ex.getCause
+              case ex: InterruptedException =>
+                Thread.currentThread().interrupt()
+                throw ex
+            }
           }
         },
         executor

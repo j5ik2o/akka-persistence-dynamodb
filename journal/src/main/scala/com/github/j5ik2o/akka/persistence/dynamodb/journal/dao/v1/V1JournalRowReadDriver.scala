@@ -1,10 +1,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.dispatch.Dispatchers
+import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
@@ -172,7 +174,13 @@ final class V1JournalRowReadDriver(
         case (Some(c), None) =>
           implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
-            .create[QueryRequest]().mapAsync(1, { request => c.queryAsync(request).toCompletableFuture }).asScala
+            .create[QueryRequest]().mapAsync(
+              1,
+              new function.Function[QueryRequest, CompletableFuture[QueryResult]] {
+                def apply(request: QueryRequest): CompletableFuture[QueryResult] =
+                  c.queryAsync(request).toCompletableFuture
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[QueryRequest].map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
         case _ =>

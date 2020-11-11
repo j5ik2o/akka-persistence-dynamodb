@@ -17,10 +17,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.dispatch.Dispatchers
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.javadsl.{ Flow => JavaFlow }
@@ -30,9 +30,8 @@ import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
 
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
@@ -427,7 +426,14 @@ class V1SnapshotDaoImpl(
       (asyncClient, syncClient) match {
         case (Some(c), None) =>
           implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
-          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.queryAsync(request).toCompletableFuture }).asScala
+          JavaFlow
+            .create[QueryRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[QueryRequest, CompletableFuture[QueryResult]] {
+                def apply(request: QueryRequest): CompletableFuture[QueryResult] =
+                  c.queryAsync(request).toCompletableFuture
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[QueryRequest]
             .map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
@@ -451,7 +457,13 @@ class V1SnapshotDaoImpl(
       case (Some(c), None) =>
         implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
         JavaFlow
-          .create[PutItemRequest]().mapAsync(1, { request => c.putItemAsync(request).toCompletableFuture }).asScala
+          .create[PutItemRequest]().mapAsync(
+            1,
+            new akka.japi.function.Function[PutItemRequest, CompletableFuture[PutItemResult]] {
+              def apply(request: PutItemRequest): CompletableFuture[PutItemResult] =
+                c.putItemAsync(request).toCompletableFuture
+            }
+          ).asScala
       case (None, Some(c)) =>
         Flow[PutItemRequest].map { request => c.putItem(request) }.withV1Dispatcher(pluginConfig)
       case _ =>
@@ -474,7 +486,11 @@ class V1SnapshotDaoImpl(
         implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
         JavaFlow
           .create[BatchWriteItemRequest]().mapAsync(
-            1, { request => c.batchWriteItemAsync(request).toCompletableFuture }
+            1,
+            new akka.japi.function.Function[BatchWriteItemRequest, CompletableFuture[BatchWriteItemResult]] {
+              def apply(request: BatchWriteItemRequest): CompletableFuture[BatchWriteItemResult] =
+                c.batchWriteItemAsync(request).toCompletableFuture
+            }
           ).asScala
       case (None, Some(c)) =>
         Flow[BatchWriteItemRequest]
@@ -500,7 +516,11 @@ class V1SnapshotDaoImpl(
           implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
             .create[DeleteItemRequest]().mapAsync(
-              1, { request => c.deleteItemAsync(request).toCompletableFuture }
+              1,
+              new akka.japi.function.Function[DeleteItemRequest, CompletableFuture[DeleteItemResult]] {
+                def apply(request: DeleteItemRequest): CompletableFuture[DeleteItemResult] =
+                  c.deleteItemAsync(request).toCompletableFuture
+              }
             ).asScala
         case (None, Some(c)) =>
           Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV1Dispatcher(pluginConfig)

@@ -1,9 +1,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
@@ -18,6 +20,7 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient
 }
+
 import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
@@ -41,7 +44,13 @@ final class V2JournalRowReadDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.query(request) }).asScala
+          JavaFlow
+            .create[QueryRequest]().mapAsync(
+              1,
+              new function.Function[QueryRequest, CompletableFuture[QueryResponse]] {
+                override def apply(request: QueryRequest): CompletableFuture[QueryResponse] = c.query(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
         case _ =>

@@ -1,10 +1,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, ScanResult, Select }
@@ -38,7 +40,13 @@ class V1QueryProcessor(
         case (Some(c), None) =>
           implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
-            .create[ScanRequest]().mapAsync(1, { request => c.scanAsync(request).toCompletableFuture }).asScala
+            .create[ScanRequest]().mapAsync(
+              1,
+              new function.Function[ScanRequest, CompletableFuture[ScanResult]] {
+                override def apply(request: ScanRequest): CompletableFuture[ScanResult] =
+                  c.scanAsync(request).toCompletableFuture
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[ScanRequest].map { request => c.scan(request) }.withV1Dispatcher(pluginConfig)
         case _ =>

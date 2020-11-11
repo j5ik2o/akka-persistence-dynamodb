@@ -1,9 +1,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import java.io.IOException
+import java.util.concurrent.{ CompletableFuture, CompletionException }
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Flow, RestartFlow, Source, SourceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
@@ -362,7 +364,14 @@ final class V2JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[DeleteItemRequest]().mapAsync(1, { request => c.deleteItem(request) }).asScala
+          JavaFlow
+            .create[DeleteItemRequest]().mapAsync(
+              1,
+              new function.Function[DeleteItemRequest, CompletableFuture[DeleteItemResponse]] {
+                override def apply(request: DeleteItemRequest): CompletableFuture[DeleteItemResponse] =
+                  c.deleteItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -383,7 +392,14 @@ final class V2JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[BatchWriteItemRequest]().mapAsync(1, { request => c.batchWriteItem(request) }).asScala
+          JavaFlow
+            .create[BatchWriteItemRequest]().mapAsync(
+              1,
+              new function.Function[BatchWriteItemRequest, CompletableFuture[BatchWriteItemResponse]] {
+                override def apply(request: BatchWriteItemRequest): CompletableFuture[BatchWriteItemResponse] =
+                  c.batchWriteItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -404,7 +420,13 @@ final class V2JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[PutItemRequest]().mapAsync(1, { request => c.putItem(request) }).asScala
+          JavaFlow
+            .create[PutItemRequest]().mapAsync(
+              1,
+              new function.Function[PutItemRequest, CompletableFuture[PutItemResponse]] {
+                override def apply(request: PutItemRequest): CompletableFuture[PutItemResponse] = c.putItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -425,7 +447,14 @@ final class V2JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[UpdateItemRequest]().mapAsync(1, { request => c.updateItem(request) }).asScala
+          JavaFlow
+            .create[UpdateItemRequest]().mapAsync(
+              1,
+              new function.Function[UpdateItemRequest, CompletableFuture[UpdateItemResponse]] {
+                override def apply(request: UpdateItemRequest): CompletableFuture[UpdateItemResponse] =
+                  c.updateItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[UpdateItemRequest].map { request => c.updateItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>

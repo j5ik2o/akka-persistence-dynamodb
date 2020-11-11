@@ -1,5 +1,5 @@
 import Dependencies.Versions._
-import Dependencies._
+import Dependencies.{ akka, _ }
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -81,7 +81,25 @@ lazy val test = (project in file("test"))
         amazonaws.dynamodb,
         testcontainers.testcontainers,
         dimafeng.testcontainerScala
-      )
+      ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2L, scalaMajor)) if scalaMajor == 13 =>
+          Seq(
+            akka.stream(akka26Version)
+          )
+        case Some((2L, scalaMajor)) if scalaMajor == 12 =>
+          Seq(
+            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
+            akka.stream(akka26Version)
+          )
+        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+          Seq(
+            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
+            akka.stream(akka25Version)
+          )
+      }
+    }
   )
 
 lazy val base = (project in file("base"))

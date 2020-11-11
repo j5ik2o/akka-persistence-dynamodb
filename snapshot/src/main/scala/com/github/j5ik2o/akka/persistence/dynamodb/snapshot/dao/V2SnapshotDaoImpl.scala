@@ -17,6 +17,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.persistence.SnapshotMetadata
@@ -448,7 +449,14 @@ class V2SnapshotDaoImpl(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.query(request) }).asScala
+          JavaFlow
+            .create[QueryRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[QueryRequest, CompletableFuture[QueryResponse]] {
+                def apply(request: QueryRequest): CompletableFuture[QueryResponse] =
+                  c.query(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -469,7 +477,14 @@ class V2SnapshotDaoImpl(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[PutItemRequest]().mapAsync(1, { request => c.putItem(request) }).asScala
+          JavaFlow
+            .create[PutItemRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[PutItemRequest, CompletableFuture[PutItemResponse]] {
+                def apply(request: PutItemRequest): CompletableFuture[PutItemResponse] =
+                  c.putItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -490,7 +505,14 @@ class V2SnapshotDaoImpl(
     val flow = (
       (asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[DeleteItemRequest]().mapAsync(1, { request => c.deleteItem(request) }).asScala
+          JavaFlow
+            .create[DeleteItemRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[DeleteItemRequest, CompletableFuture[DeleteItemResponse]] {
+                def apply(request: DeleteItemRequest): CompletableFuture[DeleteItemResponse] =
+                  c.deleteItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>
@@ -512,7 +534,14 @@ class V2SnapshotDaoImpl(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[BatchWriteItemRequest]().mapAsync(1, { request => c.batchWriteItem(request) }).asScala
+          JavaFlow
+            .create[BatchWriteItemRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[BatchWriteItemRequest, CompletableFuture[BatchWriteItemResponse]] {
+                def apply(request: BatchWriteItemRequest) =
+                  c.batchWriteItem(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
         case _ =>

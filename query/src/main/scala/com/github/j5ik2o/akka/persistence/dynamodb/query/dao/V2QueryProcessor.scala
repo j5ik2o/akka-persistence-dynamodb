@@ -1,6 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
@@ -18,8 +19,8 @@ import software.amazon.awssdk.services.dynamodb.{
 }
 
 import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 class V2QueryProcessor(
     asyncClient: Option[JavaDynamoDbAsyncClient],
@@ -39,7 +40,14 @@ class V2QueryProcessor(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          JavaFlow.create[ScanRequest]().mapAsync(1, { request => c.scan(request) }).asScala
+          JavaFlow
+            .create[ScanRequest]().mapAsync(
+              1,
+              new akka.japi.function.Function[ScanRequest, CompletableFuture[ScanResponse]] {
+                override def apply(request: ScanRequest): CompletableFuture[ScanResponse] =
+                  c.scan(request)
+              }
+            ).asScala
         case (None, Some(c)) =>
           Flow[ScanRequest].map { request => c.scan(request) }.withV2Dispatcher(pluginConfig)
         case _ =>

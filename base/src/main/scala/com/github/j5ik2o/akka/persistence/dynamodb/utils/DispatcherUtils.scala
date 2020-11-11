@@ -42,6 +42,15 @@ object DispatcherUtils extends LoggingSupport {
     }
   }
 
+  def getV2DispatcherName(pluginConfig: PluginConfig): Option[String] = pluginConfig.clientConfig.clientVersion match {
+    case ClientVersion.V2 =>
+      pluginConfig.clientConfig.v2ClientConfig.dispatcherName.orElse(
+        pluginConfig.clientConfig.v2ClientConfig.syncClientConfig.dispatcherName
+      )
+    case _ =>
+      throw new IllegalArgumentException("Invalid the client version")
+  }
+
   private def applyV1Dispatcher[A, B](pluginConfig: PluginConfig, flow: Flow[A, B, NotUsed]): Flow[A, B, NotUsed] = {
     getV1DispatcherName(pluginConfig).fold(
       flow
@@ -52,15 +61,6 @@ object DispatcherUtils extends LoggingSupport {
 
     def withV2Dispatcher(pluginConfig: PluginConfig): Flow[A, B, NotUsed] =
       applyV2Dispatcher(pluginConfig, flow)
-  }
-
-  def getV2DispatcherName(pluginConfig: PluginConfig): Option[String] = pluginConfig.clientConfig.clientVersion match {
-    case ClientVersion.V2 =>
-      pluginConfig.clientConfig.v2ClientConfig.dispatcherName.orElse(
-        pluginConfig.clientConfig.v2ClientConfig.syncClientConfig.dispatcherName
-      )
-    case _ =>
-      throw new IllegalArgumentException("Invalid the client version")
   }
 
   private def applyV2Dispatcher[A, B](pluginConfig: PluginConfig, flow: Flow[A, B, NotUsed]): Flow[A, B, NotUsed] = {

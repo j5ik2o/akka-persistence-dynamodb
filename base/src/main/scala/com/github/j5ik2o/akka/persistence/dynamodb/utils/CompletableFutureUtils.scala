@@ -13,14 +13,17 @@ object CompletableFutureUtils {
   }
 
   def toCompletableFuture[T](future: Future[T])(implicit executor: Executor): CompletableFuture[T] = {
-    if (future.isDone)
+    if (future.isDone) {
+      val cf = new CompletableFuture[T]()
       try {
-        CompletableFuture.completedFuture(future.get)
+        cf.complete(future.get())
+        cf
       } catch {
         case ex: ExecutionException =>
-          CompletableFuture.failedFuture(ex.getCause)
+          cf.completeExceptionally(ex.getCause)
+          cf
       }
-    else {
+    } else {
       CompletableFuture.supplyAsync(
         { () =>
           try {

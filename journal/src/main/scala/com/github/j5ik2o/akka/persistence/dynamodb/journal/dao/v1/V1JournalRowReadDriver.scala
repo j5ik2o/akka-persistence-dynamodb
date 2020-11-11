@@ -177,8 +177,7 @@ final class V1JournalRowReadDriver(
           Flow[QueryRequest].map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }).withV1Dispatcher(pluginConfig)
-        .log("queryFlow")
+      }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

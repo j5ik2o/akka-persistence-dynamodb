@@ -336,8 +336,7 @@ final class V1JournalRowWriteDriver(
           Flow[PutItemRequest].map { request => c.putItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }).withV1Dispatcher(pluginConfig)
-        .log("putItemFlow")
+      }).log("putItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -353,19 +352,16 @@ final class V1JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val dn                = DispatcherUtils.getV1DispatcherName(pluginConfig).get
-          val ec                = system.dispatchers.lookup(dn)
-          implicit val executor = ExecutorServiceUtils.fromExecutionContext(ec)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
             .create[BatchWriteItemRequest]().mapAsync(1, { request =>
               c.batchWriteItemAsync(request).toCompletableFuture
             }).asScala
         case (None, Some(c)) =>
-          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }
+          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }).withV1Dispatcher(pluginConfig)
-        .log("batchWriteItemFlow")
+      }).log("batchWriteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -404,17 +400,14 @@ final class V1JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val dn                = DispatcherUtils.getV1DispatcherName(pluginConfig).get
-          val ec                = system.dispatchers.lookup(dn)
-          implicit val executor = ExecutorServiceUtils.fromExecutionContext(ec)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
             .create[DeleteItemRequest]().mapAsync(1, { request => c.deleteItemAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>
-          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }
+          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }).withV1Dispatcher(pluginConfig)
-        .log("deleteItemFlow")
+      }).log("deleteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

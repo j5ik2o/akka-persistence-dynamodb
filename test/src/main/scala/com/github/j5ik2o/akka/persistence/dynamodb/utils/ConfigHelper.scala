@@ -34,9 +34,12 @@ object ConfigHelper {
        |    client-version = "${clientVersion.toLowerCase}"
        |    client-type = "${clientType.toLowerCase()}"
        |    v2 {
-       |      dispatcher-name = "journal-blocking-io-dispatcher"
        |      async {
        |        max-concurrency = 64  
+       |      }
+       |      sync {
+       |        dispatcher-name = "journal-blocking-io-dispatcher"
+       |        max-connections = 64
        |      }
        |    }
        |    v1 {
@@ -44,8 +47,6 @@ object ConfigHelper {
                             s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
                           } else ""}
        |      dispatcher-name = "journal-blocking-io-dispatcher"
-       |      async {
-       |      }
        |    } 
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {

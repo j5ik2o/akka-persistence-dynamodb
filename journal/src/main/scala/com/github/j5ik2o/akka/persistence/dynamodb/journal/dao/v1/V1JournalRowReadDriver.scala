@@ -174,7 +174,7 @@ final class V1JournalRowReadDriver(
           JavaFlow
             .create[QueryRequest]().mapAsync(1, { request => c.queryAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>
-          Flow[QueryRequest].map { request => c.query(request) }
+          Flow[QueryRequest].map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
       }).withV1Dispatcher(pluginConfig)

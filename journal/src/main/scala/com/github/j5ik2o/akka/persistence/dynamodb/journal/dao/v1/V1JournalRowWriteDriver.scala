@@ -333,7 +333,7 @@ final class V1JournalRowWriteDriver(
           JavaFlow
             .create[PutItemRequest]().mapAsync(1, { request => c.putItemAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>
-          Flow[PutItemRequest].map { request => c.putItem(request) }
+          Flow[PutItemRequest].map { request => c.putItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
       }).withV1Dispatcher(pluginConfig)
@@ -381,9 +381,7 @@ final class V1JournalRowWriteDriver(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val dn                = DispatcherUtils.getV1DispatcherName(pluginConfig).get
-          val ec                = system.dispatchers.lookup(dn)
-          implicit val executor = ExecutorServiceUtils.fromExecutionContext(ec)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
           JavaFlow
             .create[UpdateItemRequest]().mapAsync(1, { request => c.updateItemAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>

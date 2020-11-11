@@ -4,20 +4,23 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.dispatch.Dispatchers
+import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginBaseConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.JavaFutureConverter._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutorService }
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowReadDriver(
@@ -33,6 +36,7 @@ final class V1JournalRowReadDriver(
       throw new IllegalArgumentException("aws clients is both None")
     case _ =>
   }
+
   private val logger = LoggerFactory.getLogger(getClass)
 
   override def getJournalRows(
@@ -42,9 +46,12 @@ final class V1JournalRowReadDriver(
   ): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted)
     recursiveQuery(queryRequest, None)
+      .mapConcat { response =>
+        Option(response.getItems).map(_.asScala.map(_.asScala.toMap).toVector).getOrElse(Vector.empty)
+      }
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
-      .map(_.toList)
+      .map(_.toVector)
       .withAttributes(logLevels)
   }
 
@@ -66,6 +73,9 @@ final class V1JournalRowReadDriver(
         pluginConfig.queryBatchSize
       )
       recursiveQuery(queryRequest, Some(max))
+        .mapConcat { response =>
+          Option(response.getItems).map(_.asScala.map(_.asScala.toMap).toVector).getOrElse(Vector.empty)
+        }
         .map(convertToJournalRow)
         .take(max)
         .withAttributes(logLevels)
@@ -130,10 +140,10 @@ final class V1JournalRowReadDriver(
       queryRequest: QueryRequest,
       maxOpt: Option[Long],
       lastEvaluatedKey: Option[Map[String, AttributeValue]] = None,
-      acc: Source[Map[String, AttributeValue], NotUsed] = Source.empty,
+      acc: Source[QueryResult, NotUsed] = Source.empty,
       count: Long = 0,
       index: Int = 1
-  ): Source[Map[String, AttributeValue], NotUsed] = {
+  ): Source[QueryResult, NotUsed] = {
     val newQueryRequest = lastEvaluatedKey match {
       case None => queryRequest
       case Some(_) =>
@@ -142,9 +152,8 @@ final class V1JournalRowReadDriver(
     Source
       .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-          val items            = Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
           val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
+          val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
           if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.getCount) < max }) {
             logger.debug("next loop: count = {}, response.count = {}", count, response.getCount)
             recursiveQuery(queryRequest, maxOpt, lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
@@ -158,18 +167,17 @@ final class V1JournalRowReadDriver(
   }
 
   private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {
-    val flow = (
-      (syncClient, asyncClient) match {
+    val flow =
+      ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          val flow = Flow[QueryRequest]
-            .map { request => c.query(request) }
-          DispatcherUtils.applyV1Dispatcher(pluginConfig, flow)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          JavaFlow
+            .create[QueryRequest]().mapAsync(1, { request => c.queryAsync(request).toCompletableFuture }).asScala
         case (None, Some(c)) =>
-          Flow[QueryRequest].mapAsync(1) { request => c.queryAsync(request).toScala }
+          Flow[QueryRequest].map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }
-    ).log("queryFlow")
+      }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

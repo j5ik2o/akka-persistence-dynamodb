@@ -11,6 +11,7 @@ object ConfigHelper {
       dynamoDBPort: Int,
       clientVersion: String,
       clientType: String,
+      requestHandlerClassNames: Seq[String] = Seq.empty,
       journalRowDriverWrapperClassName: Option[String] = None
   ): Config = {
     val configString = s"""
@@ -33,15 +34,19 @@ object ConfigHelper {
        |    client-version = "${clientVersion.toLowerCase}"
        |    client-type = "${clientType.toLowerCase()}"
        |    v2 {
-       |      dispatcher-name = "journal-blocking-io-dispatcher"
        |      async {
        |        max-concurrency = 64  
        |      }
+       |      sync {
+       |        dispatcher-name = "journal-blocking-io-dispatcher"
+       |        max-connections = 64
+       |      }
        |    }
        |    v1 {
+       |    ${if (requestHandlerClassNames.nonEmpty) {
+                            s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
+                          } else ""}
        |      dispatcher-name = "journal-blocking-io-dispatcher"
-       |      async {
-       |      }
        |    } 
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {

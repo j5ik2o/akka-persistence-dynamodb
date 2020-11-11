@@ -15,16 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import java.net.URI
-
 import akka.persistence.snapshot.SnapshotStoreSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
-import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
 import scala.concurrent.duration._
 

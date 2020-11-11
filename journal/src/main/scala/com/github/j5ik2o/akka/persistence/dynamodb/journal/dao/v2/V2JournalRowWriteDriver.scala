@@ -4,25 +4,29 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{ Flow, GraphDSL, RestartFlow, Source, SourceUtils, Unzip, Zip }
+import akka.stream.javadsl.{ Flow => JavaFlow }
+import akka.stream.scaladsl.{ Flow, RestartFlow, Source, SourceUtils }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalRowWriteDriver, PersistenceIdWithSeqNr }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
+
+import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 final class V2JournalRowWriteDriver(
     val system: ActorSystem,
-    val asyncClient: Option[DynamoDbAsyncClient],
-    val syncClient: Option[DynamoDbSyncClient],
+    val asyncClient: Option[JavaDynamoDbAsyncClient],
+    val syncClient: Option[JavaDynamoDbSyncClient],
     val pluginConfig: JournalPluginConfig,
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
@@ -33,7 +37,6 @@ final class V2JournalRowWriteDriver(
       throw new IllegalArgumentException("aws clients is both None")
     case _ =>
   }
-  val streamClient: Option[DynamoDbAkkaClient] = asyncClient.map { c => DynamoDbAkkaClient(c) }
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -72,7 +75,7 @@ final class V2JournalRowWriteDriver(
   override def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] =
     Flow[PersistenceIdWithSeqNr].flatMapConcat { persistenceIdWithSeqNr =>
       val deleteRequest = DeleteItemRequest
-        .builder().keyAsScala(
+        .builder().key(
           Map(
             pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
               .builder()
@@ -81,7 +84,7 @@ final class V2JournalRowWriteDriver(
               .builder().n(
                 persistenceIdWithSeqNr.sequenceNumber.asString
               ).build()
-          )
+          ).asJava
         ).build()
       Source.single(deleteRequest).via(deleteItemFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
@@ -89,7 +92,7 @@ final class V2JournalRowWriteDriver(
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
     }
@@ -104,14 +107,19 @@ final class V2JournalRowWriteDriver(
             Source
               .single(requestItems).map { requests =>
                 BatchWriteItemRequest
-                  .builder().requestItemsAsScala(Map(pluginConfig.tableName -> requests)).build()
+                  .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build()
               }.via(batchWriteItemFlow).flatMapConcat { response =>
                 if (response.sdkHttpResponse().isSuccessful) {
-                  if (response.unprocessedItemsAsScala.get.nonEmpty) {
+                  if (Option(response.unprocessedItems).map(_.asScala).get.nonEmpty) {
                     val n =
                       requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
                     Source
-                      .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
+                      .single(
+                        Option(response.unprocessedItems)
+                          .map(_.asScala.toMap).map(_.map { case (k, v) => (k, v.asScala.toVector) }).get(
+                            pluginConfig.tableName
+                          )
+                      ).via(loopFlow).map(
                         _ + n
                       )
                   } else {
@@ -120,7 +128,7 @@ final class V2JournalRowWriteDriver(
                 } else {
                   val statusCode = response.sdkHttpResponse().statusCode()
                   val statusText = response.sdkHttpResponse().statusText()
-                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
                 }
               }
           }
@@ -133,7 +141,7 @@ final class V2JournalRowWriteDriver(
                 WriteRequest
                   .builder().deleteRequest(
                     DeleteRequest
-                      .builder().keyAsScala(
+                      .builder().key(
                         Map(
                           pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
                             .builder()
@@ -142,7 +150,7 @@ final class V2JournalRowWriteDriver(
                             .builder().n(
                               persistenceIdWithSeqNr.sequenceNumber.asString
                             ).build()
-                        )
+                        ).asJava
                       ).build()
                   ).build()
               }
@@ -156,7 +164,7 @@ final class V2JournalRowWriteDriver(
     val skey = journalRow.sortKey(sortKeyResolver).asString
     val updateRequest = UpdateItemRequest
       .builder()
-      .tableName(pluginConfig.tableName).keyAsScala(
+      .tableName(pluginConfig.tableName).key(
         Map(
           pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
             .builder()
@@ -164,9 +172,9 @@ final class V2JournalRowWriteDriver(
           pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
             .builder()
             .s(skey).build()
-        )
-      ).attributeUpdatesAsScala(
-        Map(
+        ).asJava
+      ).attributeUpdates(
+        (Map(
           pluginConfig.columnsDefConfig.messageColumnName -> AttributeValueUpdate
             .builder()
             .action(AttributeAction.PUT).value(
@@ -190,7 +198,7 @@ final class V2JournalRowWriteDriver(
                 .builder()
                 .action(AttributeAction.PUT).value(AttributeValue.builder().s(tag).build()).build()
             )
-          }.getOrElse(Map.empty)
+          }.getOrElse(Map.empty)).asJava
       ).build()
     Source
       .single(updateRequest)
@@ -200,7 +208,7 @@ final class V2JournalRowWriteDriver(
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
   }.withAttributes(logLevels)
@@ -210,8 +218,8 @@ final class V2JournalRowWriteDriver(
     val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
     val request = PutItemRequest
       .builder().tableName(pluginConfig.tableName)
-      .itemAsScala(
-        Map(
+      .item(
+        (Map(
           pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
             .builder()
             .s(pkey).build(),
@@ -234,7 +242,7 @@ final class V2JournalRowWriteDriver(
         ) ++ journalRow.tags
           .map { tag => Map(pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()) }.getOrElse(
             Map.empty
-          )
+          )).asJava
       ).build()
     Source.single(request).via(putItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful) {
@@ -242,7 +250,7 @@ final class V2JournalRowWriteDriver(
       } else {
         val statusCode = response.sdkHttpResponse().statusCode()
         val statusText = response.sdkHttpResponse().statusText()
-        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
       }
     }
   }
@@ -254,15 +262,20 @@ final class V2JournalRowWriteDriver(
           Source
             .single(requestItems).map { requests =>
               BatchWriteItemRequest
-                .builder().requestItemsAsScala(Map(pluginConfig.tableName -> requests)).build
+                .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build
             }.via(batchWriteItemFlow)
             .flatMapConcat {
               case response =>
                 if (response.sdkHttpResponse().isSuccessful) {
-                  if (response.unprocessedItemsAsScala.get.nonEmpty) {
+                  if (Option(response.unprocessedItems).map(_.asScala).get.nonEmpty) {
                     val n = requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
                     Source
-                      .single(response.unprocessedItemsAsScala.get(pluginConfig.tableName)).via(loopFlow).map(
+                      .single(
+                        Option(response.unprocessedItems)
+                          .map(_.asScala).map(_.map { case (k, v) => (k, v.asScala.toVector) }).get(
+                            pluginConfig.tableName
+                          )
+                      ).via(loopFlow).map(
                         _ + n
                       )
                   } else {
@@ -271,7 +284,7 @@ final class V2JournalRowWriteDriver(
                 } else {
                   val statusCode = response.sdkHttpResponse().statusCode()
                   val statusText = response.sdkHttpResponse().statusText()
-                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
                 }
             }
         }
@@ -308,8 +321,8 @@ final class V2JournalRowWriteDriver(
                   .builder().putRequest(
                     PutRequest
                       .builder()
-                      .itemAsScala(
-                        Map(
+                      .item(
+                        (Map(
                           pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
                             .builder()
                             .s(pkey).build(),
@@ -335,7 +348,7 @@ final class V2JournalRowWriteDriver(
                               pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
                                 .builder().s(tags).build()
                             )
-                          }.getOrElse(Map.empty)
+                          }.getOrElse(Map.empty)).asJava
                       ).build()
                   ).build()
             }
@@ -346,20 +359,15 @@ final class V2JournalRowWriteDriver(
   }
 
   private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.deleteItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[DeleteItemRequest].map { request =>
-          c.deleteItem(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("deleteItemFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[DeleteItemRequest]().mapAsync(1, { request => c.deleteItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("deleteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -372,20 +380,15 @@ final class V2JournalRowWriteDriver(
   }
 
   private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.batchWriteItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[BatchWriteItemRequest].map { request =>
-          c.batchWriteItem(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("batchWriteItemFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[BatchWriteItemRequest]().mapAsync(1, { request => c.batchWriteItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("batchWriteItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -398,20 +401,15 @@ final class V2JournalRowWriteDriver(
   }
 
   private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.putItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[PutItemRequest].map { request =>
-          c.putItem(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("putItemFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[PutItemRequest]().mapAsync(1, { request => c.putItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("putItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -424,20 +422,15 @@ final class V2JournalRowWriteDriver(
   }
 
   private def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.updateItemFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[UpdateItemRequest].map { request =>
-          c.updateItem(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("updateItemFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[UpdateItemRequest]().mapAsync(1, { request => c.updateItem(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[UpdateItemRequest].map { request => c.updateItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("updateItemFlow")
     if (pluginConfig.writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(

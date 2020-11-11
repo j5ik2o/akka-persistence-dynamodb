@@ -4,26 +4,28 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{ Concat, Flow, GraphDSL, RestartFlow, Source, Unzip, Zip }
+import akka.stream.javadsl.{ Flow => JavaFlow }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest, QueryResponse }
-
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.compat.java8.OptionConverters._
 
 final class V2JournalRowReadDriver(
     val system: ActorSystem,
-    val asyncClient: Option[DynamoDbAsyncClient],
-    val syncClient: Option[DynamoDbSyncClient],
+    val asyncClient: Option[JavaDynamoDbAsyncClient],
+    val syncClient: Option[JavaDynamoDbSyncClient],
     val pluginConfig: JournalPluginBaseConfig,
     val metricsReporter: Option[MetricsReporter]
 ) extends JournalRowReadDriver {
@@ -33,25 +35,18 @@ final class V2JournalRowReadDriver(
     case _ =>
   }
 
-  val streamClient: Option[DynamoDbAkkaClient] = asyncClient.map { c => DynamoDbAkkaClient(c) }
-
   private val logger = LoggerFactory.getLogger(getClass)
 
   private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.queryFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[QueryRequest].map { request =>
-          c.query(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("queryFlow")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[QueryRequest]().mapAsync(1, { request => c.query(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("queryFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -111,7 +106,9 @@ final class V2JournalRowReadDriver(
       .via(queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
-          val result = response.itemsAsScala
+          val result = Option(response.items)
+            .map(_.asScala)
+            .map(_.map(_.asScala.toMap))
             .getOrElse(Seq.empty).toVector.headOption.map { head =>
               head(pluginConfig.columnsDefConfig.sequenceNrColumnName).n().toLong
             }.getOrElse(0L)
@@ -119,7 +116,7 @@ final class V2JournalRowReadDriver(
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.withAttributes(logLevels)
   }
@@ -128,7 +125,7 @@ final class V2JournalRowReadDriver(
     JournalRow(
       persistenceId = PersistenceId(map(pluginConfig.columnsDefConfig.persistenceIdColumnName).s),
       sequenceNumber = SequenceNumber(map(pluginConfig.columnsDefConfig.sequenceNrColumnName).n.toLong),
-      deleted = map(pluginConfig.columnsDefConfig.deletedColumnName).bool.get,
+      deleted = map(pluginConfig.columnsDefConfig.deletedColumnName).bool,
       message = map.get(pluginConfig.columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
       ordering = map(pluginConfig.columnsDefConfig.orderingColumnName).n.toLong,
       tags = map.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.s)
@@ -147,23 +144,30 @@ final class V2JournalRowReadDriver(
       case None =>
         queryRequest
       case Some(_) =>
-        queryRequest.toBuilder.exclusiveStartKeyAsScala(lastEvaluatedKey).build()
+        queryRequest.toBuilder.exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull).build()
     }
     Source
       .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
-          val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-          val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+          val items            = Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+          val lastEvaluatedKey = Option(response.lastEvaluatedKey).map { _.asScala.toMap }.getOrElse(Map.empty)
           val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
           if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.count()) < max }) {
             logger.debug("next loop: count = {}, response.count = {}", count, response.count())
-            recursiveQuery(queryRequest, maxOpt, lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+            recursiveQuery(
+              queryRequest,
+              maxOpt,
+              Some(lastEvaluatedKey),
+              combinedSource,
+              count + response.count(),
+              index + 1
+            )
           } else
             combinedSource
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
   }
@@ -179,21 +183,19 @@ final class V2JournalRowReadDriver(
       .indexName(pluginConfig.getJournalRowsIndexName)
       .keyConditionExpression("#pid = :pid and #snr <= :snr")
       .filterExpression("#d = :flg")
-      .expressionAttributeNamesAsScala(
+      .expressionAttributeNames(
         Map(
           "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
           "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName,
           "#d"   -> pluginConfig.columnsDefConfig.deletedColumnName
-        )
+        ).asJava
       )
-      .expressionAttributeValuesAsScala(
-        Some(
-          Map(
-            ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
-            ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
-            ":flg" -> AttributeValue.builder().bool(deleted).build()
-          )
-        )
+      .expressionAttributeValues(
+        Map(
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":snr" -> AttributeValue.builder().n(toSequenceNr.asString).build(),
+          ":flg" -> AttributeValue.builder().bool(deleted).build()
+        ).asJava
       )
       .limit(pluginConfig.queryBatchSize)
       .build()
@@ -213,19 +215,19 @@ final class V2JournalRowReadDriver(
       .keyConditionExpression(
         "#pid = :pid and #snr between :min and :max"
       )
-      .filterExpressionAsScala(deleted.map { _ => s"#flg = :flg" })
-      .expressionAttributeNamesAsScala(
-        Map(
+      .filterExpression(deleted.map { _ => s"#flg = :flg" }.orNull)
+      .expressionAttributeNames(
+        (Map(
           "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
           "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
         ) ++ deleted
-          .map(_ => Map("#flg" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)
-      ).expressionAttributeValuesAsScala(
-        Map(
+          .map(_ => Map("#flg" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
+      ).expressionAttributeValues(
+        (Map(
           ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
           ":min" -> AttributeValue.builder().n(fromSequenceNr.asString).build(),
           ":max" -> AttributeValue.builder().n(toSequenceNr.asString).build()
-        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)
+        ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)).asJava
       )
       .limit(limit)
       .build()
@@ -240,24 +242,24 @@ final class V2JournalRowReadDriver(
       .builder()
       .tableName(pluginConfig.tableName)
       .indexName(pluginConfig.getJournalRowsIndexName)
-      .keyConditionExpressionAsScala(
-        fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id"))
+      .keyConditionExpression(
+        fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id")).orNull
       )
-      .filterExpressionAsScala(deleted.map(_ => "#d = :flg"))
-      .expressionAttributeNamesAsScala(
-        Map(
+      .filterExpression(deleted.map(_ => "#d = :flg").orNull)
+      .expressionAttributeNames(
+        (Map(
           "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
         ) ++ deleted
           .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
         fromSequenceNr
-          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)
+          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
       )
-      .expressionAttributeValuesAsScala(
-        Map(
+      .expressionAttributeValues(
+        (Map(
           ":id" -> AttributeValue.builder().s(persistenceId.asString).build()
         ) ++ deleted
           .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
-          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)
+          .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)).asJava
       ).scanIndexForward(false)
       .limit(1)
       .build()

@@ -41,7 +41,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils._
 import com.typesafe.config.Config
-import monix.execution.Scheduler
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient
@@ -153,7 +152,6 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   implicit val ec: ExecutionContext   = context.dispatcher
   implicit val system: ActorSystem    = context.system
   implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val scheduler: Scheduler   = Scheduler(ec)
   implicit val _log                   = log
 
   log.debug("dynamodb journal plugin: id = {}", id)

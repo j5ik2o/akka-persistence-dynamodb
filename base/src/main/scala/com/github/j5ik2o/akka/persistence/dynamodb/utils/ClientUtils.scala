@@ -5,7 +5,6 @@ import akka.event.LoggingAdapter
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient
@@ -19,7 +18,7 @@ object ClientUtils {
       pluginConfig: PluginConfig
   )(f: JavaDynamoDbSyncClient => Unit)(
       implicit log: LoggingAdapter
-  ): DynamoDbSyncClient = {
+  ): JavaDynamoDbSyncClient = {
     if (pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
       log.warning(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
@@ -30,20 +29,20 @@ object ClientUtils {
         pluginConfig
       ).build()
     f(javaSyncClientV2)
-    DynamoDbSyncClient(javaSyncClientV2)
+    javaSyncClientV2
   }
 
   def createV2AsyncClient(
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
-  )(f: JavaDynamoDbAsyncClient => Unit): DynamoDbAsyncClient = {
+  )(f: JavaDynamoDbAsyncClient => Unit): JavaDynamoDbAsyncClient = {
     val javaAsyncClientV2 = V2DynamoDbClientBuilderUtils
       .setupAsync(
         dynamicAccess,
         pluginConfig
       ).build()
     f(javaAsyncClientV2)
-    DynamoDbAsyncClient(javaAsyncClientV2)
+    javaAsyncClientV2
   }
 
   def createV1AsyncClient(

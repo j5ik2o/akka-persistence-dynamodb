@@ -32,11 +32,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
-import com.github.j5ik2o.reactive.aws.dynamodb.DynamoDbAsyncClient
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.monix.DynamoDbMonixClient
 import com.typesafe.config.{ Config, ConfigFactory }
-import monix.execution.Scheduler
 import net.ceedubs.ficus.Ficus._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FreeSpecLike, Matchers }
@@ -66,10 +62,6 @@ class ReadJournalDaoImplSpec
 
   import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 
-  val dynamoDbAsyncClient = DynamoDbAsyncClient(underlyingAsync)
-  val taskClient          = DynamoDbMonixClient(dynamoDbAsyncClient)
-  val streamClient        = DynamoDbAkkaClient(dynamoDbAsyncClient)
-
   private val serialization = SerializationExtension(system)
 
   private val journalPluginConfig: JournalPluginConfig =
@@ -87,7 +79,7 @@ class ReadJournalDaoImplSpec
 
   val queryProcessor =
     new V2QueryProcessor(
-      Some(dynamoDbAsyncClient),
+      Some(underlyingAsync),
       None,
       queryPluginConfig,
       Some(new MetricsReporter.None(queryPluginConfig))
@@ -95,7 +87,7 @@ class ReadJournalDaoImplSpec
 
   val journalRowReadDriver = new V2JournalRowReadDriver(
     system,
-    Some(dynamoDbAsyncClient),
+    Some(underlyingAsync),
     None,
     journalPluginConfig,
     Some(new MetricsReporter.None(queryPluginConfig))
@@ -120,7 +112,7 @@ class ReadJournalDaoImplSpec
 
   val journalRowWriteDriver = new V2JournalRowWriteDriver(
     system,
-    Some(dynamoDbAsyncClient),
+    Some(underlyingAsync),
     None,
     journalPluginConfig,
     partitionKeyResolver,
@@ -138,8 +130,6 @@ class ReadJournalDaoImplSpec
       ec,
       system
     )
-
-  val sch = Scheduler(ec)
 
   "ReadJournalDaoImpl" - {
     "allPersistenceIds" in {

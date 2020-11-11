@@ -4,23 +4,26 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{ Concat, Flow, GraphDSL, RestartFlow, Source, Unzip, Zip }
+import akka.stream.javadsl.{ Flow => JavaFlow }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
-import com.github.j5ik2o.reactive.aws.dynamodb.akka.DynamoDbAkkaClient
-import com.github.j5ik2o.reactive.aws.dynamodb.implicits._
-import com.github.j5ik2o.reactive.aws.dynamodb.{ DynamoDbAsyncClient, DynamoDbSyncClient }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model.{ ScanRequest, Select, _ }
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.jdk.CollectionConverters._
+import scala.compat.java8.OptionConverters._
 
 class V2QueryProcessor(
-    asyncClient: Option[DynamoDbAsyncClient],
-    syncClient: Option[DynamoDbSyncClient],
+    asyncClient: Option[JavaDynamoDbAsyncClient],
+    syncClient: Option[JavaDynamoDbSyncClient],
     pluginConfig: QueryPluginConfig,
     metricsReporter: Option[MetricsReporter]
 ) extends QueryProcessor {
@@ -32,23 +35,16 @@ class V2QueryProcessor(
 
   val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
-  private val streamClient = asyncClient.map(DynamoDbAkkaClient(_))
-
   private def scanFlow: Flow[ScanRequest, ScanResponse, NotUsed] = {
-    val flow = ((streamClient, syncClient) match {
-      case (Some(c), None) =>
-        c.scanFlow(1)
-      case (None, Some(c)) =>
-        val flow = Flow[ScanRequest].map { request =>
-          c.scan(request) match {
-            case Right(r) => r
-            case Left(ex) => throw ex
-          }
-        }
-        DispatcherUtils.applyV2Dispatcher(pluginConfig, flow)
-      case _ =>
-        throw new IllegalStateException("invalid state")
-    }).log("scan")
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow.create[ScanRequest]().mapAsync(1, { request => c.scan(request) }).asScala
+        case (None, Some(c)) =>
+          Flow[ScanRequest].map { request => c.scan(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("scanFlow")
     if (pluginConfig.readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
@@ -73,29 +69,29 @@ class V2QueryProcessor(
         .select(Select.SPECIFIC_ATTRIBUTES)
         .attributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
         .limit(pluginConfig.scanBatchSize)
-        .exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .consistentRead(pluginConfig.consistentRead)
         .build()
       Source.single(scanRequest).via(scanFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
-          val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-          val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+          val items            = Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+          val lastEvaluatedKey = Option(response.lastEvaluatedKey).map(_.asScala.toMap).getOrElse(Map.empty)
           val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
           if (lastEvaluatedKey.nonEmpty && (count + response.count()) < max) {
-            loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+            loop(Some(lastEvaluatedKey), combinedSource, count + response.count(), index + 1)
           } else
             combinedSource
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
     }
 
     loop(None, Source.empty, 0L, 1)
-      .filterNot(_(columnsDefConfig.deletedColumnName).bool.get)
-      .map(_(columnsDefConfig.persistenceIdColumnName).s.get)
+      .filterNot(_(columnsDefConfig.deletedColumnName).bool)
+      .map(_(columnsDefConfig.persistenceIdColumnName).s)
       .fold(Set.empty[String])(_ + _)
       .mapConcat(_.toVector)
       .map(PersistenceId.apply)
@@ -120,31 +116,32 @@ class V2QueryProcessor(
         .tableName(pluginConfig.tableName)
         .indexName(pluginConfig.tagsIndexName)
         .filterExpression("contains(#tags, :tag)")
-        .expressionAttributeNamesAsScala(
-          Map("#tags" -> columnsDefConfig.tagsColumnName)
+        .expressionAttributeNames(
+          Map("#tags" -> columnsDefConfig.tagsColumnName).asJava
         )
-        .expressionAttributeValuesAsScala(
+        .expressionAttributeValues(
           Map(
             ":tag" -> AttributeValue.builder().s(tag).build()
-          )
+          ).asJava
         )
         .limit(pluginConfig.scanBatchSize)
-        .exclusiveStartKeyAsScala(lastEvaluatedKey)
+        .exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .build()
       Source
         .single(scanRequest).via(scanFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
-            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+            val items =
+              Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+            val lastEvaluatedKey = Option(response.lastEvaluatedKey).map(_.asScala.toMap).getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
             if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+              loop(Some(lastEvaluatedKey), combinedSource, count + response.count(), index + 1)
             } else
               combinedSource
           } else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
           }
         }
     }
@@ -174,24 +171,25 @@ class V2QueryProcessor(
       val scanRequest = ScanRequest
         .builder().tableName(pluginConfig.tableName).select(Select.SPECIFIC_ATTRIBUTES).attributesToGet(
           columnsDefConfig.orderingColumnName
-        ).limit(pluginConfig.scanBatchSize).exclusiveStartKeyAsScala(lastEvaluatedKey)
+        ).limit(pluginConfig.scanBatchSize).exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .consistentRead(pluginConfig.consistentRead)
         .build()
       Source
         .single(scanRequest)
         .via(scanFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
-            val items            = response.itemsAsScala.getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = response.lastEvaluatedKeyAsScala.getOrElse(Map.empty)
+            val items =
+              Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+            val lastEvaluatedKey = Option(response.lastEvaluatedKey).map(_.asScala.toMap).getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
             if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.count(), index + 1)
+              loop(Some(lastEvaluatedKey), combinedSource, count + response.count(), index + 1)
             } else
               combinedSource
           } else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()
-            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.fold("")(s => s", $s")))
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
           }
         }
     }
@@ -205,7 +203,7 @@ class V2QueryProcessor(
     JournalRow(
       persistenceId = PersistenceId(map(columnsDefConfig.persistenceIdColumnName).s),
       sequenceNumber = SequenceNumber(map(columnsDefConfig.sequenceNrColumnName).n.toLong),
-      deleted = map(columnsDefConfig.deletedColumnName).bool.get,
+      deleted = map(columnsDefConfig.deletedColumnName).bool,
       message = map.get(columnsDefConfig.messageColumnName).map(_.b.asByteArray()).get,
       ordering = map(columnsDefConfig.orderingColumnName).n.toLong,
       tags = map.get(columnsDefConfig.tagsColumnName).map(_.s)

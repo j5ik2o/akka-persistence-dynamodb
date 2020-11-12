@@ -1,19 +1,16 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import java.io.IOException
-import java.util.concurrent.{ CompletableFuture, CompletionException }
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.japi.function
-import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Flow, RestartFlow, Source, SourceUtils }
+import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamWriteClient
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalRowWriteDriver, PersistenceIdWithSeqNr }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
@@ -41,6 +38,9 @@ final class V2JournalRowWriteDriver(
   }
 
   private val logger = LoggerFactory.getLogger(getClass)
+
+  private val streamClient =
+    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
 
   private val readDriver: V2JournalRowReadDriver = new V2JournalRowReadDriver(
     system,
@@ -88,7 +88,7 @@ final class V2JournalRowWriteDriver(
               ).build()
           ).asJava
         ).build()
-      Source.single(deleteRequest).via(deleteItemFlow).flatMapConcat { response =>
+      Source.single(deleteRequest).via(streamClient.deleteItemFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
           Source.single(1L)
         } else {
@@ -110,7 +110,7 @@ final class V2JournalRowWriteDriver(
               .single(requestItems).map { requests =>
                 BatchWriteItemRequest
                   .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build()
-              }.via(batchWriteItemFlow).flatMapConcat { response =>
+              }.via(streamClient.batchWriteItemFlow).flatMapConcat { response =>
                 if (response.sdkHttpResponse().isSuccessful) {
                   if (Option(response.unprocessedItems).map(_.asScala).get.nonEmpty) {
                     val n =
@@ -204,7 +204,7 @@ final class V2JournalRowWriteDriver(
       ).build()
     Source
       .single(updateRequest)
-      .via(updateItemFlow).flatMapConcat { response =>
+      .via(streamClient.updateItemFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
           Source.single(())
         } else {
@@ -246,7 +246,7 @@ final class V2JournalRowWriteDriver(
             Map.empty
           )).asJava
       ).build()
-    Source.single(request).via(putItemFlow).flatMapConcat { response =>
+    Source.single(request).via(streamClient.putItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful) {
         Source.single(1L)
       } else {
@@ -265,7 +265,7 @@ final class V2JournalRowWriteDriver(
             .single(requestItems).map { requests =>
               BatchWriteItemRequest
                 .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build
-            }.via(batchWriteItemFlow)
+            }.via(streamClient.batchWriteItemFlow)
             .flatMapConcat {
               case response =>
                 if (response.sdkHttpResponse().isSuccessful) {
@@ -360,114 +360,4 @@ final class V2JournalRowWriteDriver(
 
   }
 
-  private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[DeleteItemRequest]().mapAsync(
-              1,
-              new function.Function[DeleteItemRequest, CompletableFuture[DeleteItemResponse]] {
-                override def apply(request: DeleteItemRequest): CompletableFuture[DeleteItemResponse] =
-                  c.deleteItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("deleteItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[BatchWriteItemRequest]().mapAsync(
-              1,
-              new function.Function[BatchWriteItemRequest, CompletableFuture[BatchWriteItemResponse]] {
-                override def apply(request: BatchWriteItemRequest): CompletableFuture[BatchWriteItemResponse] =
-                  c.batchWriteItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("batchWriteItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[PutItemRequest]().mapAsync(
-              1,
-              new function.Function[PutItemRequest, CompletableFuture[PutItemResponse]] {
-                override def apply(request: PutItemRequest): CompletableFuture[PutItemResponse] = c.putItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("putItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[UpdateItemRequest]().mapAsync(
-              1,
-              new function.Function[UpdateItemRequest, CompletableFuture[UpdateItemResponse]] {
-                override def apply(request: UpdateItemRequest): CompletableFuture[UpdateItemResponse] =
-                  c.updateItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[UpdateItemRequest].map { request => c.updateItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("updateItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
 }

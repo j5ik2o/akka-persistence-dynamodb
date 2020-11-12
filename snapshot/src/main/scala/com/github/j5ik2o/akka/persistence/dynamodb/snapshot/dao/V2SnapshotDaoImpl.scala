@@ -20,10 +20,12 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Flow, RestartFlow, Source }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ StreamReadClient, StreamWriteClient }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
@@ -39,6 +41,7 @@ import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 class V2SnapshotDaoImpl(
+    system: ActorSystem,
     asyncClient: Option[JavaDynamoDbAsyncClient],
     syncClient: Option[JavaDynamoDbSyncClient],
     serialization: Serialization,
@@ -53,6 +56,12 @@ class V2SnapshotDaoImpl(
 
   import pluginConfig._
 
+  private val streamReadClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
+
+  private val streamWriteClient =
+    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
+
   private val serializer = new ByteArraySnapshotSerializer(serialization)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
@@ -64,7 +73,7 @@ class V2SnapshotDaoImpl(
           columnsDefConfig.sequenceNrColumnName    -> AttributeValue.builder().n(sequenceNr.asString).build()
         ).asJava
       ).build()
-    Source.single(req).via(deleteItemFlow).flatMapConcat { response =>
+    Source.single(req).via(streamWriteClient.deleteItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful)
         Source.single(())
       else {
@@ -181,7 +190,7 @@ class V2SnapshotDaoImpl(
       .consistentRead(consistentRead)
       .build()
     Source
-      .single(queryRequest).via(queryFlow)
+      .single(queryRequest).via(streamReadClient.queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
@@ -235,7 +244,7 @@ class V2SnapshotDaoImpl(
       .consistentRead(consistentRead)
       .build()
     Source
-      .single(queryRequest).via(queryFlow).flatMapConcat { response =>
+      .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
@@ -282,7 +291,7 @@ class V2SnapshotDaoImpl(
       .consistentRead(consistentRead)
       .build()
     Source
-      .single(queryRequest).via(queryFlow).flatMapConcat { response =>
+      .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
@@ -336,7 +345,7 @@ class V2SnapshotDaoImpl(
       .consistentRead(consistentRead)
       .build()
     Source
-      .single(queryRequest).via(queryFlow).flatMapConcat { response =>
+      .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
         else {
@@ -383,7 +392,7 @@ class V2SnapshotDaoImpl(
               columnsDefConfig.createdColumnName -> AttributeValue.builder().n(snapshotRow.created.toString).build()
             ).asJava
           ).build()
-        Source.single(req).via(putItemFlow).flatMapConcat { response =>
+        Source.single(req).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful)
             Source.single(())
           else {
@@ -399,7 +408,7 @@ class V2SnapshotDaoImpl(
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
     Source
-      .single(queryRequest).via(queryFlow).map { response =>
+      .single(queryRequest).via(streamReadClient.queryFlow).map { response =>
         Option(response.items).map(_.asScala).getOrElse(Seq.empty)
       }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
         rows.map { javaRow =>
@@ -434,7 +443,7 @@ class V2SnapshotDaoImpl(
               }.asJava
             ).asJava
           ).build()
-      }.via(batchWriteItemFlow).flatMapConcat { response =>
+      }.via(streamWriteClient.batchWriteItemFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(())
         else {
@@ -443,119 +452,6 @@ class V2SnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }
-  }
-
-  private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[QueryRequest]().mapAsync(
-              1,
-              new akka.japi.function.Function[QueryRequest, CompletableFuture[QueryResponse]] {
-                def apply(request: QueryRequest): CompletableFuture[QueryResponse] =
-                  c.query(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("queryFlow")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[PutItemRequest]().mapAsync(
-              1,
-              new akka.japi.function.Function[PutItemRequest, CompletableFuture[PutItemResponse]] {
-                def apply(request: PutItemRequest): CompletableFuture[PutItemResponse] =
-                  c.putItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[PutItemRequest].map { request => c.putItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("putItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResponse, NotUsed] = {
-    val flow = (
-      (asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[DeleteItemRequest]().mapAsync(
-              1,
-              new akka.japi.function.Function[DeleteItemRequest, CompletableFuture[DeleteItemResponse]] {
-                def apply(request: DeleteItemRequest): CompletableFuture[DeleteItemResponse] =
-                  c.deleteItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[DeleteItemRequest].map { request => c.deleteItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }
-    ).log("deleteItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
-
-  private def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[BatchWriteItemRequest]().mapAsync(
-              1,
-              new akka.japi.function.Function[BatchWriteItemRequest, CompletableFuture[BatchWriteItemResponse]] {
-                def apply(request: BatchWriteItemRequest) =
-                  c.batchWriteItem(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("batchWriteItemFlow")
-    if (pluginConfig.writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.writeBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.writeBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.writeBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
   }
 
 }

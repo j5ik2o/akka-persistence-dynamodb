@@ -1,23 +1,18 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.japi.function
-import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, ScanResult, Select }
+import akka.stream.scaladsl.{ Concat, Source }
+import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, Select }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
@@ -32,36 +27,10 @@ class V1QueryProcessor(
 )(implicit ec: ExecutionContext)
     extends QueryProcessor {
 
-  val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
+  private val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
-  private def scanFlow: Flow[ScanRequest, ScanResult, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
-          JavaFlow
-            .create[ScanRequest]().mapAsync(
-              1,
-              new function.Function[ScanRequest, CompletableFuture[ScanResult]] {
-                override def apply(request: ScanRequest): CompletableFuture[ScanResult] =
-                  c.scanAsync(request).toCompletableFuture
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[ScanRequest].map { request => c.scan(request) }.withV1Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("scanFlow")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
+  private val streamClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     def loop(
@@ -77,7 +46,7 @@ class V1QueryProcessor(
         .withLimit(pluginConfig.scanBatchSize)
         .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .withConsistentRead(pluginConfig.consistentRead)
-      Source.single(scanRequest).via(scanFlow).flatMapConcat { response =>
+      Source.single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
           val items =
             Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
@@ -131,7 +100,7 @@ class V1QueryProcessor(
         .withLimit(pluginConfig.scanBatchSize)
         .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
       Source
-        .single(scanRequest).via(scanFlow).flatMapConcat { response =>
+        .single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
             val items =
               Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
@@ -177,7 +146,7 @@ class V1QueryProcessor(
         .withConsistentRead(pluginConfig.consistentRead)
       Source
         .single(scanRequest)
-        .via(scanFlow).flatMapConcat { response =>
+        .via(streamClient.scanFlow).flatMapConcat { response =>
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
             val items =
               Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector

@@ -5,8 +5,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamReadClient
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
@@ -23,6 +25,7 @@ import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 class V2QueryProcessor(
+    system: ActorSystem,
     asyncClient: Option[JavaDynamoDbAsyncClient],
     syncClient: Option[JavaDynamoDbSyncClient],
     pluginConfig: QueryPluginConfig,
@@ -36,33 +39,8 @@ class V2QueryProcessor(
 
   val columnsDefConfig: JournalColumnsDefConfig = pluginConfig.columnsDefConfig
 
-  private def scanFlow: Flow[ScanRequest, ScanResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[ScanRequest]().mapAsync(
-              1,
-              new akka.japi.function.Function[ScanRequest, CompletableFuture[ScanResponse]] {
-                override def apply(request: ScanRequest): CompletableFuture[ScanResponse] =
-                  c.scan(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[ScanRequest].map { request => c.scan(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("scanFlow")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
+  private val streamClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
     def loop(
@@ -80,7 +58,7 @@ class V2QueryProcessor(
         .exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .consistentRead(pluginConfig.consistentRead)
         .build()
-      Source.single(scanRequest).via(scanFlow).flatMapConcat { response =>
+      Source.single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
           val items            = Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
           val lastEvaluatedKey = Option(response.lastEvaluatedKey).map(_.asScala.toMap).getOrElse(Map.empty)
@@ -136,7 +114,7 @@ class V2QueryProcessor(
         .exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
         .build()
       Source
-        .single(scanRequest).via(scanFlow).flatMapConcat { response =>
+        .single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
             val items =
               Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
@@ -184,7 +162,7 @@ class V2QueryProcessor(
         .build()
       Source
         .single(scanRequest)
-        .via(scanFlow).flatMapConcat { response =>
+        .via(streamClient.scanFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
             val items =
               Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)

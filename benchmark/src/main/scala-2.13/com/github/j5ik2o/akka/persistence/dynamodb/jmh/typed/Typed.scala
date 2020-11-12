@@ -14,7 +14,75 @@ import scala.concurrent.duration._
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-class Typed extends BenchmarkHelper {
+class TypedV1Async extends BenchmarkHelper {
+  override def clientVersion: String = "v1"
+  override def clientType: String    = "async"
+
+  @Benchmark
+  def increment(): Unit = {
+    implicit val to          = Timeout(10 seconds)
+    implicit val typedSystem = system.toTyped
+    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    try {
+      Await.result(future, Duration.Inf)
+    } catch {
+      case ex: Throwable =>
+        ex.printStackTrace()
+    }
+  }
+
+}
+
+@State(Scope.Benchmark)
+@BenchmarkMode(Array(Mode.SampleTime))
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+class TypedV1Sync extends BenchmarkHelper {
+  override def clientVersion: String = "v1"
+  override def clientType: String    = "sync"
+
+  @Benchmark
+  def increment(): Unit = {
+    implicit val to          = Timeout(10 seconds)
+    implicit val typedSystem = system.toTyped
+    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    try {
+      Await.result(future, Duration.Inf)
+    } catch {
+      case ex: Throwable =>
+        ex.printStackTrace()
+    }
+  }
+
+}
+
+@State(Scope.Benchmark)
+@BenchmarkMode(Array(Mode.SampleTime))
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+class TypedV2Async extends BenchmarkHelper {
+  override def clientVersion: String = "v2"
+  override def clientType: String    = "async"
+
+  @Benchmark
+  def increment(): Unit = {
+    implicit val to          = Timeout(10 seconds)
+    implicit val typedSystem = system.toTyped
+    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    try {
+      Await.result(future, Duration.Inf)
+    } catch {
+      case ex: Throwable =>
+        ex.printStackTrace()
+    }
+  }
+
+}
+
+@State(Scope.Benchmark)
+@BenchmarkMode(Array(Mode.SampleTime))
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+class TypedV2Sync extends BenchmarkHelper {
+  override def clientVersion: String = "v2"
+  override def clientType: String    = "sync"
 
   @Benchmark
   def increment(): Unit = {

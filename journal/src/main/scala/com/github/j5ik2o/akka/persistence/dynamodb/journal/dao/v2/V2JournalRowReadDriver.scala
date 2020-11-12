@@ -1,34 +1,28 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import java.io.IOException
-import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.japi.function
-import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
+import akka.stream.scaladsl.{ Concat, Source }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamReadClient
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginBaseConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
-import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest, QueryResponse }
-import software.amazon.awssdk.services.dynamodb.{
-  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
-  DynamoDbClient => JavaDynamoDbSyncClient
-}
+import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
+import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
 
-import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 final class V2JournalRowReadDriver(
     val system: ActorSystem,
-    val asyncClient: Option[JavaDynamoDbAsyncClient],
-    val syncClient: Option[JavaDynamoDbSyncClient],
+    val asyncClient: Option[DynamoDbAsyncClient],
+    val syncClient: Option[DynamoDbClient],
     val pluginConfig: JournalPluginBaseConfig,
     val metricsReporter: Option[MetricsReporter]
 ) extends JournalRowReadDriver {
@@ -40,32 +34,8 @@ final class V2JournalRowReadDriver(
 
   private val logger = LoggerFactory.getLogger(getClass)
 
-  private def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          JavaFlow
-            .create[QueryRequest]().mapAsync(
-              1,
-              new function.Function[QueryRequest, CompletableFuture[QueryResponse]] {
-                override def apply(request: QueryRequest): CompletableFuture[QueryResponse] = c.query(request)
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[QueryRequest].map { request => c.query(request) }.withV2Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("queryFlow")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-  }
+  private val streamClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   override def getJournalRows(
       persistenceId: PersistenceId,
@@ -112,7 +82,7 @@ final class V2JournalRowReadDriver(
     val queryRequest = createHighestSequenceNrRequest(persistenceId, fromSequenceNr, deleted)
     Source
       .single(queryRequest)
-      .via(queryFlow)
+      .via(streamClient.queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
           val result = Option(response.items)
@@ -156,7 +126,7 @@ final class V2JournalRowReadDriver(
         queryRequest.toBuilder.exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull).build()
     }
     Source
-      .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
+      .single(newQueryRequest).via(streamClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
           val items            = Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
           val lastEvaluatedKey = Option(response.lastEvaluatedKey).map { _.asScala.toMap }.getOrElse(Map.empty)

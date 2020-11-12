@@ -1,28 +1,22 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
 import java.io.IOException
-import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.dispatch.Dispatchers
-import akka.japi.function
-import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import akka.stream.scaladsl.{ Concat, Source }
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginBaseConfig, PluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginBaseConfig, JournalPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, ExecutorServiceUtils }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ ExecutionContext, ExecutionContextExecutorService }
+import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowReadDriver(
@@ -38,6 +32,9 @@ final class V1JournalRowReadDriver(
       throw new IllegalArgumentException("aws clients is both None")
     case _ =>
   }
+
+  private val streamClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   private val logger = LoggerFactory.getLogger(getClass)
 
@@ -92,7 +89,7 @@ final class V1JournalRowReadDriver(
     val queryRequest = createHighestSequenceNrRequest(persistenceId, fromSequenceNr, deleted)
     Source
       .single(queryRequest)
-      .via(queryFlow)
+      .via(streamClient.queryFlow)
       .flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
           val result = Option(response.getItems)
@@ -152,7 +149,7 @@ final class V1JournalRowReadDriver(
         queryRequest.withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
     }
     Source
-      .single(newQueryRequest).via(queryFlow).flatMapConcat { response =>
+      .single(newQueryRequest).via(streamClient.queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
           val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
           val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
@@ -166,35 +163,6 @@ final class V1JournalRowReadDriver(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }
-  }
-
-  private def queryFlow: Flow[QueryRequest, QueryResult, NotUsed] = {
-    val flow =
-      ((asyncClient, syncClient) match {
-        case (Some(c), None) =>
-          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
-          JavaFlow
-            .create[QueryRequest]().mapAsync(
-              1,
-              new function.Function[QueryRequest, CompletableFuture[QueryResult]] {
-                def apply(request: QueryRequest): CompletableFuture[QueryResult] =
-                  c.queryAsync(request).toCompletableFuture
-              }
-            ).asScala
-        case (None, Some(c)) =>
-          Flow[QueryRequest].map { request => c.query(request) }.withV1Dispatcher(pluginConfig)
-        case _ =>
-          throw new IllegalStateException("invalid state")
-      }).log("queryFlow")
-    if (pluginConfig.readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = pluginConfig.readBackoffConfig.minBackoff,
-          maxBackoff = pluginConfig.readBackoffConfig.maxBackoff,
-          randomFactor = pluginConfig.readBackoffConfig.randomFactor,
-          maxRestarts = pluginConfig.readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
   }
 
   private def createGSIRequest(

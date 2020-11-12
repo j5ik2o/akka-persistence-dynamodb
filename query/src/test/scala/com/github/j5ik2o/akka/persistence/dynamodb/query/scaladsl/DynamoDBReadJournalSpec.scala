@@ -115,6 +115,7 @@ class DynamoDBReadJournalSpec
 
   val queryProcessor =
     new V2QueryProcessor(
+      system,
       Some(underlyingAsync),
       None,
       queryPluginConfig,

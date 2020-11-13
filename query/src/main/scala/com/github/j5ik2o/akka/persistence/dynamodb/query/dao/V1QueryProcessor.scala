@@ -33,37 +33,16 @@ class V1QueryProcessor(
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val scanRequest = new ScanRequest()
-        .withTableName(pluginConfig.tableName)
-        .withSelect(Select.SPECIFIC_ATTRIBUTES)
-        .withAttributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
-        .withLimit(pluginConfig.scanBatchSize)
-        .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
-        .withConsistentRead(pluginConfig.consistentRead)
-      Source.single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
-        if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-          val items =
-            Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-          val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-          if (lastEvaluatedKey.nonEmpty && (count + response.getCount) < max) {
-            loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-          } else
-            combinedSource
-        } else {
-          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-          Source.failed(new IOException(s"statusCode: $statusCode"))
-        }
+    val scanRequest = new ScanRequest()
+      .withTableName(pluginConfig.tableName)
+      .withSelect(Select.SPECIFIC_ATTRIBUTES)
+      .withAttributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
+      .withLimit(pluginConfig.scanBatchSize)
+      .withConsistentRead(pluginConfig.consistentRead)
+    streamClient
+      .recursiveScanSource(scanRequest, Some(max)).mapConcat { result =>
+        Option(result.getItems).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
       }
-    }
-
-    loop(None, Source.empty, 0L, 1)
       .filterNot(_(columnsDefConfig.deletedColumnName).getBOOL)
       .map(_(columnsDefConfig.persistenceIdColumnName).getS)
       .fold(Set.empty[String])(_ + _)
@@ -79,45 +58,23 @@ class V1QueryProcessor(
       maxOffset: Long,
       max: Long
   ): Source[JournalRow, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = {
-      val scanRequest = new ScanRequest()
-        .withTableName(pluginConfig.tableName)
-        .withIndexName(pluginConfig.tagsIndexName)
-        .withFilterExpression("contains(#tags, :tag)")
-        .withExpressionAttributeNames(
-          Map("#tags" -> columnsDefConfig.tagsColumnName).asJava
-        )
-        .withExpressionAttributeValues(
-          Map(
-            ":tag" -> new AttributeValue().withS(tag)
-          ).asJava
-        )
-        .withLimit(pluginConfig.scanBatchSize)
-        .withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
-      Source
-        .single(scanRequest).via(streamClient.scanFlow).flatMapConcat { response =>
-          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val items =
-              Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-            Source.failed(new IOException(s"statusCode: $statusCode"))
-          }
-        }
-    }
-
-    loop(None, Source.empty, 0L, 1)
+    val scanRequest = new ScanRequest()
+      .withTableName(pluginConfig.tableName)
+      .withIndexName(pluginConfig.tagsIndexName)
+      .withFilterExpression("contains(#tags, :tag)")
+      .withExpressionAttributeNames(
+        Map("#tags" -> columnsDefConfig.tagsColumnName).asJava
+      )
+      .withExpressionAttributeValues(
+        Map(
+          ":tag" -> new AttributeValue().withS(tag)
+        ).asJava
+      )
+      .withLimit(pluginConfig.scanBatchSize)
+    streamClient
+      .recursiveScanSource(scanRequest, Some(max)).mapConcat { result =>
+        Option(result.getItems).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+      }
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
       .map(_.sortBy(journalRow => (journalRow.persistenceId.asString, journalRow.sequenceNumber.value)))
@@ -129,40 +86,18 @@ class V1QueryProcessor(
       .filter(journalRow => journalRow.ordering > offset && journalRow.ordering <= maxOffset)
       .take(max)
       .withAttributes(logLevels)
-
   }
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
-    def loop(
-        lastEvaluatedKey: Option[Map[String, AttributeValue]],
-        acc: Source[Map[String, AttributeValue], NotUsed],
-        count: Long,
-        index: Int
-    ): Source[Map[String, AttributeValue], NotUsed] = startTimeSource.flatMapConcat { requestStart =>
-      val scanRequest = new ScanRequest()
-        .withTableName(pluginConfig.tableName).withSelect(Select.SPECIFIC_ATTRIBUTES).withAttributesToGet(
-          columnsDefConfig.orderingColumnName
-        ).withLimit(pluginConfig.scanBatchSize).withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
-        .withConsistentRead(pluginConfig.consistentRead)
-      Source
-        .single(scanRequest)
-        .via(streamClient.scanFlow).flatMapConcat { response =>
-          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val items =
-              Option(response.getItems).map(_.asScala.map(_.asScala.toMap)).getOrElse(Seq.empty).toVector
-            val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-            val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty) {
-              loop(lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-            } else
-              combinedSource
-          } else {
-            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-            Source.failed(new IOException(s"statusCode: $statusCode"))
-          }
-        }
-    }
-    loop(None, Source.empty, 0L, 1)
+    val scanRequest = new ScanRequest()
+      .withTableName(pluginConfig.tableName).withSelect(Select.SPECIFIC_ATTRIBUTES).withAttributesToGet(
+        columnsDefConfig.orderingColumnName
+      ).withLimit(pluginConfig.scanBatchSize)
+      .withConsistentRead(pluginConfig.consistentRead)
+    streamClient
+      .recursiveScanSource(scanRequest, None).mapConcat { result =>
+        Option(result.getItems).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
+      }
       .map { result => result(columnsDefConfig.orderingColumnName).getN.toLong }
       .drop(offset)
       .take(limit)

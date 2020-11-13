@@ -44,7 +44,8 @@ final class V1JournalRowReadDriver(
       deleted: Boolean
   ): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted)
-    recursiveQuery(queryRequest, None)
+    streamClient
+      .recursiveQuerySource(queryRequest, None)
       .mapConcat { response =>
         Option(response.getItems).map(_.asScala.map(_.asScala.toMap).toVector).getOrElse(Vector.empty)
       }
@@ -71,7 +72,8 @@ final class V1JournalRowReadDriver(
         deleted,
         pluginConfig.queryBatchSize
       )
-      recursiveQuery(queryRequest, Some(max))
+      streamClient
+        .recursiveQuerySource(queryRequest, Some(max))
         .mapConcat { response =>
           Option(response.getItems).map(_.asScala.map(_.asScala.toMap).toVector).getOrElse(Vector.empty)
         }
@@ -133,36 +135,6 @@ final class V1JournalRowReadDriver(
           .map(nr => Map(":nr" -> new AttributeValue().withN(nr.asString))).getOrElse(Map.empty)).asJava
       ).withScanIndexForward(false)
       .withLimit(1)
-  }
-
-  private def recursiveQuery(
-      queryRequest: QueryRequest,
-      maxOpt: Option[Long],
-      lastEvaluatedKey: Option[Map[String, AttributeValue]] = None,
-      acc: Source[QueryResult, NotUsed] = Source.empty,
-      count: Long = 0,
-      index: Int = 1
-  ): Source[QueryResult, NotUsed] = {
-    val newQueryRequest = lastEvaluatedKey match {
-      case None => queryRequest
-      case Some(_) =>
-        queryRequest.withExclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull)
-    }
-    Source
-      .single(newQueryRequest).via(streamClient.queryFlow).flatMapConcat { response =>
-        if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-          val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
-          val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
-          if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.getCount) < max }) {
-            logger.debug("next loop: count = {}, response.count = {}", count, response.getCount)
-            recursiveQuery(queryRequest, maxOpt, lastEvaluatedKey, combinedSource, count + response.getCount, index + 1)
-          } else
-            combinedSource
-        } else {
-          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-          Source.failed(new IOException(s"statusCode: $statusCode"))
-        }
-      }
   }
 
   private def createGSIRequest(

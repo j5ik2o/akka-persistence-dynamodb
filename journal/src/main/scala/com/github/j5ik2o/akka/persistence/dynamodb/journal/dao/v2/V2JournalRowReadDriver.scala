@@ -43,7 +43,8 @@ final class V2JournalRowReadDriver(
       deleted: Boolean
   ): Source[Seq[JournalRow], NotUsed] = {
     val queryRequest = createGSIRequest(persistenceId, toSequenceNr, deleted)
-    recursiveQuery(queryRequest, None)
+    streamClient
+      .recursiveQuerySource(queryRequest, None)
       .map(convertToJournalRow)
       .fold(ArrayBuffer.empty[JournalRow])(_ += _)
       .map(_.toList)
@@ -67,7 +68,8 @@ final class V2JournalRowReadDriver(
         deleted,
         pluginConfig.queryBatchSize
       )
-      recursiveQuery(queryRequest, Some(max))
+      streamClient
+        .recursiveQuerySource(queryRequest, Some(max))
         .map(convertToJournalRow)
         .take(max)
         .withAttributes(logLevels)
@@ -109,46 +111,6 @@ final class V2JournalRowReadDriver(
       ordering = map(pluginConfig.columnsDefConfig.orderingColumnName).n.toLong,
       tags = map.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.s)
     )
-  }
-
-  private def recursiveQuery(
-      queryRequest: QueryRequest,
-      maxOpt: Option[Long],
-      lastEvaluatedKey: Option[Map[String, AttributeValue]] = None,
-      acc: Source[Map[String, AttributeValue], NotUsed] = Source.empty,
-      count: Long = 0,
-      index: Int = 1
-  ): Source[Map[String, AttributeValue], NotUsed] = {
-    val newQueryRequest = lastEvaluatedKey match {
-      case None =>
-        queryRequest
-      case Some(_) =>
-        queryRequest.toBuilder.exclusiveStartKey(lastEvaluatedKey.map(_.asJava).orNull).build()
-    }
-    Source
-      .single(newQueryRequest).via(streamClient.queryFlow).flatMapConcat { response =>
-        if (response.sdkHttpResponse().isSuccessful) {
-          val items            = Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
-          val lastEvaluatedKey = Option(response.lastEvaluatedKey).map { _.asScala.toMap }.getOrElse(Map.empty)
-          val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-          if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.count()) < max }) {
-            logger.debug("next loop: count = {}, response.count = {}", count, response.count())
-            recursiveQuery(
-              queryRequest,
-              maxOpt,
-              Some(lastEvaluatedKey),
-              combinedSource,
-              count + response.count(),
-              index + 1
-            )
-          } else
-            combinedSource
-        } else {
-          val statusCode = response.sdkHttpResponse().statusCode()
-          val statusText = response.sdkHttpResponse().statusText()
-          Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
-        }
-      }
   }
 
   private def createGSIRequest(

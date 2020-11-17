@@ -1,16 +1,20 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Flow, RestartFlow }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+
+import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 class StreamWriteClient(
     val system: ActorSystem,
@@ -74,6 +78,38 @@ class StreamWriteClient(
           maxRestarts = writeBackoffConfig.maxRestarts
         ) { () => flow }
     else flow
+  }
+
+  def recursiveBatchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] = {
+    def loop(
+        acc: Source[BatchWriteItemResponse, NotUsed]
+    ): Flow[BatchWriteItemRequest, BatchWriteItemResponse, NotUsed] =
+      Flow[BatchWriteItemRequest].flatMapConcat { request =>
+        Source.single(request).via(batchWriteItemFlow).flatMapConcat { response =>
+          if (response.sdkHttpResponse().isSuccessful) {
+            val unprocessedItems = Option(response.unprocessedItems)
+              .map(_.asScala.toMap).map { _.map { case (k, v) => (k, v.asScala.toVector) } }.flatMap(
+                _.get(pluginConfig.tableName)
+              ).getOrElse(Vector.empty)
+            if (unprocessedItems.nonEmpty) {
+              val nextRequest =
+                request.toBuilder
+                  .requestItems(
+                    Map(pluginConfig.tableName -> unprocessedItems.asJava).asJava
+                  ).build()
+              Source.single(nextRequest).via(loop(acc)).flatMapConcat { nextResponse =>
+                Source.combine(acc, Source.single(nextResponse))(Concat(_))
+              }
+            } else
+              Source.single(response)
+          } else {
+            val statusCode = response.sdkHttpResponse().statusCode()
+            val statusText = response.sdkHttpResponse().statusText()
+            Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
+          }
+        }
+      }
+    loop(Source.empty)
   }
 
   def putItemFlow: Flow[PutItemRequest, PutItemResponse, NotUsed] = {

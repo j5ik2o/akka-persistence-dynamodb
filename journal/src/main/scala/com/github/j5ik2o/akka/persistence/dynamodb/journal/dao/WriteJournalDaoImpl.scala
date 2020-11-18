@@ -17,8 +17,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.stream._
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.{ Done, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
@@ -68,7 +68,15 @@ class WriteJournalDaoImpl(
     val s =
       if (rows.size == 1)
         Source
-          .single(rows.head).via(journalRowDriver.singlePutJournalRowFlow)
+          .single(rows.head).batch(pluginConfig.clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).flatMapConcat {
+            request =>
+              if (request.size == 1)
+                Source.single(request.head).via(journalRowDriver.singlePutJournalRowFlow)
+              else
+                Source
+                  .single(request)
+                  .via(journalRowDriver.multiPutJournalRowsFlow)
+          }
       else if (rows.size > pluginConfig.clientConfig.batchWriteItemLimit)
         Source(rows.toVector)
           .grouped(pluginConfig.clientConfig.batchWriteItemLimit)
@@ -110,7 +118,13 @@ class WriteJournalDaoImpl(
     val s =
       if (rows.size == 1)
         Source
-          .single(rows.head).via(journalRowDriver.singleDeleteJournalRowFlow)
+          .single(rows.head).batch(pluginConfig.clientConfig.batchWriteItemLimit, Vector(_))(_ :+ _).flatMapConcat {
+            request =>
+              if (request.size == 1)
+                Source.single(request.head).via(journalRowDriver.singleDeleteJournalRowFlow)
+              else
+                Source.single(request).via(journalRowDriver.multiDeleteJournalRowsFlow)
+          }
       else if (rows.size > pluginConfig.clientConfig.batchWriteItemLimit)
         Source(rows.toVector)
           .grouped(pluginConfig.clientConfig.batchWriteItemLimit)

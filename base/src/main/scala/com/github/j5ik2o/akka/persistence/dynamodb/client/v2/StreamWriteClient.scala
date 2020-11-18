@@ -97,11 +97,10 @@ class StreamWriteClient(
                   .requestItems(
                     Map(pluginConfig.tableName -> unprocessedItems.asJava).asJava
                   ).build()
-              Source.single(nextRequest).via(loop(acc)).flatMapConcat { nextResponse =>
-                Source.combine(acc, Source.single(nextResponse))(Concat(_))
-              }
-            } else
-              Source.single(response)
+              Source.single(nextRequest).via(loop(Source.combine(acc, Source.single(response))(Concat(_))))
+            } else {
+              Source.combine(acc, Source.single(response))(Concat(_))
+            }
           } else {
             val statusCode = response.sdkHttpResponse().statusCode()
             val statusText = response.sdkHttpResponse().statusText()

@@ -128,9 +128,7 @@ class StreamWriteClient(
                 request.withRequestItems(
                   Map(pluginConfig.tableName -> unprocessedItems.asJava).asJava
                 )
-              Source.single(nextRequest).via(loop(acc)).flatMapConcat { nextResponse =>
-                Source.combine(acc, Source.single(nextResponse))(Concat(_))
-              }
+              Source.single(nextRequest).via(loop(Source.combine(acc, Source.single(response))(Concat(_))))
             } else
               Source.combine(acc, Source.single(response))(Concat(_))
           } else {

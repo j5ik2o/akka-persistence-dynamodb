@@ -99,68 +99,6 @@ final class V2JournalRowWriteDriver(
       }
     }
 
-  override def multiDeleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
-    Flow[Seq[PersistenceIdWithSeqNr]]
-      .flatMapConcat { persistenceIdWithSeqNrs =>
-        persistenceIdWithSeqNrs
-          .map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
-        def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
-          Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
-            Source
-              .single(requestItems).map { requests =>
-                BatchWriteItemRequest
-                  .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build()
-              }.via(streamClient.batchWriteItemFlow).flatMapConcat { response =>
-                if (response.sdkHttpResponse().isSuccessful) {
-                  if (Option(response.unprocessedItems).map(_.asScala).get.nonEmpty) {
-                    val n =
-                      requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
-                    Source
-                      .single(
-                        Option(response.unprocessedItems)
-                          .map(_.asScala.toMap).map(_.map { case (k, v) => (k, v.asScala.toVector) }).get(
-                            pluginConfig.tableName
-                          )
-                      ).via(loopFlow).map(
-                        _ + n
-                      )
-                  } else {
-                    Source.single(requestItems.size)
-                  }
-                } else {
-                  val statusCode = response.sdkHttpResponse().statusCode()
-                  val statusText = response.sdkHttpResponse().statusText()
-                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
-                }
-              }
-          }
-        if (persistenceIdWithSeqNrs.isEmpty)
-          Source.single(0L)
-        else
-          SourceUtils
-            .lazySource { () =>
-              val requestItems = persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
-                WriteRequest
-                  .builder().deleteRequest(
-                    DeleteRequest
-                      .builder().key(
-                        Map(
-                          pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
-                            .builder()
-                            .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
-                          pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
-                            .builder().n(
-                              persistenceIdWithSeqNr.sequenceNumber.asString
-                            ).build()
-                        ).asJava
-                      ).build()
-                  ).build()
-              }
-              Source
-                .single(requestItems)
-            }.via(loopFlow)
-      }.withAttributes(logLevels)
-
   override def updateMessage(journalRow: JournalRow): Source[Unit, NotUsed] = {
     val pkey = journalRow.partitionKey(partitionKeyResolver).asString
     val skey = journalRow.sortKey(sortKeyResolver).asString
@@ -257,106 +195,113 @@ final class V2JournalRowWriteDriver(
     }
   }
 
+  override def multiDeleteJournalRowsFlow: Flow[Seq[PersistenceIdWithSeqNr], Long, NotUsed] =
+    Flow[Seq[PersistenceIdWithSeqNr]]
+      .flatMapConcat { persistenceIdWithSeqNrs =>
+        persistenceIdWithSeqNrs
+          .map { case PersistenceIdWithSeqNr(pid, seqNr) => s"pid = $pid, seqNr = $seqNr" }.foreach(logger.debug)
+        if (persistenceIdWithSeqNrs.isEmpty)
+          Source.single(0L)
+        else
+          Source
+            .single(persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
+              WriteRequest
+                .builder().deleteRequest(
+                  DeleteRequest
+                    .builder().key(
+                      Map(
+                        pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                          .builder()
+                          .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
+                        pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                          .builder().n(
+                            persistenceIdWithSeqNr.sequenceNumber.asString
+                          ).build()
+                      ).asJava
+                    ).build()
+                ).build()
+            }).flatMapConcat { requestItems =>
+              Source
+                .single(
+                  BatchWriteItemRequest
+                    .builder().requestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava).build()
+                )
+                .via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+            }
+      }.withAttributes(logLevels)
+
   override def multiPutJournalRowsFlow: Flow[Seq[JournalRow], Long, NotUsed] = Flow[Seq[JournalRow]].flatMapConcat {
     journalRows =>
-      def loopFlow: Flow[Seq[WriteRequest], Long, NotUsed] =
-        Flow[Seq[WriteRequest]].flatMapConcat { requestItems =>
-          Source
-            .single(requestItems).map { requests =>
-              BatchWriteItemRequest
-                .builder().requestItems(Map(pluginConfig.tableName -> requests.asJava).asJava).build
-            }.via(streamClient.batchWriteItemFlow)
-            .flatMapConcat {
-              case response =>
-                if (response.sdkHttpResponse().isSuccessful) {
-                  if (Option(response.unprocessedItems).map(_.asScala).get.nonEmpty) {
-                    val n = requestItems.size - response.unprocessedItems.get(pluginConfig.tableName).size
-                    Source
-                      .single(
-                        Option(response.unprocessedItems)
-                          .map(_.asScala).map(_.map { case (k, v) => (k, v.asScala.toVector) }).get(
-                            pluginConfig.tableName
-                          )
-                      ).via(loopFlow).map(
-                        _ + n
-                      )
-                  } else {
-                    Source.single(requestItems.size)
-                  }
-                } else {
-                  val statusCode = response.sdkHttpResponse().statusCode()
-                  val statusText = response.sdkHttpResponse().statusText()
-                  Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
-                }
-            }
-        }
-
       if (journalRows.isEmpty)
         Source.single(0L)
-      else
-        SourceUtils
-          .lazySource { () =>
-            require(journalRows.size == journalRows.toSet.size, "journalRows: keys contains duplicates")
-            val journalRowWithPKeyWithSKeys = journalRows.map { journalRow =>
-              val pkey = partitionKeyResolver
-                .resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
-              val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
-              (journalRow, pkey, skey)
-            }
-            logger.debug(
-              s"journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
-            )
-            require(
-              journalRowWithPKeyWithSKeys.map { case (_, p, s) => (p, s) }.toSet.size == journalRows.size,
-              "journalRowWithPKeyWithSKeys: keys contains duplicates"
-            )
+      else {
+        require(journalRows.size == journalRows.toSet.size, "journalRows: keys contains duplicates")
+        val journalRowWithPKeyWithSKeys = journalRows.map { journalRow =>
+          val pkey = partitionKeyResolver
+            .resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
+          val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
+          (journalRow, pkey, skey)
+        }
+        logger.debug(
+          s"journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
+        )
+        require(
+          journalRowWithPKeyWithSKeys.map { case (_, p, s) => (p, s) }.toSet.size == journalRows.size,
+          "journalRowWithPKeyWithSKeys: keys contains duplicates"
+        )
 
-            val requestItems = journalRowWithPKeyWithSKeys.map {
-              case (journalRow, pkey, skey) =>
-                val pid      = journalRow.persistenceId.asString
-                val seqNr    = journalRow.sequenceNumber.asString
-                val ordering = journalRow.ordering.toString
-                val deleted  = journalRow.deleted
-                val message  = SdkBytes.fromByteArray(journalRow.message)
-                val tagsOpt  = journalRow.tags
-                WriteRequest
-                  .builder().putRequest(
-                    PutRequest
-                      .builder()
-                      .item(
-                        (Map(
-                          pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
-                            .builder()
-                            .s(pkey).build(),
-                          pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
-                            .builder()
-                            .s(skey).build(),
-                          pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
-                            .builder()
-                            .s(pid).build(),
-                          pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
-                            .builder()
-                            .n(seqNr).build(),
-                          pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
-                            .builder()
-                            .n(ordering).build(),
-                          pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
-                            .builder().bool(deleted).build(),
-                          pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
-                            .builder().b(message).build()
-                        ) ++ tagsOpt
-                          .map { tags =>
-                            Map(
-                              pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
-                                .builder().s(tags).build()
-                            )
-                          }.getOrElse(Map.empty)).asJava
-                      ).build()
-                  ).build()
-            }
-            Source.single(requestItems)
-          }
-          .via(loopFlow).withAttributes(logLevels)
+        Source
+          .single(journalRowWithPKeyWithSKeys.map {
+            case (journalRow, pkey, skey) =>
+              val pid      = journalRow.persistenceId.asString
+              val seqNr    = journalRow.sequenceNumber.asString
+              val ordering = journalRow.ordering.toString
+              val deleted  = journalRow.deleted
+              val message  = SdkBytes.fromByteArray(journalRow.message)
+              val tagsOpt  = journalRow.tags
+              WriteRequest
+                .builder().putRequest(
+                  PutRequest
+                    .builder()
+                    .item(
+                      (Map(
+                        pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+                          .builder()
+                          .s(pkey).build(),
+                        pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
+                          .builder()
+                          .s(skey).build(),
+                        pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                          .builder()
+                          .s(pid).build(),
+                        pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                          .builder()
+                          .n(seqNr).build(),
+                        pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
+                          .builder()
+                          .n(ordering).build(),
+                        pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
+                          .builder().bool(deleted).build(),
+                        pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
+                          .builder().b(message).build()
+                      ) ++ tagsOpt
+                        .map { tags =>
+                          Map(
+                            pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
+                              .builder().s(tags).build()
+                          )
+                        }.getOrElse(Map.empty)).asJava
+                    ).build()
+                ).build()
+          }).flatMapConcat { requestItems =>
+            Source
+              .single(
+                BatchWriteItemRequest
+                  .builder().requestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava).build()
+              )
+              .via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+          }.withAttributes(logLevels)
+      }
 
   }
 

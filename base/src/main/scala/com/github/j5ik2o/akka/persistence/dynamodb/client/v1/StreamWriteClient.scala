@@ -1,18 +1,21 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
 
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Flow, RestartFlow }
+import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
+
+import scala.jdk.CollectionConverters._
 
 class StreamWriteClient(
     val system: ActorSystem,
@@ -107,6 +110,34 @@ class StreamWriteClient(
           maxRestarts = writeBackoffConfig.maxRestarts
         ) { () => flow }
     else flow
+  }
+
+  def recursiveBatchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] = {
+    def loop(
+        acc: Source[BatchWriteItemResult, NotUsed]
+    ): Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] =
+      Flow[BatchWriteItemRequest].flatMapConcat { request =>
+        Source.single(request).via(batchWriteItemFlow).flatMapConcat { response =>
+          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
+            val unprocessedItems = Option(response.getUnprocessedItems)
+              .map(_.asScala.toMap).map(_.map { case (k, v) => (k, v.asScala.toVector) }).flatMap(
+                _.get(pluginConfig.tableName)
+              ).getOrElse(Vector.empty)
+            if (unprocessedItems.nonEmpty) {
+              val nextRequest =
+                request.withRequestItems(
+                  Map(pluginConfig.tableName -> unprocessedItems.asJava).asJava
+                )
+              Source.single(nextRequest).via(loop(Source.combine(acc, Source.single(response))(Concat(_))))
+            } else
+              Source.combine(acc, Source.single(response))(Concat(_))
+          } else {
+            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+            Source.failed(new IOException(s"statusCode: $statusCode"))
+          }
+        }
+      }
+    loop(Source.empty)
   }
 
   def deleteItemFlow: Flow[DeleteItemRequest, DeleteItemResult, NotUsed] = {

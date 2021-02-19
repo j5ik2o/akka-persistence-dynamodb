@@ -83,7 +83,7 @@ object SortKeyResolver {
       with ToPersistenceIdOps {
 
     override def separator: String =
-      journalPluginConfig.sourceConfig.getOrElse[String]("separator", PersistenceId.Separator)
+      journalPluginConfig.sourceConfig.getOrElse[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.body}-${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {

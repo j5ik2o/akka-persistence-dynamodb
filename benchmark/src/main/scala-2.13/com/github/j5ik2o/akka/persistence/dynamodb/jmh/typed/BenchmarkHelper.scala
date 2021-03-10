@@ -16,6 +16,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
       None,
       legacyConfigFormat = false,
       legacyJournalMode = false,
+      dynamoDBHost,
       dynamoDBPort,
       clientVersion,
       clientType

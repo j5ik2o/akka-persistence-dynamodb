@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
 import com.dimafeng.testcontainers.FixedHostPortGenericContainer
 import org.slf4j.LoggerFactory
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.wait.strategy.Wait
 
 import scala.concurrent.duration._
@@ -21,9 +22,11 @@ trait DynamoDBContainerHelper {
 
   protected lazy val secretAccessKey: String = "x"
 
+  protected lazy val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+
   protected lazy val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
 
-  protected lazy val dynamoDBEndpoint: String = s"http://127.0.0.1:$dynamoDBPort"
+  protected lazy val dynamoDBEndpoint: String = s"http://$dynamoDBHost:$dynamoDBPort"
 
   protected lazy val dynamoDBImageVersion: String = "1.13.4"
 

@@ -8,6 +8,7 @@ object ConfigHelper {
       defaultResource: Option[String],
       legacyConfigFormat: Boolean,
       legacyJournalMode: Boolean,
+      dynamoDBHost: String,
       dynamoDBPort: Int,
       clientVersion: String,
       clientType: String,
@@ -30,7 +31,7 @@ object ConfigHelper {
        |    region = "ap-northeast-1"
        |    access-key-id = "x"
        |    secret-access-key = "x" 
-       |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
+       |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
        |    client-version = "${clientVersion.toLowerCase}"
        |    client-type = "${clientType.toLowerCase()}"
        |    v2 {
@@ -62,7 +63,7 @@ object ConfigHelper {
        |    region = "ap-northeast-1"
        |    access-key-id = "x"
        |    secret-access-key = "x" 
-       |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
+       |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
        |    v2 {
        |      dispatcher-name = "snapshot-blocking-io-dispatcher" 
        |    }
@@ -76,7 +77,7 @@ object ConfigHelper {
        |  query-batch-size = 1
        |  dynamo-db-client {
        |    region = "ap-northeast-1"
-       |    endpoint = "http://127.0.0.1:${dynamoDBPort}/"
+       |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
        |  }
        |  columns-def {
        |    sort-key-column-name = ${if (legacyJournalMode) "sequence-nr" else "skey"}

@@ -6,11 +6,13 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBJournalPerfSpec {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBJournalPerfSpec
@@ -25,12 +27,12 @@ class DynamoDBJournalPerfSpec
         |  write-parallelism = 64
         |  query-batch-size = 1024
         |  dynamo-db-client {
-        |    endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |    endpoint = "http://${DynamoDBJournalPerfSpec.dynamoDBHost}:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |  }
         |}
         |
         |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-        |  endpoint = "http://127.0.0.1:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
+        |  endpoint = "http://${DynamoDBJournalPerfSpec.dynamoDBHost}:${DynamoDBJournalPerfSpec.dynamoDBPort}/"
         |}
         |
         """.stripMargin
@@ -45,7 +47,7 @@ class DynamoDBJournalPerfSpec
   override def awaitDurationMillis: Long = (60 * sys.env.getOrElse("SBT_TEST_TIME_FACTOR", "1").toInt).seconds.toMillis
 
   /** Number of messages sent to the PersistentActor under test for each test iteration */
-  override def eventsCount: Int = 1000
+  override def eventsCount: Int = 100
 
   /** Number of measurement iterations each test will be run. */
   override def measurementIterations: Int = 5

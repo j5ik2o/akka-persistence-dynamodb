@@ -21,6 +21,7 @@ import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.{ Config, ConfigFactory }
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -75,7 +76,8 @@ abstract class CurrentEventsByTagTestDeletedEventsTest(config: Config) extends Q
 }
 
 object DynamoDBCurrentEventsByTagTestDeletedEventsTest {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBCurrentEventsByTagTestDeletedEventsTest
@@ -86,18 +88,18 @@ class DynamoDBCurrentEventsByTagTestDeletedEventsTest
            |j5ik2o.dynamo-db-journal {
            |  query-batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBHost}:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
            |  }
            |}
            |
            |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |  endpoint = "http://${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBHost}:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
            |}
            |
            |j5ik2o.dynamo-db-read-journal { 
            |  query-batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBHost}:${DynamoDBCurrentEventsByTagTestDeletedEventsTest.dynamoDBPort}/"
            |  }
            |}
          """.stripMargin

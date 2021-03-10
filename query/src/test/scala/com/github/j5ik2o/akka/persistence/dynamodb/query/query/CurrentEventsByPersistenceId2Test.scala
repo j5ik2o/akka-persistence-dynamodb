@@ -21,6 +21,7 @@ import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.{ Config, ConfigFactory }
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -100,7 +101,8 @@ abstract class CurrentEventsByPersistenceId2Test(config: Config) extends QueryJo
 }
 
 object DynamoDBCurrentEventsByPersistenceId2Test {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBCurrentEventsByPersistenceId2Test
@@ -111,18 +113,18 @@ class DynamoDBCurrentEventsByPersistenceId2Test
            |j5ik2o.dynamo-db-journal{
            |  query-batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
            |  }
            |}
            |
            |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
+           |  endpoint = "http://${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
            |}
            |
            |j5ik2o.dynamo-db-read-journal{ 
            |  query-batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId2Test.dynamoDBPort}/"
            |  }
            |}
       """.stripMargin

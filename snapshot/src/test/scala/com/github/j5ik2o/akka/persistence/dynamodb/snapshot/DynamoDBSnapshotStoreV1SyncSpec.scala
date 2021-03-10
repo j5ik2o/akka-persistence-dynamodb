@@ -19,11 +19,13 @@ import akka.persistence.snapshot.SnapshotStoreSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBSnapshotStoreV1SyncSpec {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBSnapshotStoreV1SyncSpec
@@ -32,11 +34,11 @@ class DynamoDBSnapshotStoreV1SyncSpec
         .parseString(
           s"""
              |j5ik2o.dynamo-db-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV1SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
              |}
              |
              |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV1SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
              |  region = "ap-northeast-1"
              |  access-key-id = "x"
              |  secret-key = "x"
@@ -45,7 +47,7 @@ class DynamoDBSnapshotStoreV1SyncSpec
              |}
              |
              |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV1SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
              |}
          """.stripMargin
         ).withFallback(ConfigFactory.load("snapshot-reference"))

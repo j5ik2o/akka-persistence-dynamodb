@@ -3,12 +3,15 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.DynamoDBJournalV2SyncSpec.dynamoDBHost
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.concurrent.ScalaFutures
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBJournalV2SyncSpec {
+  val dynamoDBHost: String       = DockerClientFactory.instance().dockerHostIpAddress()
   val dynamoDBPort: Int          = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode: Boolean = false
 }
@@ -19,6 +22,7 @@ class DynamoDBJournalV2SyncSpec
         Some("journal-reference"),
         legacyConfigFormat = false,
         legacyJournalMode = DynamoDBJournalV2AsyncSpec.legacyJournalMode,
+        dynamoDBHost = DynamoDBJournalV2SyncSpec.dynamoDBHost,
         dynamoDBPort = DynamoDBJournalV2AsyncSpec.dynamoDBPort,
         clientVersion = ClientVersion.V2.toString,
         clientType = ClientType.Sync.toString

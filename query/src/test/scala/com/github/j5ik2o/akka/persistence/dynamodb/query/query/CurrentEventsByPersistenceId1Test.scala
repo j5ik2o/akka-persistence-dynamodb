@@ -21,6 +21,7 @@ import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.{ Config, ConfigFactory }
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -93,7 +94,8 @@ abstract class CurrentEventsByPersistenceId1Test(config: Config) extends QueryJo
 }
 
 object DynamoDBCurrentEventsByPersistenceId1Test {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBCurrentEventsByPersistenceId1Test
@@ -104,17 +106,17 @@ class DynamoDBCurrentEventsByPersistenceId1Test
            |j5ik2o.dynamo-db-journal { 
            |  query-batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
            |  }
            |}
            |
            |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-           |  endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |  endpoint = "http://${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
            |}
            |j5ik2o.dynamo-db-read-journal {
            |  batch-size = 1
            |  dynamo-db-client {
-           |    endpoint = "http://127.0.0.1:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
+           |    endpoint = "http://${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBHost}:${DynamoDBCurrentEventsByPersistenceId1Test.dynamoDBPort}/"
            |  }
            |}
            """.stripMargin

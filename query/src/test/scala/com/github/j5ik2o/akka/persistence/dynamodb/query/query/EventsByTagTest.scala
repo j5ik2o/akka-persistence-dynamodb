@@ -21,6 +21,7 @@ import akka.persistence.query.{ EventEnvelope, Sequence }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.{ Config, ConfigFactory }
+import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -109,7 +110,8 @@ abstract class EventsByTagTest(config: Config) extends QueryJournalSpec(config) 
 }
 
 object DynamoDBEventsByTagTest {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBEventsByTagTest
@@ -120,18 +122,18 @@ class DynamoDBEventsByTagTest
          |j5ik2o.dynamo-db-journal {
          |  query-batch-size = 1
          |  dynamo-db-client {
-         |    endpoint = "http://127.0.0.1:${DynamoDBEventsByTagTest.dynamoDBPort}/"
+         |    endpoint = "http://${DynamoDBEventsByTagTest.dynamoDBHost}:${DynamoDBEventsByTagTest.dynamoDBPort}/"
          |  }
          |}
          |
          |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-         |  endpoint = "http://127.0.0.1:${DynamoDBEventsByTagTest.dynamoDBPort}/"
+         |  endpoint = "http://${DynamoDBEventsByTagTest.dynamoDBHost}:${DynamoDBEventsByTagTest.dynamoDBPort}/"
          |}
          |
          |j5ik2o.dynamo-db-read-journal {
          |  query-batch-size = 1
          |  dynamo-db-client {
-         |    endpoint = "http://127.0.0.1:${DynamoDBEventsByTagTest.dynamoDBPort}/"
+         |    endpoint = "http://${DynamoDBEventsByTagTest.dynamoDBHost}:${DynamoDBEventsByTagTest.dynamoDBPort}/"
          |  }
          |}
          """.stripMargin

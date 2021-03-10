@@ -16,7 +16,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
 import java.net.URI
-
 import akka.actor.{ ActorSystem, Props }
 import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
@@ -43,6 +42,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
+import org.testcontainers.DockerClientFactory
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
@@ -51,7 +51,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object DynamoDBReadJournalSpec {
-  val dynamoDBPort = RandomPortUtil.temporaryServerPort()
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBReadJournalSpec
@@ -62,15 +63,15 @@ class DynamoDBReadJournalSpec
           .parseString(
             s"""
              |j5ik2o.dynamo-db-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBReadJournalSpec.dynamoDBHost}:${DynamoDBReadJournalSpec.dynamoDBPort}/"
              |}
              |
              |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBReadJournalSpec.dynamoDBHost}:${DynamoDBReadJournalSpec.dynamoDBPort}/"
              |}
              |
              |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
-             |  endpoint = "http://127.0.0.1:${DynamoDBReadJournalSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBReadJournalSpec.dynamoDBHost}:${DynamoDBReadJournalSpec.dynamoDBPort}/"
              |}
              """.stripMargin
           ).withFallback(ConfigFactory.load("query-reference"))

@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import java.net.URI
-
 import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
@@ -20,7 +19,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.typesafe.config.{ Config, ConfigFactory }
 import net.ceedubs.ficus.Ficus._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FreeSpecLike, Matchers }
+import org.scalatest.freespec.AnyFreeSpecLike
+import org.scalatest.matchers.should.Matchers
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -31,7 +31,7 @@ import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
     extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load("query-reference")))
-    with FreeSpecLike
+    with AnyFreeSpecLike
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {

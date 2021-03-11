@@ -40,8 +40,10 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.ConfigFactory
+import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.{ BeforeAndAfter, FreeSpecLike, Matchers }
+import org.scalatest.freespec.AnyFreeSpecLike
+import org.scalatest.matchers.should.Matchers
 import org.testcontainers.DockerClientFactory
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
@@ -77,7 +79,7 @@ class DynamoDBReadJournalSpec
           ).withFallback(ConfigFactory.load("query-reference"))
       )
     )
-    with FreeSpecLike
+    with AnyFreeSpecLike
     with Matchers
     with Eventually
     with ScalaFutures

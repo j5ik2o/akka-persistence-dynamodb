@@ -1,10 +1,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PartitionKey, PartitionKeyResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ Context, MetricsReporter }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
@@ -16,7 +17,7 @@ class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
 class MetricsReporterImpl extends MetricsReporter
 
-class LegacyConfigFormatSpec extends FreeSpec with Matchers {
+class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
   "config" - {
     "load" in {
       def config(legacyConfigFormat: Boolean, partitionKeyResolverClassName: String, metricsReporterClassName: String) =

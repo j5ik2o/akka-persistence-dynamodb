@@ -126,7 +126,7 @@ lazy val base = (project in file("base"))
             akka.stream(akka26Version),
             akka.testkit(akka26Version)       % Test,
             akka.streamTestkit(akka26Version) % Test,
-            scalatest.scalatest(scalaTest31Version)
+            scalatest.scalatest(scalaTest32Version)
           )
         case Some((2L, scalaMajor)) if scalaMajor == 12 =>
           Seq(
@@ -135,7 +135,7 @@ lazy val base = (project in file("base"))
             akka.stream(akka26Version),
             akka.testkit(akka26Version)             % Test,
             akka.streamTestkit(akka26Version)       % Test,
-            scalatest.scalatest(scalaTest31Version) % Test
+            scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(
@@ -174,7 +174,7 @@ lazy val journal = (project in file("journal"))
             akka.testkit(akka26Version)             % Test,
             akka.streamTestkit(akka26Version)       % Test,
             akka.persistenceTck(akka26Version)      % Test,
-            scalatest.scalatest(scalaTest31Version) % Test
+            scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(
@@ -212,7 +212,7 @@ lazy val snapshot = (project in file("snapshot"))
             akka.testkit(akka26Version)             % Test,
             akka.streamTestkit(akka26Version)       % Test,
             akka.persistenceTck(akka26Version)      % Test,
-            scalatest.scalatest(scalaTest31Version) % Test
+            scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(
@@ -250,7 +250,7 @@ lazy val query = (project in file("query"))
             akka.testkit(akka26Version)             % Test,
             akka.streamTestkit(akka26Version)       % Test,
             akka.persistenceTck(akka26Version)      % Test,
-            scalatest.scalatest(scalaTest31Version) % Test
+            scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 11 =>
           Seq(

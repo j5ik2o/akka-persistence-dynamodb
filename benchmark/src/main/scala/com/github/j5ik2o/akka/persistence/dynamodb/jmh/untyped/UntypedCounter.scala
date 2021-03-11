@@ -1,8 +1,15 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped
 
-import java.util.UUID
+import akka.persistence.{
+  PersistentActor,
+  RecoveryCompleted,
+  SaveSnapshotFailure,
+  SaveSnapshotSuccess,
+  SnapshotMetadata,
+  SnapshotOffer
+}
 
-import akka.persistence._
+import java.util.UUID
 import com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped.UntypedCounter.{ Increment, IncrementReply }
 
 object UntypedCounter {

@@ -23,3 +23,5 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.1.1")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.2")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.0")
+
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.4.8")

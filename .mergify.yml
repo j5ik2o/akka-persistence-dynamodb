@@ -1,0 +1,10 @@
+pull_request_rules:
+  - name: Automatic merge on approval
+    conditions:
+      - "status-success=ci/circleci: build"
+      - files=project/Dependencies.scala
+      - "#files=1"
+    actions:
+      merge:
+        method: merge
+        strict: true

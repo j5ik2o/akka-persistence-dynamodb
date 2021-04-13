@@ -4,7 +4,7 @@ pull_request_rules:
       - "status-success=ci/circleci: build"
       - files=project/Dependencies.scala
       - files=project/plugins.sbt
-      - "#files=2"
+      - "#files=1"
     actions:
       merge:
         method: merge

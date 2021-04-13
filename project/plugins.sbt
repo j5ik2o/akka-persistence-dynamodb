@@ -20,7 +20,7 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.7")
 
 addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.1.1")
 
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.2")
+addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.3")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.0")
 

@@ -1,11 +1,19 @@
 pull_request_rules:
-  - name: Automatic merge on approval
+  - name: Automatic merge on approval if project/plugins.sbt was changed
     conditions:
       - "status-success=ci/circleci: build"
-      - files=project/Dependencies.scala
+      - base=main
       - files=project/plugins.sbt
       - "#files=1"
     actions:
       merge:
         method: merge
-        strict: true
+  - name: Automatic merge on approval if project/Dependencies.scala was changed
+    conditions:
+      - "status-success=ci/circleci: build"
+      - base=main
+      - files=project/Dependencies.scala
+      - "#files=1"
+    actions:
+      merge:
+        method: merge

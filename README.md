@@ -1,6 +1,6 @@
 # akka-persistence-dynamodb
 
-[![CircleCI](https://circleci.com/gh/j5ik2o/akka-persistence-dynamodb/tree/main.svg?style=shield&circle-token=9f6f53d09f0fb87ee8ea81246e69683d668291cd)](https://circleci.com/gh/j5ik2o/akka-persistence-dynamodb/tree/main)
+[![Scala CI](https://github.com/j5ik2o/akka-persistence-dynamodb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/j5ik2o/akka-persistence-dynamodb/actions/workflows/ci.yml)
 [![Mergify Status](https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/j5ik2o/akka-persistence-dynamodb&style=flat)](https://mergify.io)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13)
 [![Scaladoc](http://javadoc-badge.appspot.com/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13.svg?label=scaladoc)](http://javadoc-badge.appspot.com/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13/com/github/j5ik2o/akka/persistence/dynamodb/index.html?javadocio=true)

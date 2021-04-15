@@ -1,26 +1,6 @@
-resolvers ++= Seq(
-  "Sonatype OSS Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "Sonatype OSS Release Repository" at "https://oss.sonatype.org/content/repositories/releases/",
-  "Seasar Repository" at "https://maven.seasar.org/maven2/",
-  "Flyway" at "https://davidmweber.github.io/flyway-sbt.repo",
-  Resolver.bintrayRepo("kamon-io", "sbt-plugins")
-)
-
-libraryDependencies ++= Seq(
-  "com.h2database"  % "h2"         % "1.4.200",
-  "commons-io"      % "commons-io" % "2.7",
-  "org.seasar.util" % "s2util"     % "0.0.1"
-)
-
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 
-addSbtPlugin("com.github.sbt" % "sbt-release" % "1.0.15")
-
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.7")
-
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.1.1")
-
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.3")
+addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.7")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.0")
 

@@ -1,5 +1,5 @@
+import Dependencies._
 import Dependencies.Versions._
-import Dependencies.{ akka, _ }
 
 def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
   case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -8,43 +8,20 @@ def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partial
     Seq("-Yinline-warnings")
 }
 
-lazy val deploySettings = Seq(
-  sonatypeProfileName := "com.github.j5ik2o",
-  publishMavenStyle := true,
-  publishArtifact in Test := false,
-  pomIncludeRepository := { _ => false },
-  pomExtra := {
-    <url>https://github.com/j5ik2o/akka-persistence-dynamodb</url>
-    <licenses>
-      <license>
-        <name>Apache 2</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      </license>
-    </licenses>
-    <scm>
-      <url>git@github.com:j5ik2o/akka-persistence-dynamodb.git</url>
-      <connection>scm:git:github.com/j5ik2o/akka-persistence-dynamodb</connection>
-      <developerConnection>scm:git:git@github.com:j5ik2o/akka-persistence-dynamodb.git</developerConnection>
-    </scm>
-    <developers>
-      <developer>
-        <id>j5ik2o</id>
-        <name>Junichi Kato</name>
-      </developer>
-    </developers>
-  },
-  publishTo := sonatypePublishToBundle.value,
-  credentials := {
-    val ivyCredentials = (baseDirectory in LocalRootProject).value / ".credentials"
-    val gpgCredentials = (baseDirectory in LocalRootProject).value / ".gpgCredentials"
-    Credentials(ivyCredentials) :: Credentials(gpgCredentials) :: Nil
-  }
-)
-
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
-  scalaVersion := scala213Version,
-  crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
+  homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
+  licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+  developers := List(
+      Developer(
+        id = "j5ik2o",
+        name = "Junichi Kato",
+        email = "j5ik2o@gmail.com",
+        url = url("https://blog.j5ik2o.me")
+      )
+    ),
+  scalaVersion := Versions.scala213Version,
+  crossScalaVersions := Seq(Versions.scala211Version, Versions.scala212Version, Versions.scala213Version),
   scalacOptions ++= (
       Seq(
         "-feature",
@@ -63,9 +40,10 @@ lazy val baseSettings = Seq(
       "Seasar Repository" at "https://maven.seasar.org/maven2/",
       "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
     ),
-  fork in Test := true,
-  parallelExecution in Test := false,
-  scalafmtOnCompile in ThisBuild := true,
+  Test / publishArtifact := false,
+  Test / fork := true,
+  Test / parallelExecution := false,
+  ThisBuild / scalafmtOnCompile := true,
   envVars := Map(
       "AWS_REGION" -> "ap-northeast-1"
     )
@@ -73,10 +51,8 @@ lazy val baseSettings = Seq(
 
 lazy val test = (project in file("test"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-test",
-    crossScalaVersions := Seq(scala211Version, scala212Version, scala213Version),
     libraryDependencies ++= Seq(
         iheart.ficus,
         amazonaws.dynamodb,
@@ -105,7 +81,6 @@ lazy val test = (project in file("test"))
 
 lazy val base = (project in file("base"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
@@ -159,7 +134,6 @@ lazy val base = (project in file("base"))
 
 lazy val journal = (project in file("journal"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-journal",
     libraryDependencies ++= Seq(
@@ -197,7 +171,6 @@ lazy val journal = (project in file("journal"))
 
 lazy val snapshot = (project in file("snapshot"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-snapshot",
     libraryDependencies ++= Seq(
@@ -235,7 +208,6 @@ lazy val snapshot = (project in file("snapshot"))
 
 lazy val query = (project in file("query"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-query",
     libraryDependencies ++= Seq(
@@ -273,7 +245,6 @@ lazy val query = (project in file("query"))
 
 lazy val benchmark = (project in file("benchmark"))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-benchmark",
     skip in publish := true,
@@ -303,9 +274,8 @@ lazy val benchmark = (project in file("benchmark"))
 
 lazy val root = (project in file("."))
   .settings(baseSettings)
-  .settings(deploySettings)
   .settings(
     name := "akka-persistence-dynamodb-root",
-    skip in publish := true
+    publish / skip := true
   )
   .aggregate(test, base, journal, snapshot, query, benchmark)

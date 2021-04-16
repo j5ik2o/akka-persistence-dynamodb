@@ -15,6 +15,8 @@ jobs:
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      AWS_REGION: ap-northeast-1
+      TEST_TIME_FACTOR: 3
     steps:
       - uses: actions/checkout@v2.3.4
         with:

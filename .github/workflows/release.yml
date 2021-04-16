@@ -1,28 +1,47 @@
 name: Release
 on:
   push:
-    branches: [ main ]
     tags:
       - v[1-9]+.[0-9]+.[0-9]+
 jobs:
-  release:
-    runs-on: ubuntu-20.04
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
+        scala: [ 2.11.12, 2.12.13, 2.13.5 ]
+    runs-on: ${{ matrix.os }}
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      AWS_REGION: ap-northeast-1
-      TEST_TIME_FACTOR: 3
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 0
+      - uses: olafurpg/setup-scala@v10
+        with:
+          java-version: ${{ matrix.jdk }}
+      - uses: coursier/cache-action@v5
+      - run: sbt -v ++${{ matrix.scala }} test
+      - name: clean up
+        run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
     - uses: actions/checkout@v2.3.4
       with:
         fetch-depth: 0
+        ref: ${{ github.event.workflow_run.head_branch }}
     - uses: olafurpg/setup-scala@v10
       with:
         java-version: "adopt@1.8"
     - uses: coursier/cache-action@v5
     - uses: olafurpg/setup-gpg@v3
-    - run: sbt -v scalafmtCheckAll
-    - run: sbt -v +test
     - run: sbt -v ci-release
       env:
         PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
@@ -30,9 +49,4 @@ jobs:
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
     - name: clean up
-      run: |
-        rm -rf "$HOME/.ivy2/local" || true
-        find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
-        find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
-        find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
-        find $HOME/.sbt                              -name "*.lock"               -delete || true
+      run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

@@ -15,7 +15,7 @@ jobs:
     - name: git diff
       id: changes
       run: |
-        LATEST_TAG=$(git describe --abbrev=0)
+        LATEST_TAG=$(git describe --tags --abbrev=0)
         echo "latest-tag = $LATEST"
         DIFF_COUNT=$(git diff $LATEST_TAG...HEAD --name-only | wc -l)
         echo "diff-count = $DIFF_COUNT"

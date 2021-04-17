@@ -31,7 +31,9 @@ lazy val baseSettings = Seq(
         "UTF-8",
         "-language:_",
         "-Ydelambdafy:method",
-        "-target:jvm-1.8"
+        "-target:jvm-1.8",
+        "-Yrangepos",
+        "-Ywarn-unused"
       ) ++ crossScalacOptions(scalaVersion.value)
     ),
   resolvers ++= Seq(
@@ -40,10 +42,12 @@ lazy val baseSettings = Seq(
       "Seasar Repository" at "https://maven.seasar.org/maven2/",
       "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
     ),
+  ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
+  semanticdbEnabled := true,
+  semanticdbVersion := scalafixSemanticdb.revision,
   Test / publishArtifact := false,
   Test / fork := true,
   Test / parallelExecution := false,
-  ThisBuild / scalafmtOnCompile := true,
   envVars := Map(
       "AWS_REGION" -> "ap-northeast-1"
     )
@@ -247,7 +251,7 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-benchmark",
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
         logback.classic,
         slf4j.api,
@@ -279,3 +283,6 @@ lazy val root = (project in file("."))
     publish / skip := true
   )
   .aggregate(test, base, journal, snapshot, query, benchmark)
+
+addCommandAlias("lint", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck;scalafixAll --check")
+addCommandAlias("fmt", ";scalafmtAll;scalafmtSbt")

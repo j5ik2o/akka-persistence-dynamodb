@@ -284,5 +284,6 @@ lazy val root = (project in file("."))
   )
   .aggregate(test, base, journal, snapshot, query, benchmark)
 
+// --- Custom commands
 addCommandAlias("lint", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck;scalafixAll --check")
 addCommandAlias("fmt", ";scalafmtAll;scalafmtSbt")

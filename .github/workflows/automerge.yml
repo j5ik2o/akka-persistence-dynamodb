@@ -25,8 +25,3 @@ jobs:
           echo '${{ steps.file_changes.outputs.files_removed}}'
 
 
-#      - name: automerge
-#        uses: ridedott/merge-me-action@v2
-#        env:
-#          GITHUB_TOKEN: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
-#        if: steps.changes.outputs.README == 'true'

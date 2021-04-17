@@ -15,9 +15,16 @@ jobs:
     - name: git latest tag ... HEAD diff
       id: changes
       run: |
-        LATEST_TAG=$(git describe --abbrev=0)
         echo "latest-tag = $LATEST_TAG"
-        DIFF_COUNTG=$(git log v1.0.0..HEAD --pretty=format:"%s" --no-merges --grep='^feat:' --grep='^fix:' --grep='^docs:' --grep='^style:' --grep='^refactor:' --grep='^perf:' --grep='^test:' --grep='^chore:' | wc -l)
+        DIFF_COUNT=$(git log $LATEST_TAG..HEAD --pretty=format:"%s" --no-merges \
+          --grep='^feat:' \
+          --grep='^fix:' \
+          --grep='^docs:' \
+          --grep='^style:' \
+          --grep='^refactor:' \
+          --grep='^perf:' \
+          --grep='^test:' \
+          --grep='^chore:' | awk 'END{print NR}')
         echo "diff-count = $DIFF_COUNT"
         echo "::set-output name=diff-count::$DIFF_COUNT"
     - name: Bump version and push tag

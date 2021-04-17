@@ -51,7 +51,8 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: test
     steps:
-      - uses: actions/labeler@v2
+      - name: labeler
+        uses: actions/labeler@v2
         with:
           repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       - name: automerge

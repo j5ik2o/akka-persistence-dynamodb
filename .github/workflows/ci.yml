@@ -24,7 +24,8 @@ jobs:
         fetch-depth: 0
     - uses: olafurpg/setup-scala@v10
       with:
-        java-version: ${{ matrix.jdk }} - uses: coursier/cache-action@v5
+        java-version: ${{ matrix.jdk }}
+    - uses: coursier/cache-action@v5
     - run: sbt -v ++${{ matrix.scala }} compile
     - name: clean up
       run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

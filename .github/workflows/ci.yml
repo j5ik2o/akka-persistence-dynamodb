@@ -62,4 +62,5 @@ jobs:
         uses: "pascalgn/automerge-action@v0.13.1"
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          MERGE_LABELS: ""
         if: steps.update-flag.outputs.update == 'true'

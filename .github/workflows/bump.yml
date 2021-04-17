@@ -12,12 +12,12 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
         token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-    - name: git diff
+    - name: git latest tag ... HEAD diff
       id: changes
       run: |
         LATEST_TAG=$(git describe --abbrev=0)
         echo "latest-tag = $LATEST_TAG"
-        DIFF_COUNT=$(git diff $LATEST_TAG...HEAD --name-only | wc -l)
+        DIFF_COUNTG=$(git log v1.0.0..HEAD --pretty=format:"%s" --no-merges --grep='^feat:' --grep='^fix:' --grep='^docs:' --grep='^style:' --grep='^refactor:' --grep='^perf:' --grep='^test:' --grep='^chore:' | wc -l)
         echo "diff-count = $DIFF_COUNT"
         echo "::set-output name=diff-count::$DIFF_COUNT"
     - name: Bump version and push tag

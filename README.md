@@ -519,7 +519,7 @@ As the access to the DynamoDB instance is via the AWS Java SDK, use the methods 
 
 ## License
 
-Apache License
+Apache License Version 2.0
 
 This product was made by duplicating or referring to the code of the following products, so Dennis Vriend's license is included in the product code and test code.
 

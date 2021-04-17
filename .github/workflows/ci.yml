@@ -61,5 +61,5 @@ jobs:
       - name: automerge
         uses: ridedott/merge-me-action@v2
         env:
-          GITHUB_TOKEN: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: steps.update-flag.outputs.update == 'true'

@@ -6,7 +6,7 @@ on:
     types:
       - completed
 jobs:
-  release:
+  snapshot:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:

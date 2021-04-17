@@ -59,7 +59,7 @@ jobs:
             echo "::set-output name=update::false"
           fi
       - name: automerge
-        uses: ridedott/merge-me-action@v2
-        with:
+        uses: "pascalgn/automerge-action@v0.13.1"
+        env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         if: steps.update-flag.outputs.update == 'true'

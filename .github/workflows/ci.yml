@@ -23,29 +23,29 @@ jobs:
       - run: sbt -v lint
       - name: clean up
         run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest ]
-        jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
-        scala: [ 2.11.12, 2.12.13, 2.13.5 ]
-    runs-on: ${{ matrix.os }}
-    needs: lint
-    env:
-      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-    steps:
-    - uses: actions/checkout@v2.3.4
-      with:
-        fetch-depth: 0
-    - uses: olafurpg/setup-scala@v10
-      with:
-        java-version: ${{ matrix.jdk }}
-    - uses: coursier/cache-action@v5
-    - run: sbt -v ++${{ matrix.scala }} compile
-    - name: clean up
-      run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
+#  build:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os: [ ubuntu-latest ]
+#        jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
+#        scala: [ 2.11.12, 2.12.13, 2.13.5 ]
+#    runs-on: ${{ matrix.os }}
+#    needs: lint
+#    env:
+#      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+#      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+#    steps:
+#    - uses: actions/checkout@v2.3.4
+#      with:
+#        fetch-depth: 0
+#    - uses: olafurpg/setup-scala@v10
+#      with:
+#        java-version: ${{ matrix.jdk }}
+#    - uses: coursier/cache-action@v5
+#    - run: sbt -v ++${{ matrix.scala }} compile
+#    - name: clean up
+#      run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
   test:
     strategy:
       fail-fast: false
@@ -54,7 +54,7 @@ jobs:
         jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
         scala: [ 2.11.12, 2.12.13, 2.13.5 ]
     runs-on: ${{ matrix.os }}
-    needs: build
+    needs: lint
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8

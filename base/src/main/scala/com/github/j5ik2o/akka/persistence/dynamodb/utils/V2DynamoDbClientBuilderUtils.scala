@@ -19,8 +19,6 @@ import java.net.URI
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
-import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.http.SdkHttpClient

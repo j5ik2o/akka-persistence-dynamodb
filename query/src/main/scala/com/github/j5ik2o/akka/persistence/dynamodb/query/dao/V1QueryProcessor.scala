@@ -1,11 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
-import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Concat, Source }
+import akka.stream.scaladsl.Source
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, Select }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient

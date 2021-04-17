@@ -18,7 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import akka.actor.DynamicAccess
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.monitoring.CsmConfigurationProvider
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
   CsmConfigurationProviderProvider,

@@ -1,19 +1,15 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamReadClient
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model.{ ScanRequest, Select, _ }
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -21,7 +17,6 @@ import software.amazon.awssdk.services.dynamodb.{
 }
 
 import scala.collection.mutable.ArrayBuffer
-import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 class V2QueryProcessor(

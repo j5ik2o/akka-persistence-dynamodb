@@ -33,7 +33,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriver
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider, Stopwatch }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
@@ -152,7 +152,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   implicit val ec: ExecutionContext   = context.dispatcher
   implicit val system: ActorSystem    = context.system
   implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val _log                   = log
+  implicit val _log: LoggingAdapter   = log
 
   log.debug("dynamodb journal plugin: id = {}", id)
 

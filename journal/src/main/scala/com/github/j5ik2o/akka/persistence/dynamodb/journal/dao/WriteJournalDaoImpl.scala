@@ -40,9 +40,9 @@ class WriteJournalDaoImpl(
 ) extends JournalDaoWithUpdates
     with DaoSupport {
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat: Materializer = ActorMaterializer()
 
-  private val logger = LoggerFactory.getLogger(getClass)
+  LoggerFactory.getLogger(getClass)
 
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0

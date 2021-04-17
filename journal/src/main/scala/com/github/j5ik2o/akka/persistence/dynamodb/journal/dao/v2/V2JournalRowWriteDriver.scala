@@ -4,7 +4,7 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
+import akka.stream.scaladsl.{ Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamWriteClient
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._

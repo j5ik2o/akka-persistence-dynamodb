@@ -14,7 +14,7 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
 trait DynamoDBContainerHelper {
-  private val logger = LoggerFactory.getLogger(getClass)
+  LoggerFactory.getLogger(getClass)
 
   protected lazy val region: Regions = Regions.AP_NORTHEAST_1
 

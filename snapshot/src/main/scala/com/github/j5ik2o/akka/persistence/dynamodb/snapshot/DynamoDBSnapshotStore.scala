@@ -39,6 +39,7 @@ import software.amazon.awssdk.services.dynamodb.{
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
+import akka.event.LoggingAdapter
 
 object DynamoDBSnapshotStore {
 
@@ -53,8 +54,8 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   implicit val ec: ExecutionContext        = context.dispatcher
   implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
-  implicit val mat                         = ActorMaterializer()
-  implicit val _log                        = log
+  implicit val mat: ActorMaterializer      = ActorMaterializer()
+  implicit val _log: LoggingAdapter        = log
 
   private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
 

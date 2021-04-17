@@ -25,7 +25,7 @@ object DispatcherUtils extends LoggingSupport {
         ExecutorServiceUtils.fromExecutionContext(ec)
       }.getOrElse(ExecutorServiceUtils.fromExecutionContext(system.dispatcher))
 
-  implicit class ApplyV1DispatcherOps[A, B](val flow: Flow[A, B, NotUsed]) extends AnyVal {
+  implicit class ApplyV1DispatcherOps[A, B](private val flow: Flow[A, B, NotUsed]) extends AnyVal {
 
     def withV1Dispatcher(pluginConfig: PluginConfig): Flow[A, B, NotUsed] =
       applyV1Dispatcher(pluginConfig, flow)
@@ -57,7 +57,7 @@ object DispatcherUtils extends LoggingSupport {
     ) { name => flow.withAttributes(ActorAttributes.dispatcher(name)) }
   }
 
-  implicit class ApplyV2DispatcherOps[A, B](val flow: Flow[A, B, NotUsed]) extends AnyVal {
+  implicit class ApplyV2DispatcherOps[A, B](private val flow: Flow[A, B, NotUsed]) extends AnyVal {
 
     def withV2Dispatcher(pluginConfig: PluginConfig): Flow[A, B, NotUsed] =
       applyV2Dispatcher(pluginConfig, flow)

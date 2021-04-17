@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.dynamodb.{
 }
 
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContextExecutor
 
 class WriteJournalDaoImplSpec
     extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load("query-reference")))
@@ -37,7 +38,7 @@ class WriteJournalDaoImplSpec
     with DynamoDBSpecSupport {
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
@@ -69,7 +70,7 @@ class WriteJournalDaoImplSpec
       system.settings.config.getOrElse[Config]("j5ik2o.dynamo-db-read-journal", ConfigFactory.empty())
     )
 
-  implicit val ec = system.dispatcher
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, ",", None)
@@ -102,7 +103,7 @@ class WriteJournalDaoImplSpec
       ec,
       system
     )
-  val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
+  val config: Config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 
   val partitionKeyResolver = new PartitionKeyResolver.Default(journalPluginConfig)
   val sortKeyResolver      = new SortKeyResolver.Default(journalPluginConfig)

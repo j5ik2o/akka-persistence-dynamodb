@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import com.amazon.dax.client.dynamodbv2.{ AmazonDaxAsyncClientBuilder, AmazonDaxClientBuilder }
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
-import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
 object V1DaxClientBuilderUtils {

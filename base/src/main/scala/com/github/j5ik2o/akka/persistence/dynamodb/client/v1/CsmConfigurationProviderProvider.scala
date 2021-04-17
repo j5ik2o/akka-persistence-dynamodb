@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import akka.actor.DynamicAccess
-import com.amazonaws.monitoring.{ CsmConfigurationProvider, MonitoringListener }
+import com.amazonaws.monitoring.CsmConfigurationProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 

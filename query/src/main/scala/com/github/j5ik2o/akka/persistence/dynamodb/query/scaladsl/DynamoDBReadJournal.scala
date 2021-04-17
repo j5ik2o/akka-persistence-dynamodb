@@ -55,6 +55,7 @@ import software.amazon.awssdk.services.dynamodb.{
 import scala.collection.immutable._
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
+import akka.event.LoggingAdapter
 
 object DynamoDBReadJournal {
   final val Identifier = "j5ik2o.dynamo-db-read-journal"
@@ -73,9 +74,9 @@ object DynamoDBReadJournal {
   /** Stop querying - used when we reach the desired offset  */
   private case object Stop extends FlowControl
 
-  implicit class OffsetOps(val that: Offset) extends AnyVal {
+  implicit class OffsetOps(private val that: Offset) extends AnyVal {
 
-    def value = that match {
+    def value: Long = that match {
       case Sequence(offsetValue) => offsetValue
       case NoOffset              => 0L
       case _ =>
@@ -94,11 +95,11 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with EventsByPersistenceIdQuery
     with CurrentEventsByTagQuery
     with EventsByTagQuery {
-  private val logger                        = LoggerFactory.getLogger(getClass)
-  private implicit val ec: ExecutionContext = system.dispatcher
-  private val dynamicAccess                 = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
-  private implicit val mat                  = ActorMaterializer()
-  private implicit val _log                 = system.log
+  LoggerFactory.getLogger(getClass)
+  private implicit val ec: ExecutionContext   = system.dispatcher
+  private val dynamicAccess                   = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+  private implicit val mat: ActorMaterializer = ActorMaterializer()
+  private implicit val _log: LoggingAdapter   = system.log
   import DynamoDBReadJournal._
 
   private val queryPluginConfig: QueryPluginConfig = QueryPluginConfig.fromConfig(config)

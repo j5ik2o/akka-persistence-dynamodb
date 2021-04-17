@@ -1,13 +1,13 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.util.concurrent.{ CompletableFuture, ExecutionException, Executor, ForkJoinPool, Future }
+import java.util.concurrent.{ CompletableFuture, ExecutionException, Executor, Future }
 import java.util.function.Supplier
 
 import scala.concurrent._
 
 object CompletableFutureUtils {
 
-  implicit class CompletableFutureOps[T](val future: Future[T]) extends AnyVal {
+  implicit class CompletableFutureOps[T](private val future: Future[T]) extends AnyVal {
 
     def toCompletableFuture(implicit executor: Executor): CompletableFuture[T] =
       CompletableFutureUtils.toCompletableFuture(future)

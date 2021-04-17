@@ -31,6 +31,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentR
 import scala.collection.immutable.Set
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+import akka.stream.Materializer
 
 class ReadJournalDaoImpl(
     queryProcessor: QueryProcessor,
@@ -42,7 +43,7 @@ class ReadJournalDaoImpl(
     extends ReadJournalDao
     with DaoSupport {
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat: Materializer = ActorMaterializer()
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = queryProcessor.allPersistenceIds(max)
 

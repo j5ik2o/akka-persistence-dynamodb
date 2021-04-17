@@ -37,7 +37,6 @@ import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.language.implicitConversions
 import scala.util.Try
 
 abstract class QueryJournalSpec(config: Config)
@@ -53,7 +52,7 @@ abstract class QueryJournalSpec(config: Config)
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
   implicit val timeout: Timeout     = 30.seconds
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   val identifier: String = DynamoDBReadJournal.Identifier
 
@@ -121,7 +120,7 @@ abstract class QueryJournalSpec(config: Config)
     Future.sequence(actors.map(_.ask(tagged))).map(_ => ())
   }
 
-  val WITH_IN = 30 seconds
+  val WITH_IN: FiniteDuration = 30 seconds
 
   def withCurrentPersistenceIds(within: FiniteDuration = WITH_IN)(f: TestSubscriber.Probe[String] => Unit): Unit = {
     val tp = readJournal

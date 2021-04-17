@@ -51,6 +51,7 @@ import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDyn
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContextExecutor
 
 object DynamoDBReadJournalSpec {
   val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
@@ -86,7 +87,7 @@ class DynamoDBReadJournalSpec
     with BeforeAndAfter
     with DynamoDBSpecSupport {
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 
@@ -101,7 +102,7 @@ class DynamoDBReadJournalSpec
     .endpointOverride(URI.create(dynamoDBEndpoint))
     .build()
 
-  implicit val ec = system.dispatcher
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   private val config = system.settings.config.getConfig("j5ik2o.dynamo-db-journal")
 

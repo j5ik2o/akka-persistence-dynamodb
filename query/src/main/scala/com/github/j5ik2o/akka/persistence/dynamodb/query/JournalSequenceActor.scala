@@ -95,7 +95,7 @@ object JournalSequenceActor {
     def empty: MissingElements = MissingElements(Vector.empty)
   }
 
-  implicit private class IntOps(val init: OrderingId) extends AnyVal {
+  implicit private class IntOps(private val init: OrderingId) extends AnyVal {
 
     def untilWithForall(until: OrderingId, f: OrderingId => Boolean): Boolean = {
       val b      = new Breaks

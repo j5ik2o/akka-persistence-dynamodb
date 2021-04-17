@@ -4,11 +4,11 @@ import java.io.IOException
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Concat, Source }
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest, QueryResult }
+import akka.stream.scaladsl.Source
+import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginBaseConfig, JournalPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
@@ -36,7 +36,7 @@ final class V1JournalRowReadDriver(
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
-  private val logger = LoggerFactory.getLogger(getClass)
+  LoggerFactory.getLogger(getClass)
 
   override def getJournalRows(
       persistenceId: PersistenceId,

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{ Flow, Source, SourceUtils }
+import akka.stream.scaladsl.{ Flow, Source }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamWriteClient

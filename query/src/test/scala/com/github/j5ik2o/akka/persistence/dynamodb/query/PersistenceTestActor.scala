@@ -28,7 +28,7 @@ object PersistenceTestActor {
 
 class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
   import PersistenceTestActor._
-  val pluginName = context.system.settings.config.getString("akka.persistence.journal.plugin")
+  val pluginName: String = context.system.settings.config.getString("akka.persistence.journal.plugin")
 
   override def persistenceId: String = "my-" + id
 

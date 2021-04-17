@@ -362,7 +362,6 @@ j5ik2o.dynamo-db-snapshot {
 }
 ```
 
-
 ## akka-persistence query plugin
 
 Just this, if you like the default settings.

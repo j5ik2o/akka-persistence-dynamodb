@@ -31,6 +31,7 @@ jobs:
         run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
   release:
     runs-on: ubuntu-latest
+    needs: test
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8

@@ -19,37 +19,36 @@ jobs:
       - run: sbt -v lint
       - name: clean up
         run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ adopt@1.8 ] # , adopt@1.11, adopt@1.14 ]
-        scala: [ 2.13.5 ] # , 2.12.13, 2.11.12 ]
-    runs-on: ubuntu-latest
-    needs: lint
-    env:
-      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      AWS_REGION: ap-northeast-1
-      TEST_TIME_FACTOR: 3
-    steps:
-      - uses: actions/checkout@v2.3.4
-        with:
-          fetch-depth: 0
-      - uses: olafurpg/setup-scala@v10
-        with:
-          java-version: ${{ matrix.jdk }}
-      - uses: coursier/cache-action@v5
-      - uses: olafurpg/setup-gpg@v3
-      - run: sbt -v ++${{ matrix.scala }} test
-      - name: clean up
-        run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
+#  test:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        jdk: [ adopt@1.8 ] # , adopt@1.11, adopt@1.14 ]
+#        scala: [ 2.13.5 ] # , 2.12.13, 2.11.12 ]
+#    runs-on: ubuntu-latest
+#    needs: lint
+#    env:
+#      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+#      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+#      AWS_REGION: ap-northeast-1
+#      TEST_TIME_FACTOR: 3
+#    steps:
+#      - uses: actions/checkout@v2.3.4
+#        with:
+#          fetch-depth: 0
+#      - uses: olafurpg/setup-scala@v10
+#        with:
+#          java-version: ${{ matrix.jdk }}
+#      - uses: coursier/cache-action@v5
+#      - uses: olafurpg/setup-gpg@v3
+#      - run: sbt -v ++${{ matrix.scala }} test
+#      - name: clean up
+#        run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
   automerge:
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: trilom/file-changes-action@v1.2.3
-        id: changes
+        id: file_changes
         with:
           githubToken: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       - run: |
@@ -57,10 +56,10 @@ jobs:
           cat $HOME/files_modified.json
           cat $HOME/files_added.json
           cat $HOME/files_removed.json
-          echo '${{ steps.file_changes.outputs.files}}'
-          echo '${{ steps.file_changes.outputs.files_modified}}'
-          echo '${{ steps.file_changes.outputs.files_added}}'
-          echo '${{ steps.file_changes.outputs.files_removed}}'
+          echo '${{ steps.file_changes.outputs.files }}'
+          echo '${{ steps.file_changes.outputs.files_modified }}'
+          echo '${{ steps.file_changes.outputs.files_added }}'
+          echo '${{ steps.file_changes.outputs.files_removed }}'
 #      - name: automerge
 #        uses: ridedott/merge-me-action@v2
 #        env:

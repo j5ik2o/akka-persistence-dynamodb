@@ -10,14 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: dorny/paths-filter@v2
+      - uses: trilom/file-changes-action@v1.2.3
         id: changes
         with:
-          filters: |
-            README:
-              - 'README.md'
-      - name: automerge
-        uses: ridedott/merge-me-action@v2
-        env:
-          GITHUB_TOKEN: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
-        if: steps.changes.outputs.README == 'true'
+          githubToken: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - run: |
+          cat $HOME/files.json
+          cat $HOME/files_modified.json
+          cat $HOME/files_added.json
+          cat $HOME/files_removed.json
+          echo '${{ steps.file_changes.outputs.files}}'
+          echo '${{ steps.file_changes.outputs.files_modified}}'
+          echo '${{ steps.file_changes.outputs.files_added}}'
+          echo '${{ steps.file_changes.outputs.files_removed}}'
+
+
+#      - name: automerge
+#        uses: ridedott/merge-me-action@v2
+#        env:
+#          GITHUB_TOKEN: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+#        if: steps.changes.outputs.README == 'true'

@@ -164,14 +164,13 @@ class WriteJournalDaoImplSpec
             Seq.empty[JournalRow]
           )(_ :+ _).futureValue
       results.size shouldBe 60
-      results.toVector.zip(journalRows.toVector).foreach {
-        case (v1, v2) =>
-          v1.persistenceId shouldBe v2.persistenceId
-          v1.sequenceNumber shouldBe v2.sequenceNumber
-          v1.deleted shouldBe v2.deleted
-          v1.ordering shouldBe v2.ordering
-          v1.tags shouldBe v2.tags
-          (v1.message sameElements v2.message) shouldBe true
+      results.toVector.zip(journalRows.toVector).foreach { case (v1, v2) =>
+        v1.persistenceId shouldBe v2.persistenceId
+        v1.sequenceNumber shouldBe v2.sequenceNumber
+        v1.deleted shouldBe v2.deleted
+        v1.ordering shouldBe v2.ordering
+        v1.tags shouldBe v2.tags
+        (v1.message sameElements v2.message) shouldBe true
       }
     }
     "update" in {
@@ -191,7 +190,13 @@ class WriteJournalDaoImplSpec
       writeJournalDao.updateMessage(journalRows.head.withDeleted).runWith(Sink.head).futureValue
       val results =
         writeJournalDao
-          .getMessagesAsJournalRow(PersistenceId(pid), SequenceNumber(1), SequenceNumber(60), Long.MaxValue, None).runFold(
+          .getMessagesAsJournalRow(
+            PersistenceId(pid),
+            SequenceNumber(1),
+            SequenceNumber(60),
+            Long.MaxValue,
+            None
+          ).runFold(
             Seq.empty[JournalRow]
           )(_ :+ _).futureValue
       results.head.persistenceId shouldBe PersistenceId(pid)

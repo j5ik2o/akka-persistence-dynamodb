@@ -232,7 +232,7 @@ class DynamoDBReadJournalSpec
       Future.sequence(futures).futureValue
       val results = readJournal.currentEventsByPersistenceId("my-1", 0, Long.MaxValue).runWith(Sink.seq).futureValue
 //      println(results)
-      results should have size (maxSize)
+      results should have size maxSize
       results.map(_.persistenceId).forall(_ == "my-1") shouldBe true
       for (n <- 1 to maxSize) {
         results.map(_.sequenceNr) should contain(n)

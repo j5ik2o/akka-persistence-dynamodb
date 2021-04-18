@@ -28,8 +28,8 @@ import scala.util.control.Breaks
 
 object JournalSequenceActor {
 
-  def props(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-      implicit materializer: Materializer
+  def props(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(implicit
+      materializer: Materializer
   ): Props = Props(new JournalSequenceActor(readJournalDao, config))
 
   private case object QueryOrderingIds
@@ -61,8 +61,7 @@ object JournalSequenceActor {
     def nonEmpty: Boolean = !isEmpty
   }
 
-  /**
-    * Efficient representation of missing elements using NumericRanges.
+  /** Efficient representation of missing elements using NumericRanges.
     * It can be seen as a collection of OrderingIds
     */
   private case class MissingElements(elements: Seq[Range[OrderingId]]) {
@@ -116,13 +115,12 @@ object JournalSequenceActor {
 
 }
 
-/**
-  * To support the EventsByTag query, this actor keeps track of which rows are visible in the database.
+/** To support the EventsByTag query, this actor keeps track of which rows are visible in the database.
   * This is required to guarantee the EventByTag does not skip any rows in case rows with a higher (ordering) id are
   * visible in the database before rows with a lower (ordering) id.
   */
-class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(
-    implicit materializer: Materializer
+class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(implicit
+    materializer: Materializer
 ) extends Actor
     with ActorLogging
     with Timers {
@@ -143,8 +141,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     }
   }
 
-  /**
-    * @param currentMaxOrdering The highest ordering value for which it is known that no missing elements exist
+  /** @param currentMaxOrdering The highest ordering value for which it is known that no missing elements exist
     * @param missingByCounter   A map with missing orderingIds. The key of the map is the count at which the missing elements
     *                           can be assumed to be "skipped ids" (they are no longer assumed missing).
     * @param moduloCounter      A counter which is incremented every time a new query have been executed, modulo `maxTries`
@@ -193,8 +190,7 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
       context.become(receive(currentMaxOrdering, missingByCounter, moduloCounter, newDelay))
   }
 
-  /**
-    * This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
+  /** This method that implements the "find gaps" algo. It's the meat and main purpose of this actor.
     */
   private def findGaps(
       elements: Seq[OrderingId],
@@ -213,20 +209,19 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
         currentMaxOrdering,
         currentMaxOrdering,
         MissingElements.empty
-      ) {
-        case ((currentMax, previousElement, missing), currentElement) =>
-          // we must decide if we move the cursor forward
-          val newMax =
-            if ((currentMax + 1).untilWithForall(currentElement, index => givenUp.contains(index)))
-              currentElement
-            else currentMax
+      ) { case ((currentMax, previousElement, missing), currentElement) =>
+        // we must decide if we move the cursor forward
+        val newMax =
+          if ((currentMax + 1).untilWithForall(currentElement, index => givenUp.contains(index)))
+            currentElement
+          else currentMax
 
-          // we accumulate in newMissing the gaps we detect on each iteration
-          val newMissing =
-            if (previousElement + 1 == currentElement || newMax == currentElement) missing
-            else missing.addRange(previousElement + 1, currentElement)
+        // we accumulate in newMissing the gaps we detect on each iteration
+        val newMissing =
+          if (previousElement + 1 == currentElement || newMax == currentElement) missing
+          else missing.addRange(previousElement + 1, currentElement)
 
-          (newMax, currentElement, newMissing)
+        (newMax, currentElement, newMissing)
       }
 
     val newMissingByCounter = missingByCounter + (moduloCounter -> missingElems)

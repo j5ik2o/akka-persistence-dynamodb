@@ -180,7 +180,9 @@ final class V2JournalRowWriteDriver(
           pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
             .builder().b(SdkBytes.fromByteArray(journalRow.message)).build()
         ) ++ journalRow.tags
-          .map { tag => Map(pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()) }.getOrElse(
+          .map { tag =>
+            Map(pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build())
+          }.getOrElse(
             Map.empty
           )).asJava
       ).build()
@@ -251,48 +253,47 @@ final class V2JournalRowWriteDriver(
         )
 
         Source
-          .single(journalRowWithPKeyWithSKeys.map {
-            case (journalRow, pkey, skey) =>
-              val pid      = journalRow.persistenceId.asString
-              val seqNr    = journalRow.sequenceNumber.asString
-              val ordering = journalRow.ordering.toString
-              val deleted  = journalRow.deleted
-              val message  = SdkBytes.fromByteArray(journalRow.message)
-              val tagsOpt  = journalRow.tags
-              WriteRequest
-                .builder().putRequest(
-                  PutRequest
-                    .builder()
-                    .item(
-                      (Map(
-                        pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
-                          .builder()
-                          .s(pkey).build(),
-                        pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
-                          .builder()
-                          .s(skey).build(),
-                        pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
-                          .builder()
-                          .s(pid).build(),
-                        pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
-                          .builder()
-                          .n(seqNr).build(),
-                        pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
-                          .builder()
-                          .n(ordering).build(),
-                        pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
-                          .builder().bool(deleted).build(),
-                        pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
-                          .builder().b(message).build()
-                      ) ++ tagsOpt
-                        .map { tags =>
-                          Map(
-                            pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
-                              .builder().s(tags).build()
-                          )
-                        }.getOrElse(Map.empty)).asJava
-                    ).build()
-                ).build()
+          .single(journalRowWithPKeyWithSKeys.map { case (journalRow, pkey, skey) =>
+            val pid      = journalRow.persistenceId.asString
+            val seqNr    = journalRow.sequenceNumber.asString
+            val ordering = journalRow.ordering.toString
+            val deleted  = journalRow.deleted
+            val message  = SdkBytes.fromByteArray(journalRow.message)
+            val tagsOpt  = journalRow.tags
+            WriteRequest
+              .builder().putRequest(
+                PutRequest
+                  .builder()
+                  .item(
+                    (Map(
+                      pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+                        .builder()
+                        .s(pkey).build(),
+                      pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue
+                        .builder()
+                        .s(skey).build(),
+                      pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
+                        .builder()
+                        .s(pid).build(),
+                      pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
+                        .builder()
+                        .n(seqNr).build(),
+                      pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
+                        .builder()
+                        .n(ordering).build(),
+                      pluginConfig.columnsDefConfig.deletedColumnName -> AttributeValue
+                        .builder().bool(deleted).build(),
+                      pluginConfig.columnsDefConfig.messageColumnName -> AttributeValue
+                        .builder().b(message).build()
+                    ) ++ tagsOpt
+                      .map { tags =>
+                        Map(
+                          pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
+                            .builder().s(tags).build()
+                        )
+                      }.getOrElse(Map.empty)).asJava
+                  ).build()
+              ).build()
           }).flatMapConcat { requestItems =>
             Source
               .single(

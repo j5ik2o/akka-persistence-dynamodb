@@ -16,8 +16,8 @@ object ClientUtils {
       dynamicAccess: DynamicAccess,
       configRootPath: String,
       pluginConfig: PluginConfig
-  )(f: JavaDynamoDbSyncClient => Unit)(
-      implicit log: LoggingAdapter
+  )(f: JavaDynamoDbSyncClient => Unit)(implicit
+      log: LoggingAdapter
   ): JavaDynamoDbSyncClient = {
     if (pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
       log.warning(
@@ -56,8 +56,8 @@ object ClientUtils {
       dynamicAccess: DynamicAccess,
       configRootPath: String,
       pluginConfig: PluginConfig
-  )(
-      implicit log: LoggingAdapter
+  )(implicit
+      log: LoggingAdapter
   ): AmazonDynamoDB = {
     if (pluginConfig.clientConfig.v1ClientConfig.dispatcherName.isEmpty)
       log.warning(

@@ -65,13 +65,12 @@ object DynamoDBReadJournal {
   /** Keep querying - used when we are sure that there is more events to fetch */
   private case object Continue extends FlowControl
 
-  /**
-    * Keep querying with delay - used when we have consumed all events,
+  /** Keep querying with delay - used when we have consumed all events,
     * but want to poll for future events
     */
   private case object ContinueDelayed extends FlowControl
 
-  /** Stop querying - used when we reach the desired offset  */
+  /** Stop querying - used when we reach the desired offset */
   private case object Stop extends FlowControl
 
   implicit class OffsetOps(private val that: Offset) extends AnyVal {
@@ -232,7 +231,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
           knownIds += id
           xs
         }
-        (id) => next(id)
+        id => next(id)
       }
 
   private def adaptEvents(persistentRepr: PersistentRepr): Vector[PersistentRepr] = {
@@ -270,8 +269,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
       )
   }
 
-  /**
-    * Same type of query as [[EventsByTagQuery#eventsByTag]] but the event stream
+  /** Same type of query as [[EventsByTagQuery#eventsByTag]] but the event stream
     * is completed immediately when it reaches the end of the "result set". Events that are
     * stored after the query is completed are not included in the event stream.
     *
@@ -294,17 +292,15 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     else {
       readJournalDao
         .eventsByTag(tag, offset, latestOrdering.maxOrdering, max)
-        .mapAsync(1)(Future.fromTry).mapConcat {
-          case (repr, _, ordering) =>
-            adaptEvents(repr).map(r =>
-              EventEnvelope(Sequence(ordering), r.persistenceId, r.sequenceNr, r.payload, r.timestamp)
-            )
+        .mapAsync(1)(Future.fromTry).mapConcat { case (repr, _, ordering) =>
+          adaptEvents(repr).map(r =>
+            EventEnvelope(Sequence(ordering), r.persistenceId, r.sequenceNr, r.payload, r.timestamp)
+          )
         }
     }
   }
 
-  /**
-    * @param terminateAfterOffset If None, the stream never completes. If a Some, then the stream will complete once a
+  /** @param terminateAfterOffset If None, the stream never completes. If a Some, then the stream will complete once a
     *                             query has been executed which might return an event with this offset (or a higher offset).
     *                             The stream may include offsets higher than the value in terminateAfterOffset, since the last batch
     *                             will be returned completely.
@@ -319,45 +315,44 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     val batchSize                    = queryPluginConfig.maxBufferSize
 
     Source
-      .unfoldAsync[(Long, FlowControl), Seq[EventEnvelope]]((offset, Continue)) {
-        case (from, control) =>
-          def retrieveNextBatch() = {
-            for {
-              queryUntil <- journalSequenceActor.ask(GetMaxOrderingId).mapTo[MaxOrderingId]
-              xs         <- currentJournalEventsByTag(tag, from, batchSize, queryUntil).runWith(Sink.seq)
-            } yield {
-              val hasMoreEvents = xs.size == batchSize
-              val nextControl: FlowControl =
-                terminateAfterOffset match {
-                  // we may stop if target is behind queryUntil and we don't have more events to fetch
-                  case Some(target) if !hasMoreEvents && target <= queryUntil.maxOrdering => Stop
-                  // We may also stop if we have found an event with an offset >= target
-                  case Some(target) if xs.exists(_.offset.value >= target) => Stop
+      .unfoldAsync[(Long, FlowControl), Seq[EventEnvelope]]((offset, Continue)) { case (from, control) =>
+        def retrieveNextBatch() = {
+          for {
+            queryUntil <- journalSequenceActor.ask(GetMaxOrderingId).mapTo[MaxOrderingId]
+            xs         <- currentJournalEventsByTag(tag, from, batchSize, queryUntil).runWith(Sink.seq)
+          } yield {
+            val hasMoreEvents = xs.size == batchSize
+            val nextControl: FlowControl =
+              terminateAfterOffset match {
+                // we may stop if target is behind queryUntil and we don't have more events to fetch
+                case Some(target) if !hasMoreEvents && target <= queryUntil.maxOrdering => Stop
+                // We may also stop if we have found an event with an offset >= target
+                case Some(target) if xs.exists(_.offset.value >= target) => Stop
 
-                  // otherwise, disregarding if Some or None, we must decide how to continue
-                  case _ =>
-                    if (hasMoreEvents) Continue else ContinueDelayed
-                }
-
-              val nextStartingOffset = if (xs.isEmpty) {
-                /* If no events matched the tag between `from` and `maxOrdering` then there is no need to execute the exact
-                 * same query again. We can continue querying from `maxOrdering`, which will save some load on the db.
-                 * (Note: we may never return a value smaller than `from`, otherwise we might return duplicate events) */
-                math.max(from, queryUntil.maxOrdering)
-              } else {
-                // Continue querying from the largest offset
-                xs.map(_.offset.value).max
+                // otherwise, disregarding if Some or None, we must decide how to continue
+                case _ =>
+                  if (hasMoreEvents) Continue else ContinueDelayed
               }
-              Some((nextStartingOffset, nextControl), xs)
-            }
-          }
 
-          control match {
-            case Stop     => Future.successful(None)
-            case Continue => retrieveNextBatch()
-            case ContinueDelayed =>
-              akka.pattern.after(refreshInterval, system.scheduler)(retrieveNextBatch())
+            val nextStartingOffset = if (xs.isEmpty) {
+              /* If no events matched the tag between `from` and `maxOrdering` then there is no need to execute the exact
+               * same query again. We can continue querying from `maxOrdering`, which will save some load on the db.
+               * (Note: we may never return a value smaller than `from`, otherwise we might return duplicate events) */
+              math.max(from, queryUntil.maxOrdering)
+            } else {
+              // Continue querying from the largest offset
+              xs.map(_.offset.value).max
+            }
+            Some((nextStartingOffset, nextControl), xs)
           }
+        }
+
+        control match {
+          case Stop     => Future.successful(None)
+          case Continue => retrieveNextBatch()
+          case ContinueDelayed =>
+            akka.pattern.after(refreshInterval, system.scheduler)(retrieveNextBatch())
+        }
       }
       .mapConcat(identity)
   }
@@ -367,8 +362,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
       eventsByTag(tag, offset, terminateAfterOffset = Some(maxOrderingInDb))
     }
 
-  /**
-    * Query events that have a specific tag.
+  /** Query events that have a specific tag.
     *
     * akka-persistence-jdbc has implemented this feature by using a LIKE %tag% query on the tags column.
     * A consequence of this is that tag names must be chosen wisely: for example when querying the tag `User`,

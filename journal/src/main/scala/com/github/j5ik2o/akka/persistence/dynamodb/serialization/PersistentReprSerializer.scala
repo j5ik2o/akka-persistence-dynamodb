@@ -26,8 +26,8 @@ trait PersistentReprSerializer[A] {
 
   def serialize(atomicWrites: Seq[AtomicWrite]): Seq[Either[Throwable, Seq[A]]] = {
     atomicWrites.map { atomicWrite =>
-      val serialized = atomicWrite.payload.zipWithIndex.map {
-        case (v, index) => serialize(v, Some(index))
+      val serialized = atomicWrite.payload.zipWithIndex.map { case (v, index) =>
+        serialize(v, Some(index))
       }
       EitherSeq.sequence(serialized)
     }

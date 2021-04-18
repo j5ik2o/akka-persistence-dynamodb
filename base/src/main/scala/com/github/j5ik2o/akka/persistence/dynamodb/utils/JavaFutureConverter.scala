@@ -11,9 +11,8 @@ object JavaFutureConverter {
   class to[A](jf: JavaFuture[A]) extends {
 
     def toScala(implicit ec: ExecutionContext): ScalaFuture[A] = {
-      ScalaFuture(jf.get()).recoverWith {
-        case e: ExecutionException =>
-          ScalaFuture.failed(e.getCause)
+      ScalaFuture(jf.get()).recoverWith { case e: ExecutionException =>
+        ScalaFuture.failed(e.getCause)
       }
     }
   }

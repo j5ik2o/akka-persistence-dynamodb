@@ -21,13 +21,11 @@ object TypedCounter {
     EventSourcedBehavior[Command, Int, Int](
       persistenceId = PersistenceId.ofUniqueId("User-" + id.toString),
       emptyState = 0,
-      commandHandler = {
-        case (state, Increment(n, replyTo)) =>
-          Effect.persist(n).thenReply(replyTo)(_ => IncrementReply())
+      commandHandler = { case (state, Increment(n, replyTo)) =>
+        Effect.persist(n).thenReply(replyTo)(_ => IncrementReply())
       },
-      eventHandler = {
-        case (state, event) =>
-          state + event
+      eventHandler = { case (state, event) =>
+        state + event
       }
     )
   //.withRetention(RetentionCriteria.snapshotEvery(100, 1))

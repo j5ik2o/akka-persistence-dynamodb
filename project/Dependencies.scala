@@ -73,13 +73,13 @@ object Dependencies {
   object testcontainers {
     val testcontainersVersion    = "1.15.3"
     val testcontainers           = "org.testcontainers" % "testcontainers" % testcontainersVersion
-    val testcontainersLocalStack = "org.testcontainers" % "localstack" % testcontainersVersion
-    val testcontainersKafka      = "org.testcontainers" % "kafka" % testcontainersVersion
+    val testcontainersLocalStack = "org.testcontainers" % "localstack"     % testcontainersVersion
+    val testcontainersKafka      = "org.testcontainers" % "kafka"          % testcontainersVersion
   }
 
   object dimafeng {
     val testcontainersScalaVersion  = "0.39.3"
-    val testcontainerScala          = "com.dimafeng" %% "testcontainers-scala" % testcontainersScalaVersion
+    val testcontainerScala          = "com.dimafeng" %% "testcontainers-scala"           % testcontainersScalaVersion
     val testcontainerScalaScalaTest = "com.dimafeng" %% "testcontainers-scala-scalatest" % testcontainersScalaVersion
     //    val testcontainerScalaMsql       = "com.dimafeng" %% "testcontainers-scala-mysql" % testcontainersScalaVersion
     val testcontainerScalaKafka      = "com.dimafeng" %% "testcontainers-scala-kafka"      % testcontainersScalaVersion

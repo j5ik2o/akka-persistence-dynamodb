@@ -3,13 +3,21 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '.github/**'
+    paths:
+      - '**.scala'
+      - '**.java'
+      - '**.sbt'
+      - '.scalafmt.conf'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '.github/**'
+    paths:
+      - '**.scala'
+      - '**.java'
+      - '**.sbt'
+      - '.scalafmt.conf'
+      - '.github/workflows/ci.yml'
   schedule:
     - cron: '0 * * * *'
 jobs:

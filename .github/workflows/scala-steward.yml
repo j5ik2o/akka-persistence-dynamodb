@@ -23,4 +23,4 @@ jobs:
           github-token: ${{ steps.generate_token.outputs.token }}
           author-email: "82752207+my-scala-steward[bot]@users.noreply.github.com"
           author-name: "my-scala-steward[bot]"
-          cache-ttl: 0
+          cache-ttl: 0s

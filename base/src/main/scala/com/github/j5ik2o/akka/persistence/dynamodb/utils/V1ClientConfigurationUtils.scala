@@ -76,9 +76,8 @@ object V1ClientConfigurationUtils {
       result.setSecureRandom(secureRandomProvider.create)
     }
     result.setUseExpectContinue(useExpectContinue)
-    headers.foreach {
-      case (k, v) =>
-        result.addHeader(k, v)
+    headers.foreach { case (k, v) =>
+      result.addHeader(k, v)
     }
     disableHostPrefixInjection.foreach { v => result.setDisableHostPrefixInjection(v) }
     // * public ClientConfiguration withTlsKeyManagersProvider(TlsKeyManagersProvider tlsKeyManagersProvider) {

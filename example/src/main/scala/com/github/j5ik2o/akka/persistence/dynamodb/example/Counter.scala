@@ -17,13 +17,11 @@ object Counter {
     EventSourcedBehavior[Message, Int, State](
       persistenceId = PersistenceId.of("counter", id.toString, "-"),
       emptyState = State(0),
-      commandHandler = {
-        case (_, Increment(n)) =>
-          Effect.persist(n)
+      commandHandler = { case (_, Increment(n)) =>
+        Effect.persist(n)
       },
-      eventHandler = {
-        case (State(v), n: Int) =>
-          State(v + n)
+      eventHandler = { case (State(v), n: Int) =>
+        State(v + n)
       }
     )
   }

@@ -13,35 +13,35 @@ lazy val baseSettings = Seq(
   homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
   licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
   developers := List(
-      Developer(
-        id = "j5ik2o",
-        name = "Junichi Kato",
-        email = "j5ik2o@gmail.com",
-        url = url("https://blog.j5ik2o.me")
-      )
-    ),
+    Developer(
+      id = "j5ik2o",
+      name = "Junichi Kato",
+      email = "j5ik2o@gmail.com",
+      url = url("https://blog.j5ik2o.me")
+    )
+  ),
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(Versions.scala211Version, Versions.scala212Version, Versions.scala213Version),
   scalacOptions ++= (
-      Seq(
-        "-feature",
-        "-deprecation",
-        "-unchecked",
-        "-encoding",
-        "UTF-8",
-        "-language:_",
-        "-Ydelambdafy:method",
-        "-target:jvm-1.8",
-        "-Yrangepos",
-        "-Ywarn-unused"
-      ) ++ crossScalacOptions(scalaVersion.value)
-    ),
+    Seq(
+      "-feature",
+      "-deprecation",
+      "-unchecked",
+      "-encoding",
+      "UTF-8",
+      "-language:_",
+      "-Ydelambdafy:method",
+      "-target:jvm-1.8",
+      "-Yrangepos",
+      "-Ywarn-unused"
+    ) ++ crossScalacOptions(scalaVersion.value)
+  ),
   resolvers ++= Seq(
-      Resolver.sonatypeRepo("snapshots"),
-      Resolver.sonatypeRepo("releases"),
-      "Seasar Repository" at "https://maven.seasar.org/maven2/",
-      "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
-    ),
+    Resolver.sonatypeRepo("snapshots"),
+    Resolver.sonatypeRepo("releases"),
+    "Seasar Repository" at "https://maven.seasar.org/maven2/",
+    "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
+  ),
   ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
@@ -49,8 +49,8 @@ lazy val baseSettings = Seq(
   Test / fork := true,
   Test / parallelExecution := false,
   envVars := Map(
-      "AWS_REGION" -> "ap-northeast-1"
-    )
+    "AWS_REGION" -> "ap-northeast-1"
+  )
 )
 
 lazy val test = (project in file("test"))
@@ -58,11 +58,11 @@ lazy val test = (project in file("test"))
   .settings(
     name := "akka-persistence-dynamodb-test",
     libraryDependencies ++= Seq(
-        iheart.ficus,
-        amazonaws.dynamodb,
-        testcontainers.testcontainers,
-        dimafeng.testcontainerScala
-      ),
+      iheart.ficus,
+      amazonaws.dynamodb,
+      testcontainers.testcontainers,
+      dimafeng.testcontainerScala
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor == 13 =>
@@ -88,15 +88,15 @@ lazy val base = (project in file("base"))
   .settings(
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
-        slf4j.api,
-        iheart.ficus,
-        amazonaws.dynamodb,
-        amazonaws.dax,
-        softwareamazon.dynamodb,
-        logback.classic                      % Test,
-        slf4j.julToSlf4J                     % Test,
-        dimafeng.testcontainerScalaScalaTest % Test
-      ),
+      slf4j.api,
+      iheart.ficus,
+      amazonaws.dynamodb,
+      amazonaws.dax,
+      softwareamazon.dynamodb,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
+      dimafeng.testcontainerScalaScalaTest % Test
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor == 13 =>
@@ -128,12 +128,12 @@ lazy val base = (project in file("base"))
       }
     },
     dependencyOverrides ++= Seq(
-        "io.netty"               % "netty-codec-http"    % nettyVersion,
-        "io.netty"               % "netty-transport"     % nettyVersion,
-        "io.netty"               % "netty-handler"       % nettyVersion,
-        "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
-        "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-      )
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
   ).dependsOn(test % "test->compile")
 
 lazy val journal = (project in file("journal"))
@@ -141,9 +141,9 @@ lazy val journal = (project in file("journal"))
   .settings(
     name := "akka-persistence-dynamodb-journal",
     libraryDependencies ++= Seq(
-        "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-        "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
-      ),
+      "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -165,12 +165,12 @@ lazy val journal = (project in file("journal"))
       }
     },
     dependencyOverrides ++= Seq(
-        "io.netty"               % "netty-codec-http"    % nettyVersion,
-        "io.netty"               % "netty-transport"     % nettyVersion,
-        "io.netty"               % "netty-handler"       % nettyVersion,
-        "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
-        "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-      )
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
   ).dependsOn(test % "test->compile", base % "test->test;compile->compile", snapshot % "test->compile")
 
 lazy val snapshot = (project in file("snapshot"))
@@ -178,9 +178,9 @@ lazy val snapshot = (project in file("snapshot"))
   .settings(
     name := "akka-persistence-dynamodb-snapshot",
     libraryDependencies ++= Seq(
-        logback.classic  % Test,
-        slf4j.julToSlf4J % Test
-      ),
+      logback.classic  % Test,
+      slf4j.julToSlf4J % Test
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -202,12 +202,12 @@ lazy val snapshot = (project in file("snapshot"))
       }
     },
     dependencyOverrides ++= Seq(
-        "io.netty"               % "netty-codec-http"    % nettyVersion,
-        "io.netty"               % "netty-transport"     % nettyVersion,
-        "io.netty"               % "netty-handler"       % nettyVersion,
-        "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
-        "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-      )
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
   ).dependsOn(test % "test->compile", base % "test->test;compile->compile")
 
 lazy val query = (project in file("query"))
@@ -215,9 +215,9 @@ lazy val query = (project in file("query"))
   .settings(
     name := "akka-persistence-dynamodb-query",
     libraryDependencies ++= Seq(
-        logback.classic  % Test,
-        slf4j.julToSlf4J % Test
-      ),
+      logback.classic  % Test,
+      slf4j.julToSlf4J % Test
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
@@ -239,12 +239,12 @@ lazy val query = (project in file("query"))
       }
     },
     dependencyOverrides ++= Seq(
-        "io.netty"               % "netty-codec-http"    % nettyVersion,
-        "io.netty"               % "netty-transport"     % nettyVersion,
-        "io.netty"               % "netty-handler"       % nettyVersion,
-        "org.reactivestreams"    % "reactive-streams"    % reactiveStreamsVersion,
-        "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-      )
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
   ).dependsOn(test % "test->compile", journal % "test->test;compile->compile", snapshot % "test->compile")
 
 lazy val benchmark = (project in file("benchmark"))
@@ -253,11 +253,11 @@ lazy val benchmark = (project in file("benchmark"))
     name := "akka-persistence-dynamodb-benchmark",
     publish / skip := true,
     libraryDependencies ++= Seq(
-        logback.classic,
-        slf4j.api,
-        slf4j.julToSlf4J,
-        dimafeng.testcontainerScala
-      ),
+      logback.classic,
+      slf4j.api,
+      slf4j.julToSlf4J,
+      dimafeng.testcontainerScala
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>

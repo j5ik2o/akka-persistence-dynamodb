@@ -23,9 +23,8 @@ object V2ClientOverrideConfigurationBuilderUtils {
     import pluginConfig.clientConfig.v2ClientConfig._
     var clientOverrideConfigurationBuilder = ClientOverrideConfiguration
       .builder()
-    headers.foreach {
-      case (k, v) =>
-        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
+    headers.foreach { case (k, v) =>
+      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
     }
     retryMode.foreach { v => clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(v) }
     RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { rp =>

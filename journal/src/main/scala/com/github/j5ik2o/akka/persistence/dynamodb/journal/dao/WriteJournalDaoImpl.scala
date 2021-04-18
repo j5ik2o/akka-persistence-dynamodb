@@ -34,8 +34,8 @@ class WriteJournalDaoImpl(
     protected val journalRowDriver: JournalRowWriteDriver,
     val serializer: FlowPersistentReprSerializer[JournalRow],
     protected val metricsReporter: Option[MetricsReporter]
-)(
-    implicit val ec: ExecutionContext,
+)(implicit
+    val ec: ExecutionContext,
     system: ActorSystem
 ) extends JournalDaoWithUpdates
     with DaoSupport {
@@ -95,9 +95,8 @@ class WriteJournalDaoImpl(
     val result = Source
       .queue[(Promise[Long], Seq[JournalRow])](queueBufferSize, queueOverflowStrategy)
       .viaMat(KillSwitches.single)(Keep.both)
-      .mapAsync(writeParallelism) {
-        case (promise, rows) =>
-          internalPutStream(promise, rows)
+      .mapAsync(writeParallelism) { case (promise, rows) =>
+        internalPutStream(promise, rows)
       }
       .toMat(Sink.ignore)(Keep.both)
       .withAttributes(logLevels)
@@ -143,9 +142,8 @@ class WriteJournalDaoImpl(
     val result = Source
       .queue[(Promise[Long], Seq[PersistenceIdWithSeqNr])](queueBufferSize, queueOverflowStrategy)
       .viaMat(KillSwitches.single)(Keep.both)
-      .mapAsync(writeParallelism) {
-        case (promise, rows) =>
-          internalDeleteStream(promise, rows)
+      .mapAsync(writeParallelism) { case (promise, rows) =>
+        internalDeleteStream(promise, rows)
       }
       .toMat(Sink.ignore)(Keep.both)
       .withAttributes(logLevels)
@@ -158,7 +156,7 @@ class WriteJournalDaoImpl(
     for (_ <- 1 to queueParallelism) yield deleteQueue
 
   override def dispose(): Unit = {
-    putQueues.foreach { case (_, sw)    => sw.shutdown() }
+    putQueues.foreach { case (_, sw) => sw.shutdown() }
     deleteQueues.foreach { case (_, sw) => sw.shutdown() }
   }
 
@@ -176,21 +174,22 @@ class WriteJournalDaoImpl(
   ): Source[Long, NotUsed] = {
     journalRowDriver
       .getJournalRows(persistenceId, toSequenceNr, deleted = false)
-      .flatMapConcat { journalRows => putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows)) }.flatMapConcat {
-        case (result, journalRows) =>
-          if (!pluginConfig.softDeleted) {
-            journalRowDriver
-              .highestSequenceNr(persistenceId, deleted = Some(true))
-              .flatMapConcat { highestMarkedSequenceNr =>
-                journalRowDriver
-                  .getJournalRows(
-                    persistenceId,
-                    SequenceNumber(highestMarkedSequenceNr - 1),
-                    deleted = false
-                  ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
-              }
-          } else
-            Source.single(result)
+      .flatMapConcat { journalRows =>
+        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
+      }.flatMapConcat { case (result, journalRows) =>
+        if (!pluginConfig.softDeleted) {
+          journalRowDriver
+            .highestSequenceNr(persistenceId, deleted = Some(true))
+            .flatMapConcat { highestMarkedSequenceNr =>
+              journalRowDriver
+                .getJournalRows(
+                  persistenceId,
+                  SequenceNumber(highestMarkedSequenceNr - 1),
+                  deleted = false
+                ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+            }
+        } else
+          Source.single(result)
       }.withAttributes(logLevels)
   }
 

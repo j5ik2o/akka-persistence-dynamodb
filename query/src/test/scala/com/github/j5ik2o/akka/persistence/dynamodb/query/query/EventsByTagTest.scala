@@ -39,9 +39,9 @@ abstract class EventsByTagTest(config: Config) extends QueryJournalSpec(config) 
 
       currentEventsByTagAsList("number3", Sequence(0)) should matchPattern {
         case List(
-            EventEnvelope(Sequence(1), _, _, _),
-            EventEnvelope(Sequence(2), _, _, _),
-            EventEnvelope(Sequence(3), _, _, _)
+              EventEnvelope(Sequence(1), _, _, _),
+              EventEnvelope(Sequence(2), _, _, _),
+              EventEnvelope(Sequence(3), _, _, _)
             ) =>
       }
 
@@ -53,12 +53,10 @@ abstract class EventsByTagTest(config: Config) extends QueryJournalSpec(config) 
         case List(EventEnvelope(Sequence(3), _, _, _)) =>
       }
 
-      currentEventsByTagAsList("number3", Sequence(3)) should matchPattern {
-        case Nil =>
+      currentEventsByTagAsList("number3", Sequence(3)) should matchPattern { case Nil =>
       }
 
-      currentEventsByTagAsList("number3", Sequence(4)) should matchPattern {
-        case Nil =>
+      currentEventsByTagAsList("number3", Sequence(4)) should matchPattern { case Nil =>
       }
 
       withEventsByTag()("number3", Sequence(0)) { tp =>

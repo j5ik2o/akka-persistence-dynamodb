@@ -172,7 +172,9 @@ final class V1JournalRowReadDriver(
       limit: Int
   ): QueryRequest = {
     new QueryRequest()
-      .withTableName(pluginConfig.tableName).withIndexName(pluginConfig.getJournalRowsIndexName).withKeyConditionExpression(
+      .withTableName(pluginConfig.tableName).withIndexName(
+        pluginConfig.getJournalRowsIndexName
+      ).withKeyConditionExpression(
         "#pid = :pid and #snr between :min and :max"
       ).withFilterExpression(deleted.map { _ => s"#flg = :flg" }.orNull)
       .withExpressionAttributeNames(

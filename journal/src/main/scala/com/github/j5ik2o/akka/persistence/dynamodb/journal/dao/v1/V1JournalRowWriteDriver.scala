@@ -91,7 +91,9 @@ final class V1JournalRowWriteDriver(
           pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
             .withB(ByteBuffer.wrap(journalRow.message))
         ) ++ journalRow.tags
-          .map { tag => Map(pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue().withS(tag)) }.getOrElse(
+          .map { tag =>
+            Map(pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue().withS(tag))
+          }.getOrElse(
             Map.empty
           )).asJava
       )
@@ -126,42 +128,41 @@ final class V1JournalRowWriteDriver(
         )
 
         Source
-          .single(journalRowWithPKeyWithSKeys.map {
-            case (journalRow, pkey, skey) =>
-              val pid      = journalRow.persistenceId.asString
-              val seqNr    = journalRow.sequenceNumber.asString
-              val ordering = journalRow.ordering.toString
-              val deleted  = journalRow.deleted
-              val message  = ByteBuffer.wrap(journalRow.message)
-              val tagsOpt  = journalRow.tags
-              new WriteRequest()
-                .withPutRequest(
-                  new PutRequest()
-                    .withItem(
-                      (Map(
-                        pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
-                          .withS(pkey),
-                        pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
-                          .withS(skey),
-                        pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
-                          .withS(pid),
-                        pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
-                          .withN(seqNr),
-                        pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
-                          .withN(ordering),
-                        pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
-                          .withBOOL(deleted),
-                        pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
-                          .withB(message)
-                      ) ++ tagsOpt
-                        .map { tags =>
-                          Map(
-                            pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
-                              .withS(tags)
-                          )
-                        }.getOrElse(Map.empty)).asJava
-                    )
-                )
+          .single(journalRowWithPKeyWithSKeys.map { case (journalRow, pkey, skey) =>
+            val pid      = journalRow.persistenceId.asString
+            val seqNr    = journalRow.sequenceNumber.asString
+            val ordering = journalRow.ordering.toString
+            val deleted  = journalRow.deleted
+            val message  = ByteBuffer.wrap(journalRow.message)
+            val tagsOpt  = journalRow.tags
+            new WriteRequest()
+              .withPutRequest(
+                new PutRequest()
+                  .withItem(
+                    (Map(
+                      pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+                        .withS(pkey),
+                      pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+                        .withS(skey),
+                      pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                        .withS(pid),
+                      pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+                        .withN(seqNr),
+                      pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+                        .withN(ordering),
+                      pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
+                        .withBOOL(deleted),
+                      pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
+                        .withB(message)
+                    ) ++ tagsOpt
+                      .map { tags =>
+                        Map(
+                          pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
+                            .withS(tags)
+                        )
+                      }.getOrElse(Map.empty)).asJava
+                  )
+              )
           }).flatMapConcat { requestItems =>
             Source
               .single(

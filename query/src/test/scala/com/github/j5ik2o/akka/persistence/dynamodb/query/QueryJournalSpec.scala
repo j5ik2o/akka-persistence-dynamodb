@@ -142,8 +142,7 @@ abstract class QueryJournalSpec(config: Config)
     tp.within(within)(f(tp))
   }
 
-  /**
-    * The returned event stream is ordered by sequence number,
+  /** The returned event stream is ordered by sequence number,
     * i.e. the same order as the PersistentActor persisted the events.
     * The same prefix of stream elements (in same order) are returned for multiple
     * executions of the query, except for when events have been deleted.

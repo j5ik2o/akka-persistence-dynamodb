@@ -1,4 +1,4 @@
 automerge:
 - project/Dependencies.scala
 - project/plugins.sbt
-- .scalafmt.conf 
+- .scalafmt.conf

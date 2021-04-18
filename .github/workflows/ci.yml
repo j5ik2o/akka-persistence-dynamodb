@@ -68,14 +68,20 @@ jobs:
     if: github.event_name == 'pull_request'
     needs: test
     steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: 111016
+          private_key: ${{ secrets.MY_SCALA_STEWARD }}
       - name: labeler
         uses: actions/labeler@v3
         with:
-          repo-token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+          repo-token: "${{ steps.generate_token.outputs.token }}"
       - name: automerge
         uses: pascalgn/automerge-action@v0.13.1
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GITHUB_TOKEN: "${{ steps.generate_token.outputs.token }}"
           MERGE_LABELS: "automerge"
           MERGE_METHOD: "rebase"
           MERGE_FILTER_AUTHOR: "my-scala-steward[bot]"

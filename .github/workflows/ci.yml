@@ -71,7 +71,7 @@ jobs:
       - name: labeler
         uses: actions/labeler@v2
         with:
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          repo-token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
       - name: automerge
         uses: pascalgn/automerge-action@v0.13.1
         env:

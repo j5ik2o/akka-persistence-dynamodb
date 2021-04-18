@@ -79,5 +79,3 @@ jobs:
           MERGE_LABELS: "automerge"
           MERGE_METHOD: "rebase"
           MERGE_FILTER_AUTHOR: "my-scala-steward[bot]"
-          MERGE_FORKS: true
-          MERGE_DELETE_BRANCH: true

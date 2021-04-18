@@ -59,7 +59,8 @@ jobs:
           java-version: ${{ matrix.jdk }}
       - uses: coursier/cache-action@v5
       - uses: olafurpg/setup-gpg@v3
-      - run: sbt -v ++${{ matrix.scala }} test
+      - name: sbt test
+        run: sbt -v ++${{ matrix.scala }} test
       - name: clean up
         run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
   automerge:
@@ -75,3 +76,8 @@ jobs:
         uses: pascalgn/automerge-action@v0.13.1
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          MERGE_LABELS: "automerge"
+          MERGE_METHOD: "rebase"
+          MERGE_FILTER_AUTHOR: "scala-steward"
+          MERGE_FORKS: true
+          MERGE_DELETE_BRANCH: true

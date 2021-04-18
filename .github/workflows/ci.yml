@@ -33,7 +33,7 @@ jobs:
       - uses: olafurpg/setup-scala@v10
         with:
           java-version: "adopt@1.8"
-      - uses: coursier/cache-action@v5
+      - uses: coursier/cache-action@v6
       - run: sbt -v lint
       - name: clean up
         run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
@@ -57,7 +57,7 @@ jobs:
       - uses: olafurpg/setup-scala@v10
         with:
           java-version: ${{ matrix.jdk }}
-      - uses: coursier/cache-action@v5
+      - uses: coursier/cache-action@v6
       - uses: olafurpg/setup-gpg@v3
       - name: sbt test
         run: sbt -v ++${{ matrix.scala }} test

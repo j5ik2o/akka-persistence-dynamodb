@@ -1,0 +1,24 @@
+name: scala-steward
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        if: ${{ !github.event.repository.fork }}
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: 111016
+          private_key: ${{ secrets.MY_SCALA_STEWARD }}
+      - uses: scala-steward-org/scala-steward-action@v2
+        if: ${{ !github.event.repository.fork }}
+        with:
+          github-token: ${{ steps.generate_token.outputs.token }}
+          author-email: "82752207+my-scala-steward[bot]@users.noreply.github.com"
+          author-name: "my-scala-steward[bot]"

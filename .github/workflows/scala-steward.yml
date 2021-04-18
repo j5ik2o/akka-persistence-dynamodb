@@ -1,4 +1,4 @@
-name: scala-steward
+name: Scala Steward
 on:
   push:
     branches:
@@ -7,7 +7,7 @@ on:
   schedule:
     - cron: '0 * * * *'
 jobs:
-  test:
+  scala-steward:
     runs-on: ubuntu-latest
     steps:
       - name: Generate token

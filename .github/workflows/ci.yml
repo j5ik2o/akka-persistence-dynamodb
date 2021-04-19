@@ -73,7 +73,7 @@ jobs:
         uses: tibdex/github-app-token@v1
         with:
           app_id: 111016
-          private_key: ${{ secrets.MY_SCALA_STEWARD }}
+          private_key: ${{ secrets.BOT_PRIVATE_KEY }}
       - name: labeler
         uses: actions/labeler@v3
         with:
@@ -84,4 +84,4 @@ jobs:
           GITHUB_TOKEN: "${{ steps.generate_token.outputs.token }}"
           MERGE_LABELS: "automerge"
           MERGE_METHOD: "rebase"
-          MERGE_FILTER_AUTHOR: "my-scala-steward[bot]"
+          MERGE_FILTER_AUTHOR: "j5ik2o-bot[bot]"

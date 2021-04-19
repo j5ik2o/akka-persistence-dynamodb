@@ -23,4 +23,3 @@ jobs:
           github-token: ${{ steps.generate_token.outputs.token }}
           author-email: "82752207+j5ik2o-bot[bot]@users.noreply.github.com"
           author-name: "j5ik2o-bot[bot]"
-          cache-ttl: 0s

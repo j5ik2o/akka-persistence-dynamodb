@@ -58,7 +58,6 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
       - uses: coursier/cache-action@v6
-      - uses: olafurpg/setup-gpg@v3
       - name: sbt test
         run: sbt -v ++${{ matrix.scala }} test
       - name: clean up

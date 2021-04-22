@@ -27,8 +27,6 @@ object Dependencies {
     val reactiveStreamsVersion = "1.0.2"
     val nettyVersion           = "4.1.33.Final"
 
-    val kafkaVersion        = "2.4.1.1"
-    val alpakkaKafkaVersion = "2.0.2"
   }
 
   import Versions._

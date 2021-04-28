@@ -10,7 +10,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
-        scala: [ 2.11.12, 2.12.13, 2.13.5 ]
+        scala: [ 3.0.0-RC2, 2.13.5, 2.12.13 ]
     runs-on: ${{ matrix.os }}
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8

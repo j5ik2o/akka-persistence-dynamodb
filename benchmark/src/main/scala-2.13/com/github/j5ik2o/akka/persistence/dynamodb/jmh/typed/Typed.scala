@@ -20,7 +20,7 @@ class TypedV1Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
+    implicit val to: Timeout = Timeout(10.seconds)
     implicit val typedSystem = system.toTyped
     val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
@@ -42,7 +42,7 @@ class TypedV1Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
+    implicit val to: Timeout = Timeout(10.seconds)
     implicit val typedSystem = system.toTyped
     val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
@@ -64,7 +64,7 @@ class TypedV2Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
+    implicit val to: Timeout = Timeout(10.seconds)
     implicit val typedSystem = system.toTyped
     val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
@@ -86,7 +86,7 @@ class TypedV2Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
+    implicit val to: Timeout = Timeout(10.seconds)
     implicit val typedSystem = system.toTyped
     val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {

@@ -3,14 +3,13 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val scala211Version = "2.11.12"
     val scala212Version = "2.12.10"
     val scala213Version = "2.13.5"
+    val scala3Version   = "3.0.0-RC2"
 
     val scalaCollectionCompatVersion = "2.4.4"
 
-    val akka25Version = "2.5.32"
-    val akka26Version = "2.6.10"
+    val akkaVersion = "2.6.10"
 
     val logbackVersion      = "1.2.0"
     val slf4jVersion        = "1.7.30"
@@ -20,8 +19,7 @@ object Dependencies {
     val awsSdkV2Version     = "2.16.71"
     val reactiveAwsDynamoDB = "1.2.6"
 
-    val scalaTest32Version      = "3.2.4"
-    val scalaTest30Version      = "3.0.8"
+    val scalaTestVersion        = "3.2.7"
     val scalaJava8CompatVersion = "0.9.1"
 
     val reactiveStreamsVersion = "1.0.2"
@@ -54,18 +52,29 @@ object Dependencies {
   }
 
   object akka {
-    def slf4j(version: String)            = "com.typesafe.akka" %% "akka-slf4j"             % version
-    def stream(version: String)           = "com.typesafe.akka" %% "akka-stream"            % version
-    def testkit(version: String)          = "com.typesafe.akka" %% "akka-testkit"           % version
-    def streamTestkit(version: String)    = "com.typesafe.akka" %% "akka-stream-testkit"    % version
-    def persistence(version: String)      = "com.typesafe.akka" %% "akka-persistence"       % version
-    def persistenceQuery(version: String) = "com.typesafe.akka" %% "akka-persistence-query" % version
-    def persistenceTyped(version: String) = "com.typesafe.akka" %% "akka-persistence-typed" % version
-    def persistenceTck(version: String)   = "com.typesafe.akka" %% "akka-persistence-tck"   % version
+    def slf4j            = "com.typesafe.akka" %% "akka-slf4j"             % akkaVersion
+    def stream           = "com.typesafe.akka" %% "akka-stream"            % akkaVersion
+    def testkit          = "com.typesafe.akka" %% "akka-testkit"           % akkaVersion
+    def streamTestkit    = "com.typesafe.akka" %% "akka-stream-testkit"    % akkaVersion
+    def persistence      = "com.typesafe.akka" %% "akka-persistence"       % akkaVersion
+    def persistenceQuery = "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion
+    def persistenceTyped = "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion
+    def persistenceTck   = "com.typesafe.akka" %% "akka-persistence-tck"   % akkaVersion
   }
 
   object scalatest {
-    def scalatest(version: String) = "org.scalatest" %% "scalatest" % version
+    def scalatest = "org.scalatest" %% "scalatest" % scalaTestVersion
+  }
+
+  object j5ik2o {
+    val version = "1.1.1"
+
+    val dockerControllerScalaScalatest =
+      "com.github.j5ik2o" %% "docker-controller-scala-scalatest" % version
+
+    val dockerControllerScalaMinio =
+      "com.github.j5ik2o" %% "docker-controller-scala-dynamodb" % version
+
   }
 
   object testcontainers {

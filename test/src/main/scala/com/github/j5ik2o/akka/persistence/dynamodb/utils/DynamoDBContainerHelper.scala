@@ -55,7 +55,7 @@ trait DynamoDBContainerHelper {
   val journalTableName  = "Journal"
   val snapshotTableName = "Snapshot"
 
-  protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500 milliseconds
+  protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500.milliseconds
 
   protected val MaxCount = 10
 

@@ -25,7 +25,6 @@ import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
@@ -149,10 +148,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val id = UUID.randomUUID()
 
-  implicit val ec: ExecutionContext   = context.dispatcher
-  implicit val system: ActorSystem    = context.system
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val _log: LoggingAdapter   = log
+  implicit val ec: ExecutionContext = context.dispatcher
+  implicit val system: ActorSystem  = context.system
+  implicit val _log: LoggingAdapter = log
 
   log.debug("dynamodb journal plugin: id = {}", id)
 
@@ -279,7 +277,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           }.toVector
         }
     writeInProgress.put(persistenceId, future)
-    future.onComplete { result: Try[Seq[Try[Unit]]] =>
+    future.onComplete { (result: Try[Seq[Try[Unit]]]) =>
       self ! WriteFinished(persistenceId, future)
       result match {
         case Success(_) =>

@@ -2,10 +2,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
+import akka.stream.RestartSettings
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
@@ -18,6 +18,7 @@ import software.amazon.awssdk.services.dynamodb.model.{
   ScanResponse
 }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+
 import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
 
@@ -50,10 +51,11 @@ class StreamReadClient(
     if (readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = readBackoffConfig.minBackoff,
+            maxBackoff = readBackoffConfig.maxBackoff,
+            randomFactor = readBackoffConfig.randomFactor
+          ).withMaxRestarts(readBackoffConfig.maxRestarts, readBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }
@@ -125,10 +127,11 @@ class StreamReadClient(
     if (readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = readBackoffConfig.minBackoff,
+            maxBackoff = readBackoffConfig.maxBackoff,
+            randomFactor = readBackoffConfig.randomFactor
+          ).withMaxRestarts(readBackoffConfig.maxRestarts, readBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }

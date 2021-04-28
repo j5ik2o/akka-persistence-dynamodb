@@ -22,7 +22,6 @@ import akka.event.{ Logging, LoggingAdapter }
 import akka.persistence.journal.Tagged
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, PersistenceQuery }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
@@ -51,8 +50,6 @@ abstract class QueryJournalSpec(config: Config)
   val log: LoggingAdapter           = Logging(system, this.getClass)
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
   implicit val timeout: Timeout     = 30.seconds
-
-  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   val identifier: String = DynamoDBReadJournal.Identifier
 

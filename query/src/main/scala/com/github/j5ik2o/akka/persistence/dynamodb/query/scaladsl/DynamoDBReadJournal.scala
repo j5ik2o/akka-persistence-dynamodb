@@ -22,7 +22,6 @@ import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, Sequence, _ }
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
@@ -95,10 +94,9 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with CurrentEventsByTagQuery
     with EventsByTagQuery {
   LoggerFactory.getLogger(getClass)
-  private implicit val ec: ExecutionContext   = system.dispatcher
-  private val dynamicAccess                   = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
-  private implicit val mat: ActorMaterializer = ActorMaterializer()
-  private implicit val _log: LoggingAdapter   = system.log
+  private implicit val ec: ExecutionContext = system.dispatcher
+  private val dynamicAccess                 = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+  private implicit val _log: LoggingAdapter = system.log
   import DynamoDBReadJournal._
 
   private val queryPluginConfig: QueryPluginConfig = QueryPluginConfig.fromConfig(config)

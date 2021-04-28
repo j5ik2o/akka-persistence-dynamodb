@@ -21,7 +21,6 @@ import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.query.scaladsl._
 import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
@@ -87,9 +86,7 @@ class DynamoDBReadJournalSpec
     with BeforeAndAfter
     with DynamoDBSpecSupport {
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBReadJournalSpec.dynamoDBPort
 

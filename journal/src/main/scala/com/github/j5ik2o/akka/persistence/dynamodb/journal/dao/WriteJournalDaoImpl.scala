@@ -36,11 +36,9 @@ class WriteJournalDaoImpl(
     protected val metricsReporter: Option[MetricsReporter]
 )(implicit
     val ec: ExecutionContext,
-    system: ActorSystem
+    val system: ActorSystem
 ) extends JournalDaoWithUpdates
     with DaoSupport {
-
-  implicit val mat: Materializer = ActorMaterializer()
 
   LoggerFactory.getLogger(getClass)
 

@@ -69,15 +69,15 @@ object ClientConfiguration {
   val nonProxyHostsKey                         = "non-proxy-hosts"
   val proxyAuthenticationMethodsKey            = "proxy-authentication-methods"
 
-  val DefaultConnectionTimeout: FiniteDuration      = AWSClientConfiguration.DEFAULT_CONNECTION_TIMEOUT milliseconds
+  val DefaultConnectionTimeout: FiniteDuration      = AWSClientConfiguration.DEFAULT_CONNECTION_TIMEOUT.milliseconds
   val DefaultMaxConnections: Int                    = AWSClientConfiguration.DEFAULT_MAX_CONNECTIONS
   val DefaultV1RetryPolicyProviderClassName: String = classOf[RetryPolicyProvider.Default].getName
   val DefaultThrottleRetries: Boolean               = AWSClientConfiguration.DEFAULT_THROTTLE_RETRIES
-  val DefaultSocketTimeout: FiniteDuration          = AWSClientConfiguration.DEFAULT_SOCKET_TIMEOUT milliseconds
-  val DefaultRequestTimeout: FiniteDuration         = AWSClientConfiguration.DEFAULT_REQUEST_TIMEOUT milliseconds
+  val DefaultSocketTimeout: FiniteDuration          = AWSClientConfiguration.DEFAULT_SOCKET_TIMEOUT.milliseconds
+  val DefaultRequestTimeout: FiniteDuration         = AWSClientConfiguration.DEFAULT_REQUEST_TIMEOUT.milliseconds
 
   val DefaultClientExecutionTimeout: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_CLIENT_EXECUTION_TIMEOUT milliseconds
+    AWSClientConfiguration.DEFAULT_CLIENT_EXECUTION_TIMEOUT.milliseconds
   val DefaultUseReaper: Boolean                    = AWSClientConfiguration.DEFAULT_USE_REAPER
   val DefaultUseGZIP: Boolean                      = AWSClientConfiguration.DEFAULT_USE_GZIP
   val DefaultResponseMetadataCacheSize: Int        = AWSClientConfiguration.DEFAULT_RESPONSE_METADATA_CACHE_SIZE
@@ -85,10 +85,10 @@ object ClientConfiguration {
   val DefaultUseSecureRandom: Boolean              = false
   val DefaultUseExpectContinue: Boolean            = AWSClientConfiguration.DEFAULT_USE_EXPECT_CONTINUE
   val DefaultCacheResponseMetadata: Boolean        = AWSClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA
-  val DefaultConnectionMaxIdle: FiniteDuration     = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS milliseconds
+  val DefaultConnectionMaxIdle: FiniteDuration     = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS.milliseconds
 
   val DefaultValidateAfterInactivity: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS milliseconds
+    AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS.milliseconds
   val DefaultTcpKeepAlive: Boolean = AWSClientConfiguration.DEFAULT_TCP_KEEP_ALIVE
 
   val DefaultMaxConsecutiveRetiesBeforeThrottling: Int =

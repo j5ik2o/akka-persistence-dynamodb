@@ -17,7 +17,7 @@ object TypedCounter {
 
   case class IncrementReply() extends Reply
 
-  def apply(id: UUID): Behavior[Command] = Behaviors.setup[Command] { context =>
+  def apply(id: UUID): Behavior[Command] = Behaviors.setup[Command] { _ =>
     EventSourcedBehavior[Command, Int, Int](
       persistenceId = PersistenceId.ofUniqueId("User-" + id.toString),
       emptyState = 0,

@@ -16,13 +16,11 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import java.util.UUID
-
 import akka.actor.ExtendedActorSystem
+import akka.event.LoggingAdapter
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
 import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
@@ -37,9 +35,9 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
+import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
-import akka.event.LoggingAdapter
 
 object DynamoDBSnapshotStore {
 
@@ -54,7 +52,6 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   implicit val ec: ExecutionContext        = context.dispatcher
   implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
-  implicit val mat: ActorMaterializer      = ActorMaterializer()
   implicit val _log: LoggingAdapter        = log
 
   private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
@@ -139,7 +136,6 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           SequenceNumber(maxSequenceNr),
           maxTimestamp
         )
-      case _ => Source.empty
     }
     val future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
     future.onComplete {
@@ -199,7 +195,6 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           .deleteUpToMaxSequenceNrAndMaxTimestamp(pid, SequenceNumber(maxSequenceNr), maxTimestamp).runWith(
             Sink.ignore
           ).map(_ => ())
-      case _ => Future.successful(())
     }
     future.onComplete {
       case Success(_) =>

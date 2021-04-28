@@ -18,7 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 import java.net.URI
 import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
@@ -49,9 +48,7 @@ class ReadJournalDaoImplSpec
     with ScalaFutures
     with DynamoDBSpecSupport {
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

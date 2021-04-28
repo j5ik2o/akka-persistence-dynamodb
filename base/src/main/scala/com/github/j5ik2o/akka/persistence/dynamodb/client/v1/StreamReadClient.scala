@@ -2,10 +2,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
+import akka.stream.RestartSettings
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model._
@@ -48,10 +48,11 @@ class StreamReadClient(
     if (readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = readBackoffConfig.minBackoff,
+            maxBackoff = readBackoffConfig.maxBackoff,
+            randomFactor = readBackoffConfig.randomFactor
+          ).withMaxRestarts(readBackoffConfig.maxRestarts, readBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }
@@ -117,10 +118,11 @@ class StreamReadClient(
     if (readBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = readBackoffConfig.minBackoff,
+            maxBackoff = readBackoffConfig.maxBackoff,
+            randomFactor = readBackoffConfig.randomFactor
+          ).withMaxRestarts(readBackoffConfig.maxRestarts, readBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }

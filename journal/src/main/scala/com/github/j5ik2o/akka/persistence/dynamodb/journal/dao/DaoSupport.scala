@@ -1,16 +1,16 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao
 
+import akka.actor.ActorSystem
 import akka.persistence.PersistentRepr
-import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.{ actor, NotUsed }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
   Continue,
   ContinueDelayed,
   FlowControl,
   Stop
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
@@ -41,8 +41,9 @@ trait DaoSupport {
 
   protected def journalRowDriver: JournalRowReadDriver
 
+  implicit def system: ActorSystem
+
   implicit def ec: ExecutionContext
-  implicit def mat: Materializer
 
   def getMessagesAsJournalRow(
       persistenceId: PersistenceId,

@@ -49,7 +49,7 @@ object QueryPluginConfig extends LoggingSupport {
   val DefaultGetJournalRowsIndexName: String          = JournalPluginConfig.DefaultGetJournalRowsIndexName
   val DefaultTagSeparator: String                     = JournalPluginConfig.DefaultTagSeparator
   val DefaultShardCount: Int                          = JournalPluginConfig.DefaultShardCount
-  val DefaultRefreshInterval: FiniteDuration          = 1 seconds
+  val DefaultRefreshInterval: FiniteDuration          = 1.seconds
   val DefaultMaxBufferSize: Int                       = 500
   val DefaultQueryBatchSize: Int                      = 1024
   val DefaultScanBatchSize: Int                       = 1024

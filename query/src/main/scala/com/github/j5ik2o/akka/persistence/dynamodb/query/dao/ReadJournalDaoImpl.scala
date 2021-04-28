@@ -19,7 +19,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.PersistentRepr
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ DaoSupport, JournalRowReadDriver }
@@ -31,7 +30,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentR
 import scala.collection.immutable.Set
 import scala.concurrent.ExecutionContext
 import scala.util.Try
-import akka.stream.Materializer
 
 class ReadJournalDaoImpl(
     queryProcessor: QueryProcessor,
@@ -39,11 +37,9 @@ class ReadJournalDaoImpl(
     pluginConfig: QueryPluginConfig,
     override val serializer: FlowPersistentReprSerializer[JournalRow],
     override protected val metricsReporter: Option[MetricsReporter]
-)(implicit val ec: ExecutionContext, system: ActorSystem)
+)(implicit val ec: ExecutionContext, val system: ActorSystem)
     extends ReadJournalDao
     with DaoSupport {
-
-  implicit val mat: Materializer = ActorMaterializer()
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = queryProcessor.allPersistenceIds(max)
 

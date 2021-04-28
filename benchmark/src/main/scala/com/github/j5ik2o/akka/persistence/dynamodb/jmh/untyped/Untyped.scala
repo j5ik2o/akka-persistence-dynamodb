@@ -19,8 +19,8 @@ class UntypedV1Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to = Timeout(10 seconds)
-    val future      = untypedRef ? Increment(1)
+    implicit val to: Timeout = Timeout(10.seconds)
+    val future               = untypedRef ? Increment(1)
     try {
       Await.result(future, Duration.Inf)
     } catch {
@@ -40,8 +40,8 @@ class UntypedV1Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to = Timeout(10 seconds)
-    val future      = untypedRef ? Increment(1)
+    implicit val to: Timeout = Timeout(10.seconds)
+    val future               = untypedRef ? Increment(1)
     try {
       Await.result(future, Duration.Inf)
     } catch {
@@ -61,8 +61,8 @@ class UntypedV2Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to = Timeout(10 seconds)
-    val future      = untypedRef ? Increment(1)
+    implicit val to: Timeout = Timeout(10.seconds)
+    val future               = untypedRef ? Increment(1)
     try {
       Await.result(future, Duration.Inf)
     } catch {
@@ -82,8 +82,8 @@ class UntypedV2Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to = Timeout(10 seconds)
-    val future      = untypedRef ? Increment(1)
+    implicit val to: Timeout = Timeout(10.seconds)
+    val future               = untypedRef ? Increment(1)
     try {
       Await.result(future, Duration.Inf)
     } catch {

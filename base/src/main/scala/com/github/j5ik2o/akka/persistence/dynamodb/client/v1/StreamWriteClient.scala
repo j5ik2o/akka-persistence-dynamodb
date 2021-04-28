@@ -2,10 +2,10 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
+import akka.stream.RestartSettings
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
 import com.amazonaws.services.dynamodbv2.model._
@@ -46,10 +46,11 @@ class StreamWriteClient(
     if (writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = writeBackoffConfig.minBackoff,
+            maxBackoff = writeBackoffConfig.maxBackoff,
+            randomFactor = writeBackoffConfig.randomFactor
+          ).withMaxRestarts(writeBackoffConfig.maxRestarts, writeBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }
@@ -75,10 +76,11 @@ class StreamWriteClient(
     if (writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = writeBackoffConfig.minBackoff,
+            maxBackoff = writeBackoffConfig.maxBackoff,
+            randomFactor = writeBackoffConfig.randomFactor
+          ).withMaxRestarts(writeBackoffConfig.maxRestarts, writeBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }
@@ -104,10 +106,11 @@ class StreamWriteClient(
     if (writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = writeBackoffConfig.minBackoff,
+            maxBackoff = writeBackoffConfig.maxBackoff,
+            randomFactor = writeBackoffConfig.randomFactor
+          ).withMaxRestarts(writeBackoffConfig.maxRestarts, writeBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }
@@ -161,10 +164,11 @@ class StreamWriteClient(
     if (writeBackoffConfig.enabled)
       RestartFlow
         .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
+          RestartSettings(
+            minBackoff = writeBackoffConfig.minBackoff,
+            maxBackoff = writeBackoffConfig.maxBackoff,
+            randomFactor = writeBackoffConfig.randomFactor
+          ).withMaxRestarts(writeBackoffConfig.maxRestarts, writeBackoffConfig.minBackoff)
         ) { () => flow }
     else flow
   }

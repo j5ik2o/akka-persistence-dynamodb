@@ -34,12 +34,12 @@ object SyncClientConfig extends LoggingSupport {
   val maxIdleConnectionTimeoutKey     = "max-idle-connection-timeout"
   val useConnectionReaperKey          = "use-connection-reaper"
 
-  val DefaultSocketTimeout: FiniteDuration                = 50 seconds
-  val DefaultConnectionTimeout: FiniteDuration            = 2 seconds
-  val DefaultConnectionAcquisitionTimeout: FiniteDuration = 10 seconds
+  val DefaultSocketTimeout: FiniteDuration                = 50.seconds
+  val DefaultConnectionTimeout: FiniteDuration            = 2.seconds
+  val DefaultConnectionAcquisitionTimeout: FiniteDuration = 10.seconds
   val DefaultMaxConnections: Int                          = 50
   val DefaultConnectionTimeToLive: FiniteDuration         = Duration.Zero
-  val DefaultMaxIdleConnectionTimeout: FiniteDuration     = 60 seconds
+  val DefaultMaxIdleConnectionTimeout: FiniteDuration     = 60.seconds
   val DefaultUseConnectionReaper: Boolean                 = true
 
   def fromConfig(config: Config): SyncClientConfig = {

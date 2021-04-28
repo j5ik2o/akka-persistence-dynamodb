@@ -78,7 +78,7 @@ object MetricsReporter {
     override def withData(value: Option[Any]): Context = copy(data = value)
   }
 
-  def newContext(id: UUID, persistenceId: PersistenceId, data: Option[Any] = None): Context =
+  def newContext(id: UUID, persistenceId: PersistenceId, data: Option[Any] = scala.None): Context =
     DefaultContext(id, persistenceId, data)
 
   class None(pluginConfig: PluginConfig) extends MetricsReporter {

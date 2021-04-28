@@ -74,7 +74,7 @@ abstract class PersistenceIdsQueryTest(config: Config) extends QueryJournalSpec(
       if (readJournal.isInstanceOf[DynamoDBReadJournal]) {
         tp.expectNext("my-1")
       }
-      tp.expectNoMessage(1 seconds)
+      tp.expectNoMessage(1.seconds)
 
       actor2 ! 1
       eventually {
@@ -154,12 +154,12 @@ class DynamoDBPersistenceIdsQueryTest
     )
     with DynamoDBSpecSupport {
 
-  override implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  override implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBPersistenceIdsQueryTest.dynamoDBPort
 
-  before { createTable }
+  before { createTable() }
 
-  after { deleteTable }
+  after { deleteTable() }
 
 }

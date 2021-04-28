@@ -55,12 +55,12 @@ class DynamoDBSnapshotStoreV1AsyncSpec
     with ScalaFutures
     with DynamoDBSpecSupport {
 
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
 
-  before { createTable }
+  before { createTable() }
 
-  after { deleteTable }
+  after { deleteTable() }
 
 }

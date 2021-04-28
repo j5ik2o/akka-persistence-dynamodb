@@ -33,7 +33,7 @@ class DynamoDBJournalV1SyncSpec
     with DynamoDBSpecSupport {
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = CapabilityFlag.on()
 
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBJournalV1AsyncSpec.dynamoDBPort
 

@@ -117,7 +117,7 @@ abstract class QueryJournalSpec(config: Config)
     Future.sequence(actors.map(_.ask(tagged))).map(_ => ())
   }
 
-  val WITH_IN: FiniteDuration = 30 seconds
+  val WITH_IN: FiniteDuration = 30.seconds
 
   def withCurrentPersistenceIds(within: FiniteDuration = WITH_IN)(f: TestSubscriber.Probe[String] => Unit): Unit = {
     val tp = readJournal

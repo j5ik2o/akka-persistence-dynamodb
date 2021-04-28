@@ -14,7 +14,7 @@ trait DynamoDBSpecSupport
     with ScalaFutures
     with DynamoDBContainerSpecSupport {
   this: Suite =>
-  private implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  private implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   SLF4JBridgeHandler.removeHandlersForRootLogger()
   SLF4JBridgeHandler.install()

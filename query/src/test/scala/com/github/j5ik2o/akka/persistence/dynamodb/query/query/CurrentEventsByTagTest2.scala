@@ -97,12 +97,12 @@ class DynamoDBCurrentEventsByTagTest2
     )
     with DynamoDBSpecSupport {
 
-  override implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  override implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = DynamoDBCurrentEventsByTagTest2.dynamoDBPort
 
-  before { createTable }
+  before { createTable() }
 
-  after { deleteTable }
+  after { deleteTable() }
 
 }

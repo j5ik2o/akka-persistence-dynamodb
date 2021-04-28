@@ -163,8 +163,8 @@ class ReadJournalDaoImplSpec
     }
   }
 
-  before { createTable }
+  before { createTable() }
 
-  after { deleteTable }
+  after { deleteTable() }
 
 }

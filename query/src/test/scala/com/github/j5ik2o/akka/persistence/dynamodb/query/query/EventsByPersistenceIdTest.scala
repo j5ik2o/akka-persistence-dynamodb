@@ -17,11 +17,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
+import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.dockerController.DockerClientConfigUtil
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -35,17 +36,17 @@ abstract class EventsByPersistenceIdTest(config: Config) extends QueryJournalSpe
     } else {
       tp.expectNoMessage(300.millis)
     }
-    tp.cancel
+    tp.cancel()
   }
 
   it should "not complete when toSeqNr = Long.MaxValue" in
   withEventsByPersistenceId()("unkown-pid", 0L, Long.MaxValue) { tp =>
     tp.request(Int.MaxValue)
     tp.expectNoMessage(300.millis)
-    tp.cancel
+    tp.cancel()
   }
 
-  it should "complete when toSeqNr is reached" in withTestActors() { (actor1, actor2, actor3) =>
+  it should "complete when toSeqNr is reached" in withTestActors() { (actor1, _, _) =>
     actor1 ! "a"
     actor1 ! "a"
     actor1 ! "a"
@@ -115,8 +116,9 @@ abstract class EventsByPersistenceIdTest(config: Config) extends QueryJournalSpe
 //class InMemoryEventsByPersistenceIdTest extends EventsByPersistenceIdTest("inmemory.conf")
 
 object DynamoDBEventsByPersistenceIdTest {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
-  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
+  val dockerClientConfig: DockerClientConfig = DockerClientConfigUtil.buildConfigAwareOfDockerMachine()
+  val dynamoDBHost: String                   = DockerClientConfigUtil.dockerHost(dockerClientConfig)
+  val dynamoDBPort: Int                      = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBEventsByPersistenceIdTest
@@ -146,12 +148,20 @@ class DynamoDBEventsByPersistenceIdTest
     )
     with DynamoDBSpecSupport {
 
-  override implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  private val testTimeFactor: Double = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toDouble
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBEventsByPersistenceIdTest.dynamoDBPort
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = scaled((30 * testTimeFactor).seconds), interval = scaled((1 * testTimeFactor).seconds))
 
-  before { createTable() }
+  override protected lazy val dynamoDBHost: String = DynamoDBEventsByPersistenceIdTest.dynamoDBHost
+  override protected lazy val dynamoDBPort: Int    = DynamoDBEventsByPersistenceIdTest.dynamoDBPort
 
-  after { deleteTable() }
+  override protected def afterStartContainers(): Unit = {
+    createTable()
+  }
+
+  override protected def beforeStopContainers(): Unit = {
+    deleteTable()
+  }
 
 }

@@ -27,7 +27,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
 
   @Setup
   def setup(): Unit = {
-    dynamoDbLocalContainer.start()
+    startDockerContainers()
     Thread.sleep(1000)
     createTable()
     system = ActorSystem("benchmark-" + UUID.randomUUID().toString, config)
@@ -37,7 +37,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
 
   @TearDown
   def tearDown(): Unit = {
-    dynamoDbLocalContainer.stop()
+    stopDockerContainers()
     system.terminate()
   }
 }

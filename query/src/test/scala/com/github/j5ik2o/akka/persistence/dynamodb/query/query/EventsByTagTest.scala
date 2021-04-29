@@ -18,10 +18,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.query
 
 import akka.persistence.query.{ EventEnvelope, Sequence }
+import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.query.QueryJournalSpec
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.dockerController.DockerClientConfigUtil
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
@@ -108,8 +109,9 @@ abstract class EventsByTagTest(config: Config) extends QueryJournalSpec(config) 
 }
 
 object DynamoDBEventsByTagTest {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
-  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
+  val dockerClientConfig: DockerClientConfig = DockerClientConfigUtil.buildConfigAwareOfDockerMachine()
+  val dynamoDBHost: String                   = DockerClientConfigUtil.dockerHost(dockerClientConfig)
+  val dynamoDBPort: Int                      = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBEventsByTagTest
@@ -139,12 +141,19 @@ class DynamoDBEventsByTagTest
     )
     with DynamoDBSpecSupport {
 
-  override implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  private val testTimeFactor: Double = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toDouble
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBEventsByTagTest.dynamoDBPort
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = scaled((30 * testTimeFactor).seconds), interval = scaled((1 * testTimeFactor).seconds))
 
-  before { createTable() }
+  override protected lazy val dynamoDBHost: String = DynamoDBEventsByTagTest.dynamoDBHost
+  override protected lazy val dynamoDBPort: Int    = DynamoDBEventsByTagTest.dynamoDBPort
 
-  after { deleteTable() }
+  override protected def afterStartContainers(): Unit = {
+    createTable()
+  }
 
+  override protected def beforeStopContainers(): Unit = {
+    deleteTable()
+  }
 }

@@ -16,16 +16,18 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
 import akka.persistence.snapshot.SnapshotStoreSpec
+import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.dockerController.DockerClientConfigUtil
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
-import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBSnapshotStoreV1AsyncSpec {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
-  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
+  val dockerClientConfig: DockerClientConfig = DockerClientConfigUtil.buildConfigAwareOfDockerMachine()
+  val dynamoDBHost: String                   = DockerClientConfigUtil.dockerHost(dockerClientConfig)
+  val dynamoDBPort: Int                      = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBSnapshotStoreV1AsyncSpec
@@ -55,12 +57,20 @@ class DynamoDBSnapshotStoreV1AsyncSpec
     with ScalaFutures
     with DynamoDBSpecSupport {
 
-  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  private val testTimeFactor: Double = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toDouble
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = scaled((30 * testTimeFactor).seconds), interval = scaled((1 * testTimeFactor).seconds))
 
-  before { createTable() }
+  override protected lazy val dynamoDBHost: String = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBHost
+  override protected lazy val dynamoDBPort: Int    = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
 
-  after { deleteTable() }
+  override protected def afterStartContainers(): Unit = {
+    createTable()
+  }
+
+  override protected def beforeStopContainers(): Unit = {
+    deleteTable()
+  }
 
 }

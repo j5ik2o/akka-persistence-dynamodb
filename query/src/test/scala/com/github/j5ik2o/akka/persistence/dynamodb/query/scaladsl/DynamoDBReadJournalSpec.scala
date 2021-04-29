@@ -15,7 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
-import java.net.URI
 import akka.actor.{ ActorSystem, Props }
 import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
@@ -26,6 +25,7 @@ import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
 import akka.testkit.TestKit
 import akka.util.Timeout
+import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
@@ -38,23 +38,24 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.dockerController.DockerClientConfigUtil
 import com.typesafe.config.ConfigFactory
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll }
 import org.scalatest.concurrent.{ Eventually, ScalaFutures }
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
-import org.testcontainers.DockerClientFactory
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
-import scala.concurrent.Future
+import java.net.URI
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContextExecutor
 
 object DynamoDBReadJournalSpec {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
-  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
+  val dockerClientConfig: DockerClientConfig = DockerClientConfigUtil.buildConfigAwareOfDockerMachine()
+  val dynamoDBHost: String                   = DockerClientConfigUtil.dockerHost(dockerClientConfig)
+  val dynamoDBPort: Int                      = RandomPortUtil.temporaryServerPort()
 }
 
 class DynamoDBReadJournalSpec
@@ -84,11 +85,16 @@ class DynamoDBReadJournalSpec
     with Eventually
     with ScalaFutures
     with BeforeAndAfter
+    with BeforeAndAfterAll
     with DynamoDBSpecSupport {
 
-  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  private val testTimeFactor: Double = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toDouble
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBReadJournalSpec.dynamoDBPort
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = scaled((30 * testTimeFactor).seconds), interval = scaled((1 * testTimeFactor).seconds))
+
+  override protected lazy val dynamoDBHost: String = DynamoDBReadJournalSpec.dynamoDBHost
+  override protected lazy val dynamoDBPort: Int    = DynamoDBReadJournalSpec.dynamoDBPort
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()

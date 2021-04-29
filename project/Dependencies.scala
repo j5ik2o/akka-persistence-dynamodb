@@ -72,8 +72,8 @@ object Dependencies {
     val dockerControllerScalaScalatest =
       "com.github.j5ik2o" %% "docker-controller-scala-scalatest" % version
 
-    val dockerControllerScalaMinio =
-      "com.github.j5ik2o" %% "docker-controller-scala-dynamodb" % version
+    val dockerControllerScalaDynamoDBLocal =
+      "com.github.j5ik2o" %% "docker-controller-scala-dynamodb-local" % version
 
   }
 

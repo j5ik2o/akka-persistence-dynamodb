@@ -35,7 +35,7 @@ class WriteJournalDaoImplSpec
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {
-  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
@@ -225,8 +225,12 @@ class WriteJournalDaoImplSpec
     }
   }
 
-  before { createTable() }
+  override protected def afterStartContainers(): Unit = {
+    createTable()
+  }
 
-  after { deleteTable() }
+  override protected def beforeStopContainers(): Unit = {
+    deleteTable()
+  }
 
 }

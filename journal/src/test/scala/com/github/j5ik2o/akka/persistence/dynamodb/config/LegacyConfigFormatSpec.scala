@@ -7,6 +7,8 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
+import scala.util.control.NonFatal
+
 class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
   override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
@@ -79,19 +81,26 @@ class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
       journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxConcurrency shouldBe 50
       journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxPendingConnectionAcquires shouldBe 10000
 
-      an[ClassNotFoundException] should be thrownBy {
+      try {
         JournalPluginConfig.fromConfig(
           config(false, "Dummy", classOf[MetricsReporterImpl].getName)
             .getConfig("j5ik2o.dynamo-db-journal")
         )
+      } catch {
+        case NonFatal(ex: ClassNotFoundException) =>
+        case ex =>
+          fail(ex)
       }
-      val ex = the[IllegalArgumentException] thrownBy {
+
+      try {
         JournalPluginConfig.fromConfig(
           config(false, "java.lang.String", classOf[MetricsReporterImpl].getName)
             .getConfig("j5ik2o.dynamo-db-journal")
         )
+      } catch {
+        case NonFatal(ex) =>
+          ex.printStackTrace()
       }
-      ex.printStackTrace()
     }
   }
 }

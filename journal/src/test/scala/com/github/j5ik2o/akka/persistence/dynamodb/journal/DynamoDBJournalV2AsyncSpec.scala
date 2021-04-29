@@ -2,17 +2,19 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import akka.persistence.CapabilityFlag
 import akka.persistence.journal.JournalSpec
+import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.dockerController.DockerClientConfigUtil
 import org.scalatest.concurrent.ScalaFutures
-import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBJournalV2AsyncSpec {
-  val dynamoDBHost: String       = DockerClientFactory.instance().dockerHostIpAddress()
-  val dynamoDBPort: Int          = RandomPortUtil.temporaryServerPort()
-  val legacyJournalMode: Boolean = false
+  val dockerClientConfig: DockerClientConfig = DockerClientConfigUtil.buildConfigAwareOfDockerMachine()
+  val dynamoDBHost: String                   = DockerClientConfigUtil.dockerHost(dockerClientConfig)
+  val dynamoDBPort: Int                      = RandomPortUtil.temporaryServerPort()
+  val legacyJournalMode: Boolean             = false
 }
 
 class DynamoDBJournalV2AsyncSpec
@@ -29,22 +31,25 @@ class DynamoDBJournalV2AsyncSpec
     )
     with ScalaFutures
     with DynamoDBSpecSupport {
+
+  private val testTimeFactor: Double = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toDouble
+
   override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = CapabilityFlag.on()
 
-  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  override implicit val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = scaled((30 * testTimeFactor).seconds), interval = scaled((1 * testTimeFactor).seconds))
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBJournalV2AsyncSpec.dynamoDBPort
+  override protected lazy val dynamoDBHost: String = DynamoDBJournalV2AsyncSpec.dynamoDBHost
+  override protected lazy val dynamoDBPort: Int    = DynamoDBJournalV2AsyncSpec.dynamoDBPort
 
   override val legacyJournalTable: Boolean = DynamoDBJournalV2AsyncSpec.legacyJournalMode
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  override protected def afterStartContainers(): Unit = {
     createTable()
   }
 
-  override def afterAll(): Unit = {
+  override protected def beforeStopContainers(): Unit = {
     deleteTable()
-    super.afterAll()
   }
 
 }

@@ -65,12 +65,12 @@ lazy val test = (project in file("test"))
   .settings(
     name := "akka-persistence-dynamodb-test",
     libraryDependencies ++= Seq(
-      amazonaws.dynamodb,
-      testcontainers.testcontainers
+      amazonaws.dynamodb
     ),
     libraryDependencies ++= Seq(
       iheart.ficus,
-      dimafeng.testcontainerScala,
+      j5ik2o.dockerControllerScalaScalatest,
+      j5ik2o.dockerControllerScalaDynamoDBLocal,
       akka.stream
     ).map(_.cross(CrossVersion.for3Use2_13)),
     libraryDependencies ++= {
@@ -103,10 +103,9 @@ lazy val base = (project in file("base"))
       iheart.ficus,
       akka.slf4j,
       akka.stream,
-      akka.testkit                         % Test,
-      akka.streamTestkit                   % Test,
-      scalatest.scalatest                  % Test,
-      dimafeng.testcontainerScalaScalaTest % Test
+      akka.testkit        % Test,
+      akka.streamTestkit  % Test,
+      scalatest.scalatest % Test
     ).map(_.cross(CrossVersion.for3Use2_13)),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {

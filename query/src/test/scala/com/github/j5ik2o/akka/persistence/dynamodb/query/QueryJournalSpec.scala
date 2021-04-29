@@ -48,8 +48,8 @@ abstract class QueryJournalSpec(config: Config)
   implicit val system: ActorSystem  = ActorSystem("test", config)
   implicit val ec: ExecutionContext = system.dispatcher
   val log: LoggingAdapter           = Logging(system, this.getClass)
-  implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
-  implicit val timeout: Timeout     = 30.seconds
+
+  implicit val timeout: Timeout = 30.seconds
 
   val identifier: String = DynamoDBReadJournal.Identifier
 

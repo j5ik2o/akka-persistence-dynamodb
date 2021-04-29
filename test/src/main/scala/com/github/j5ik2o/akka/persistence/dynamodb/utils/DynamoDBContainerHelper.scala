@@ -5,15 +5,14 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
-import com.dimafeng.testcontainers.FixedHostPortGenericContainer
+import com.github.j5ik2o.dockerController.dynamodbLocal.DynamoDBLocalController
+import com.github.j5ik2o.dockerController.{ CmdConfigures, DockerController, DockerControllerHelper, WaitPredicates }
 import org.slf4j.LoggerFactory
-import org.testcontainers.DockerClientFactory
-import org.testcontainers.containers.wait.strategy.Wait
 
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
-trait DynamoDBContainerHelper {
+trait DynamoDBContainerHelper extends DockerControllerHelper {
   LoggerFactory.getLogger(getClass)
 
   protected lazy val region: Regions = Regions.AP_NORTHEAST_1
@@ -22,23 +21,56 @@ trait DynamoDBContainerHelper {
 
   protected lazy val secretAccessKey: String = "x"
 
-  protected lazy val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  protected lazy val dynamoDBHost: String = dockerHost
 
   protected lazy val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
 
   protected lazy val dynamoDBEndpoint: String = s"http://$dynamoDBHost:$dynamoDBPort"
 
-  protected lazy val dynamoDBImageVersion: String = "1.13.4"
+  val dynamoDBLocalController: DynamoDBLocalController = DynamoDBLocalController(dockerClient)(dynamoDBPort)
+    .configureCmds {
+      CmdConfigures(
+        removeContainerCmdConfigure = {
+          _.withForce(true)
+        }
+      )
+    }.asInstanceOf[DynamoDBLocalController]
 
-  protected lazy val dynamoDBImageName: String = s"amazon/dynamodb-local:$dynamoDBImageVersion"
+  override protected val dockerControllers: Vector[DockerController] = Vector(dynamoDBLocalController)
 
-  protected lazy val dynamoDbLocalContainer: FixedHostPortGenericContainer = FixedHostPortGenericContainer(
-    dynamoDBImageName,
-    exposedHostPort = dynamoDBPort,
-    exposedContainerPort = 8000,
-    command = Seq("-Xmx256m", "-jar", "DynamoDBLocal.jar", "-dbPath", ".", "-sharedDb"),
-    waitStrategy = Wait.forListeningPort()
-  )
+  override protected val waitPredicatesSettings: Map[DockerController, WaitPredicateSetting] =
+    Map(
+      dynamoDBLocalController -> WaitPredicateSetting(
+        Duration.Inf,
+        WaitPredicates.forLogMessageByRegex(DynamoDBLocalController.RegexOfWaitPredicate, Some(10.seconds))
+      )
+    )
+
+  protected def startDockerContainers(): Unit = {
+    for (dockerController <- dockerControllers) {
+      createDockerContainer(dockerController, None)
+    }
+    for (dockerController <- dockerControllers) {
+      startDockerContainer(dockerController, None)
+    }
+  }
+
+  protected def stopDockerContainers(): Unit = {
+    for (dockerController <- dockerControllers) {
+      stopDockerContainer(dockerController, None)
+    }
+    for (dockerController <- dockerControllers) {
+      removeDockerContainer(dockerController, None)
+    }
+  }
+
+//  protected lazy val dynamoDbLocalContainer: FixedHostPortGenericContainer = FixedHostPortGenericContainer(
+//    dynamoDBImageName,
+//    exposedHostPort = dynamoDBPort,
+//    exposedContainerPort = 8000,
+//    command = Seq("-Xmx256m", "-jar", "DynamoDBLocal.jar", "-dbPath", ".", "-sharedDb"),
+//    waitStrategy = Wait.forListeningPort()
+//  )
 
   protected lazy val dynamoDBClient: AmazonDynamoDB = {
     AmazonDynamoDBClientBuilder
@@ -66,10 +98,8 @@ trait DynamoDBContainerHelper {
       try {
         val listTablesResult = dynamoDBClient.listTables(2)
         if (tableNames.forall(s => listTablesResult.getTableNames.asScala.contains(s))) {
-          println("finish")
           isWaken = true
         } else {
-          println("waiting...")
           Thread.sleep(1000)
         }
       } catch {

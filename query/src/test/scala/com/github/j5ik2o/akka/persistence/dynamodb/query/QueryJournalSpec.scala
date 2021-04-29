@@ -47,7 +47,7 @@ abstract class QueryJournalSpec(config: Config)
     with Eventually {
   implicit val system: ActorSystem  = ActorSystem("test", config)
   implicit val ec: ExecutionContext = system.dispatcher
-  val log: LoggingAdapter           = Logging(system, this.getClass)
+  private val log: LoggingAdapter   = Logging.getLogger(system, getClass)
 
   implicit val timeout: Timeout = 30.seconds
 

@@ -45,7 +45,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
-import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient

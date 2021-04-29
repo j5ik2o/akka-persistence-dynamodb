@@ -7,7 +7,6 @@ import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
 import com.github.j5ik2o.dockerController.dynamodbLocal.DynamoDBLocalController
 import com.github.j5ik2o.dockerController.{ CmdConfigures, DockerController, DockerControllerHelper, WaitPredicates }
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._

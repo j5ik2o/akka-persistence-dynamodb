@@ -4,7 +4,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PartitionKey, Parti
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.typesafe.config.{ Config, ConfigFactory }
-import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
 import scala.util.control.NonFatal
@@ -19,12 +19,11 @@ class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
 class MetricsReporterImpl extends MetricsReporter
 
-class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
-  "config" - {
-    "load" in {
-      def config(legacyConfigFormat: Boolean, partitionKeyResolverClassName: String, metricsReporterClassName: String) =
-        ConfigFactory.parseString(
-          s"""
+class LegacyConfigFormatSpec extends AnyFunSuite with Matchers {
+  test("load") {
+    def config(legacyConfigFormat: Boolean, partitionKeyResolverClassName: String, metricsReporterClassName: String) =
+      ConfigFactory.parseString(
+        s"""
           |j5ik2o {
           |  dynamo-db-journal {
           |    legacy-config-format = ${legacyConfigFormat}
@@ -64,43 +63,42 @@ class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
           |
           |}
           |""".stripMargin
-        )
-      val journalPluginConfig1 = JournalPluginConfig.fromConfig(
-        config(true, classOf[PartitionKeyResolverImpl].getName, classOf[MetricsReporterImpl].getName)
+      )
+    val journalPluginConfig1 = JournalPluginConfig.fromConfig(
+      config(true, classOf[PartitionKeyResolverImpl].getName, classOf[MetricsReporterImpl].getName)
+        .getConfig("j5ik2o.dynamo-db-journal")
+    )
+    journalPluginConfig1.tableName shouldBe "Journal"
+    journalPluginConfig1.clientConfig.v2ClientConfig.asyncClientConfig.maxConcurrency shouldBe 32
+    journalPluginConfig1.clientConfig.v2ClientConfig.asyncClientConfig.maxPendingConnectionAcquires shouldBe 1000
+
+    val journalPluginConfig2 = JournalPluginConfig.fromConfig(
+      config(false, classOf[PartitionKeyResolverImpl].getName, classOf[MetricsReporterImpl].getName)
+        .getConfig("j5ik2o.dynamo-db-journal")
+    )
+    journalPluginConfig2.tableName shouldBe "Journal"
+    journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxConcurrency shouldBe 50
+    journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxPendingConnectionAcquires shouldBe 10000
+
+    try {
+      JournalPluginConfig.fromConfig(
+        config(false, "Dummy", classOf[MetricsReporterImpl].getName)
           .getConfig("j5ik2o.dynamo-db-journal")
       )
-      journalPluginConfig1.tableName shouldBe "Journal"
-      journalPluginConfig1.clientConfig.v2ClientConfig.asyncClientConfig.maxConcurrency shouldBe 32
-      journalPluginConfig1.clientConfig.v2ClientConfig.asyncClientConfig.maxPendingConnectionAcquires shouldBe 1000
+    } catch {
+      case NonFatal(ex: ClassNotFoundException) =>
+      case ex =>
+        fail(ex)
+    }
 
-      val journalPluginConfig2 = JournalPluginConfig.fromConfig(
-        config(false, classOf[PartitionKeyResolverImpl].getName, classOf[MetricsReporterImpl].getName)
+    try {
+      JournalPluginConfig.fromConfig(
+        config(false, "java.lang.String", classOf[MetricsReporterImpl].getName)
           .getConfig("j5ik2o.dynamo-db-journal")
       )
-      journalPluginConfig2.tableName shouldBe "Journal"
-      journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxConcurrency shouldBe 50
-      journalPluginConfig2.clientConfig.v2ClientConfig.asyncClientConfig.maxPendingConnectionAcquires shouldBe 10000
-
-      try {
-        JournalPluginConfig.fromConfig(
-          config(false, "Dummy", classOf[MetricsReporterImpl].getName)
-            .getConfig("j5ik2o.dynamo-db-journal")
-        )
-      } catch {
-        case NonFatal(ex: ClassNotFoundException) =>
-        case ex =>
-          fail(ex)
-      }
-
-      try {
-        JournalPluginConfig.fromConfig(
-          config(false, "java.lang.String", classOf[MetricsReporterImpl].getName)
-            .getConfig("j5ik2o.dynamo-db-journal")
-        )
-      } catch {
-        case NonFatal(ex) =>
-          ex.printStackTrace()
-      }
+    } catch {
+      case NonFatal(ex) =>
+        ex.printStackTrace()
     }
   }
 }

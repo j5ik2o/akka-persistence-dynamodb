@@ -226,9 +226,9 @@ class DynamoDBReadJournalSpec
 //      // sub.expectComplete()
 //    }
     "currentEventsByPersistenceId" in {
-      implicit val to = Timeout(30.seconds)
-      val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
-      val maxSize     = 500
+      implicit val to: Timeout = Timeout(30.seconds)
+      val pActor               = system.actorOf(Props(new PersistenceTestActor(1)))
+      val maxSize              = 500
       val futures = for (n <- 1 to maxSize) yield {
         pActor ? n
       }
@@ -243,8 +243,8 @@ class DynamoDBReadJournalSpec
     }
     "withPersistenceIds" in withPersistenceIds() { tp =>
       tp.request(Int.MaxValue)
-      implicit val to = Timeout(10.seconds)
-      val pActor      = system.actorOf(Props(new PersistenceTestActor(1)))
+      implicit val to: Timeout = Timeout(10.seconds)
+      val pActor               = system.actorOf(Props(new PersistenceTestActor(1)))
       (pActor ? 1).futureValue
       (pActor ? 2).futureValue
       (pActor ? 3).futureValue
@@ -254,8 +254,12 @@ class DynamoDBReadJournalSpec
     }
   }
 
-  before { createTable() }
+  override protected def afterStartContainers(): Unit = {
+    createTable()
+  }
 
-  after { deleteTable() }
+  override protected def beforeStopContainers(): Unit = {
+    deleteTable()
+  }
 
 }

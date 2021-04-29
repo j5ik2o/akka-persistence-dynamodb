@@ -185,10 +185,6 @@ abstract class QueryJournalSpec(config: Config)
     TestKit.shutdownActorSystem(system)
   }
 
-  override protected def beforeEach(): Unit = {}
-
-  override protected def beforeAll(): Unit = {}
-
   def countJournal: Long = {
     log.debug("countJournal: start")
     val numEvents = readJournal

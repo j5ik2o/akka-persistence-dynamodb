@@ -93,7 +93,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with EventsByPersistenceIdQuery
     with CurrentEventsByTagQuery
     with EventsByTagQuery {
-  LoggerFactory.getLogger(getClass)
+
   private implicit val ec: ExecutionContext = system.dispatcher
   private val dynamicAccess                 = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
   private implicit val _log: LoggingAdapter = system.log

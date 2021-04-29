@@ -36,8 +36,6 @@ final class V1JournalRowReadDriver(
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
-  LoggerFactory.getLogger(getClass)
-
   override def getJournalRows(
       persistenceId: PersistenceId,
       toSequenceNr: SequenceNumber,

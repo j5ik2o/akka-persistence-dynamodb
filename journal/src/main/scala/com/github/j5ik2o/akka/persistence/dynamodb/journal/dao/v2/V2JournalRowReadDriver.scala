@@ -32,8 +32,6 @@ final class V2JournalRowReadDriver(
     case _ =>
   }
 
-  LoggerFactory.getLogger(getClass)
-
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 

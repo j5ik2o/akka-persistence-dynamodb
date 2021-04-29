@@ -40,8 +40,6 @@ class WriteJournalDaoImpl(
 ) extends JournalDaoWithUpdates
     with DaoSupport {
 
-  LoggerFactory.getLogger(getClass)
-
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
   private val writeParallelism: Int = pluginConfig.writeParallelism

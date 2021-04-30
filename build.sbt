@@ -57,7 +57,15 @@ lazy val baseSettings = Seq(
   Test / parallelExecution := false,
   envVars := Map(
     "AWS_REGION" -> "ap-northeast-1"
-  )
+  ),
+  Compile / doc / sources := {
+    val old = (Compile / doc / sources).value
+    if (scalaVersion.value == scala3Version) {
+      Nil
+    } else {
+      old
+    }
+  }
 )
 
 lazy val test = (project in file("test"))
@@ -65,11 +73,15 @@ lazy val test = (project in file("test"))
   .settings(
     name := "akka-persistence-dynamodb-test",
     libraryDependencies ++= Seq(
-      amazonaws.dynamodb
+      amazonaws.dynamodb,
+      scalatest.scalatest,
+      "org.scalactic" %% "scalactic" % "3.2.9"
     ),
     libraryDependencies ++= Seq(
       iheart.ficus,
-      j5ik2o.dockerControllerScalaScalatest,
+      j5ik2o.dockerControllerScalaScalatest excludeAll (
+        ExclusionRule(organization = "org.scalatest")
+      ),
       j5ik2o.dockerControllerScalaDynamoDBLocal,
       akka.stream
     ).map(_.cross(CrossVersion.for3Use2_13)),
@@ -96,16 +108,23 @@ lazy val base = (project in file("base"))
       amazonaws.dynamodb,
       amazonaws.dax,
       softwareamazon.dynamodb,
-      logback.classic  % Test,
-      slf4j.julToSlf4J % Test
+      logback.classic     % Test,
+      slf4j.julToSlf4J    % Test,
+      scalatest.scalatest % Test,
+      "org.scalactic"    %% "scalactic" % "3.2.9"
     ),
     libraryDependencies ++= Seq(
       iheart.ficus,
       akka.slf4j,
       akka.stream,
-      akka.testkit        % Test,
-      akka.streamTestkit  % Test,
-      scalatest.scalatest % Test
+      akka.testkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.streamTestkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      )
     ).map(_.cross(CrossVersion.for3Use2_13)),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -133,15 +152,24 @@ lazy val journal = (project in file("journal"))
   .settings(
     name := "akka-persistence-dynamodb-journal",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
+      "ch.qos.logback"    % "logback-classic" % logbackVersion % Test,
+      "org.slf4j"         % "jul-to-slf4j"    % slf4jVersion   % Test,
+      scalatest.scalatest % Test
     ),
     libraryDependencies ++= Seq(
       akka.persistence,
-      akka.testkit        % Test,
-      akka.streamTestkit  % Test,
-      akka.persistenceTck % Test,
-      scalatest.scalatest % Test
+      akka.testkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.streamTestkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.persistenceTck % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      )
     ).map(_.cross(CrossVersion.for3Use2_13)),
     dependencyOverrides ++= Seq(
       "io.netty"                % "netty-codec-http"   % nettyVersion,
@@ -157,15 +185,24 @@ lazy val snapshot = (project in file("snapshot"))
   .settings(
     name := "akka-persistence-dynamodb-snapshot",
     libraryDependencies ++= Seq(
-      logback.classic  % Test,
-      slf4j.julToSlf4J % Test
+      logback.classic     % Test,
+      slf4j.julToSlf4J    % Test,
+      scalatest.scalatest % Test
     ),
     libraryDependencies ++= Seq(
       akka.persistence,
-      akka.testkit        % Test,
-      akka.streamTestkit  % Test,
-      akka.persistenceTck % Test,
-      scalatest.scalatest % Test
+      akka.testkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.streamTestkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.persistenceTck % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      )
     ).map(_.cross(CrossVersion.for3Use2_13)),
     dependencyOverrides ++= Seq(
       "io.netty"                % "netty-codec-http"   % nettyVersion,
@@ -181,15 +218,24 @@ lazy val query = (project in file("query"))
   .settings(
     name := "akka-persistence-dynamodb-query",
     libraryDependencies ++= Seq(
-      logback.classic  % Test,
-      slf4j.julToSlf4J % Test
+      logback.classic     % Test,
+      slf4j.julToSlf4J    % Test,
+      scalatest.scalatest % Test
     ),
     libraryDependencies ++= Seq(
       akka.persistenceQuery,
-      akka.testkit        % Test,
-      akka.streamTestkit  % Test,
-      akka.persistenceTck % Test,
-      scalatest.scalatest % Test
+      akka.testkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.streamTestkit % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      ),
+      akka.persistenceTck % Test excludeAll (
+        ExclusionRule(organization = "org.scalatest"),
+        ExclusionRule(organization = "org.scalatic")
+      )
     ).map(_.cross(CrossVersion.for3Use2_13)),
     dependencyOverrides ++= Seq(
       "io.netty"                % "netty-codec-http"   % nettyVersion,

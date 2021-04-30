@@ -2,7 +2,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import akka.NotUsed
 import akka.stream.Attributes
-import akka.stream.scaladsl.{ Source, SourceUtils }
+import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 
@@ -19,7 +19,7 @@ trait QueryProcessor {
   def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed]
 
   protected val startTimeSource: Source[Long, NotUsed] =
-    SourceUtils
+    Source
       .lazySource(() => Source.single(System.nanoTime())).mapMaterializedValue(_ => NotUsed)
 
   protected val logLevels: Attributes = Attributes.logLevels(

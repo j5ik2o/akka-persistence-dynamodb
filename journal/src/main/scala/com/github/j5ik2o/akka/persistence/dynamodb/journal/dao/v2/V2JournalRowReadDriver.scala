@@ -87,13 +87,12 @@ final class V2JournalRowReadDriver(
       .via(streamClient.queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful) {
-          val result = Option(response.items)
-            .map(_.asScala)
-            .map(_.map(_.asScala.toMap))
-            .getOrElse(Seq.empty).toVector.headOption.map { head =>
-              head(pluginConfig.columnsDefConfig.sequenceNrColumnName).n().toLong
-            }.getOrElse(0L)
-          Source.single(result)
+          val result = for {
+            items    <- Option(response.items())
+            head     <- items.asScala.headOption
+            sequence <- Option(head.get(pluginConfig.columnsDefConfig.sequenceNrColumnName))
+          } yield sequence.n().toLong
+          Source.single(result.getOrElse(0L))
         } else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
@@ -179,6 +178,7 @@ final class V2JournalRowReadDriver(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): QueryRequest = {
+    val limit = deleted.map(_ => Int.MaxValue).getOrElse(1)
     QueryRequest
       .builder()
       .tableName(pluginConfig.tableName)
@@ -187,13 +187,13 @@ final class V2JournalRowReadDriver(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id")).orNull
       )
       .filterExpression(deleted.map(_ => "#d = :flg").orNull)
+      .projectionExpression((Seq("#snr") ++ deleted.map(_ => "#d")).mkString(","))
       .expressionAttributeNames(
         (Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
-        ) ++ deleted
-          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-        fromSequenceNr
-          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
+        ) ++
+        deleted.map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
       )
       .expressionAttributeValues(
         (Map(
@@ -202,7 +202,7 @@ final class V2JournalRowReadDriver(
           .map(d => Map(":flg" -> AttributeValue.builder().bool(d).build())).getOrElse(Map.empty) ++ fromSequenceNr
           .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)).asJava
       ).scanIndexForward(false)
-      .limit(1)
+      .limit(limit)
       .build()
   }
 

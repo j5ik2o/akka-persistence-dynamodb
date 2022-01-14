@@ -15,7 +15,7 @@ object Dependencies {
     val logbackVersion      = "1.2.10"
     val slf4jVersion        = "1.7.32"
     val ficusVersion        = "1.5.1"
-    val awsSdkV1Version     = "1.12.140"
+    val awsSdkV1Version     = "1.12.141"
     val awsSdkV1DaxVersion  = "1.0.221844.0"
     val awsSdkV2Version     = "2.17.40"
     val reactiveAwsDynamoDB = "1.2.6"

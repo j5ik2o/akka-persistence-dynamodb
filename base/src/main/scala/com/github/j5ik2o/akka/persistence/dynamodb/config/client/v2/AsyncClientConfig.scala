@@ -40,12 +40,12 @@ object AsyncClientConfig extends LoggingSupport {
 
   val DefaultMaxConcurrency: Int                          = 50
   val DefaultMaxPendingConnectionAcquires: Int            = 10000
-  val DefaultReadTimeout: FiniteDuration                  = 30 seconds
-  val DefaultWriteTimeout: FiniteDuration                 = 30 seconds
-  val DefaultConnectionTimeout: FiniteDuration            = 2 seconds
-  val DefaultConnectionAcquisitionTimeout: FiniteDuration = 10 seconds
+  val DefaultReadTimeout: FiniteDuration                  = 30.seconds
+  val DefaultWriteTimeout: FiniteDuration                 = 30.seconds
+  val DefaultConnectionTimeout: FiniteDuration            = 2.seconds
+  val DefaultConnectionAcquisitionTimeout: FiniteDuration = 10.seconds
   val DefaultConnectionTimeToLive: FiniteDuration         = Duration.Zero
-  val DefaultMaxIdleConnectionTimeout: FiniteDuration     = 60 seconds
+  val DefaultMaxIdleConnectionTimeout: FiniteDuration     = 60.seconds
   val DefaultUseConnectionReaperKey: Boolean              = true
   val DefaultUseHttp2Key: Boolean                         = false
   val DefaultHttp2MaxStreams: Long                        = 4294967295L

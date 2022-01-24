@@ -39,19 +39,19 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
   val maxRetryDelayKey                  = "max-retry-delay"
   val unhealthyConsecutiveErrorCountKey = "unhealthy-consecutive-error-count"
 
-  val DefaultConnectionTimeout: FiniteDuration      = 1000 milliseconds
-  val DefaultRequestTimeout: FiniteDuration         = 60000 milliseconds
-  val DefaultHealthCheckTimeout: FiniteDuration     = 1000 milliseconds
-  val DefaultHealthCheckInterval: FiniteDuration    = 5000 milliseconds
-  val DefaultIdleConnectionTimeout: FiniteDuration  = 30000 milliseconds
+  val DefaultConnectionTimeout: FiniteDuration      = 1000.milliseconds
+  val DefaultRequestTimeout: FiniteDuration         = 60000.milliseconds
+  val DefaultHealthCheckTimeout: FiniteDuration     = 1000.milliseconds
+  val DefaultHealthCheckInterval: FiniteDuration    = 5000.milliseconds
+  val DefaultIdleConnectionTimeout: FiniteDuration  = 30000.milliseconds
   val DefaultMinIdleConnectionSize: Int             = 1
   val DefaultWriteRetriesKey: Int                   = 2
   val DefaultMaxPendingConnectionsPerHost: Int      = 10
   val DefaultReadRetries: Int                       = 2
-  val DefaultThreadKeepAlive: FiniteDuration        = 10000 milliseconds
-  val DefaultClusterUpdateInterval: FiniteDuration  = 4000 milliseconds
-  val DefaultClusterUpdateThreshold: FiniteDuration = 125 milliseconds
-  val DefaultMaxRetryDelay: FiniteDuration          = 7000 milliseconds
+  val DefaultThreadKeepAlive: FiniteDuration        = 10000.milliseconds
+  val DefaultClusterUpdateInterval: FiniteDuration  = 4000.milliseconds
+  val DefaultClusterUpdateThreshold: FiniteDuration = 125.milliseconds
+  val DefaultMaxRetryDelay: FiniteDuration          = 7000.milliseconds
   val DefaultUnhealthyConsecutiveErrorCount         = 5
 
   def fromConfig(config: Config): DynamoDBClientV1DaxConfig = {

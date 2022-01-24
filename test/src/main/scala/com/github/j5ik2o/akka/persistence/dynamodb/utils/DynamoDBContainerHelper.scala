@@ -55,7 +55,7 @@ trait DynamoDBContainerHelper {
   val journalTableName  = "Journal"
   val snapshotTableName = "Snapshot"
 
-  protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500 milliseconds
+  protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500.milliseconds
 
   protected val MaxCount = 10
 
@@ -66,10 +66,8 @@ trait DynamoDBContainerHelper {
       try {
         val listTablesResult = dynamoDBClient.listTables(2)
         if (tableNames.forall(s => listTablesResult.getTableNames.asScala.contains(s))) {
-          println("finish")
           isWaken = true
         } else {
-          println("waiting...")
           Thread.sleep(1000)
         }
       } catch {

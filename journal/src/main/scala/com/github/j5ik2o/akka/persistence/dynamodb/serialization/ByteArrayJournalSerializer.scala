@@ -16,14 +16,14 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.serialization
 
-import java.util.UUID
-
 import akka.persistence.PersistentRepr
-import akka.serialization.Serialization
+import akka.serialization.{ AsyncSerializer, Serialization, Serializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
+import java.util.UUID
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 class ByteArrayJournalSerializer(
@@ -32,48 +32,94 @@ class ByteArrayJournalSerializer(
     metricsReporter: Option[MetricsReporter]
 ) extends FlowPersistentReprSerializer[JournalRow] {
 
+  private def serializer: Future[Serializer] = {
+    try Future.successful(serialization.serializerFor(classOf[PersistentRepr]))
+    catch {
+      case ex: Throwable =>
+        Future.failed(ex)
+    }
+  }
+
+  private def toBinary(serializer: Serializer, persistentRepr: PersistentRepr)(implicit
+      ec: ExecutionContext
+  ): Future[Array[Byte]] = {
+    serializer match {
+      case async: AsyncSerializer => async.toBinaryAsync(persistentRepr)
+      case serializer =>
+        try Future.successful(serializer.toBinary(persistentRepr))
+        catch {
+          case ex: Throwable =>
+            Future.failed(ex)
+        }
+    }
+  }
+
+  private def fromBinary(serializer: Serializer, data: Array[Byte])(implicit
+      ec: ExecutionContext
+  ): Future[PersistentRepr] = {
+    val future = serializer match {
+      case async: AsyncSerializer => async.fromBinaryAsync(data, classOf[PersistentRepr].getName)
+      case serializer =>
+        try Future.successful(serializer.fromBinary(data, classOf[PersistentRepr]))
+        catch {
+          case ex: Throwable =>
+            Future.failed(ex)
+        }
+    }
+    future.map(_.asInstanceOf[PersistentRepr])
+  }
+
   override def serialize(
       persistentRepr: PersistentRepr,
       tags: Set[String],
       index: Option[Int]
-  ): Either[Throwable, JournalRow] = {
+  )(implicit ec: ExecutionContext): Future[JournalRow] = {
     val pid        = PersistenceId(persistentRepr.persistenceId)
     val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalSerializeJournal(context))
-    serialization
-      .serialize(persistentRepr)
-      .map(
-        JournalRow(
-          PersistenceId(persistentRepr.persistenceId),
-          SequenceNumber(persistentRepr.sequenceNr),
-          persistentRepr.deleted,
-          _,
-          System.currentTimeMillis(),
-          encodeTags(tags, separator)
-        )
-      ) match {
-      case Success(value) =>
+
+    val future = for {
+      serializer <- serializer
+      serialized <- toBinary(serializer, persistentRepr)
+    } yield JournalRow(
+      PersistenceId(persistentRepr.persistenceId),
+      SequenceNumber(persistentRepr.sequenceNr),
+      persistentRepr.deleted,
+      serialized,
+      System.currentTimeMillis(),
+      encodeTags(tags, separator)
+    )
+
+    future.onComplete {
+      case Success(_) =>
         metricsReporter.foreach(_.afterJournalSerializeJournal(newContext))
-        Right(value)
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalSerializeJournal(newContext, ex))
-        Left(ex)
     }
+
+    future
   }
 
-  override def deserialize(journalRow: JournalRow): Either[Throwable, (PersistentRepr, Set[String], Long)] = {
+  override def deserialize(
+      journalRow: JournalRow
+  )(implicit ec: ExecutionContext): Future[(PersistentRepr, Set[String], Long)] = {
     val pid        = journalRow.persistenceId
     val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalDeserializeJournal(context))
-    serialization
-      .deserialize(journalRow.message, classOf[PersistentRepr])
-      .map((_, decodeTags(journalRow.tags, separator), journalRow.ordering)) match {
-      case Success(value) =>
+
+    val future = for {
+      serializer   <- serializer
+      deserialized <- fromBinary(serializer, journalRow.message)
+    } yield (deserialized, decodeTags(journalRow.tags, separator), journalRow.ordering)
+
+    future.onComplete {
+      case Success(_) =>
         metricsReporter.foreach(_.afterJournalDeserializeJournal(newContext))
-        Right(value)
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalDeserializeJournal(newContext, ex))
-        Left(ex)
     }
+
+    future
   }
+
 }

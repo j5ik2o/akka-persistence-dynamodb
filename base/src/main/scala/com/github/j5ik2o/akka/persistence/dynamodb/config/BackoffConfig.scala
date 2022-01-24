@@ -30,8 +30,8 @@ object BackoffConfig extends LoggingSupport {
   val maxRestartsKey  = "max-restarts"
 
   val DefaultEnabled                    = false
-  val DefaultMinBackoff: FiniteDuration = 3 seconds
-  val DefaultMaxBackoff: FiniteDuration = 30 seconds
+  val DefaultMinBackoff: FiniteDuration = 3.seconds
+  val DefaultMaxBackoff: FiniteDuration = 30.seconds
   val DefaultRandomFactor: Double       = 0.8
   val DefaultMaxRestarts: Int           = 3
 

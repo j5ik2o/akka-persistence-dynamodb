@@ -16,7 +16,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowWriteDriver(
@@ -27,8 +26,7 @@ final class V1JournalRowWriteDriver(
     val partitionKeyResolver: PartitionKeyResolver,
     val sortKeyResolver: SortKeyResolver,
     val metricsReporter: Option[MetricsReporter]
-)(implicit ec: ExecutionContext)
-    extends JournalRowWriteDriver {
+) extends JournalRowWriteDriver {
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")

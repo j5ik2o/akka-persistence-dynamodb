@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
-import java.io.IOException
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
@@ -15,8 +13,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.slf4j.LoggerFactory
 
+import java.io.IOException
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowReadDriver(
@@ -25,8 +23,7 @@ final class V1JournalRowReadDriver(
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: JournalPluginBaseConfig,
     val metricsReporter: Option[MetricsReporter]
-)(implicit ec: ExecutionContext)
-    extends JournalRowReadDriver {
+) extends JournalRowReadDriver {
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")

@@ -41,7 +41,8 @@ class DynamoDBJournalPerfSpec
     with BeforeAndAfterAll
     with ScalaFutures
     with DynamoDBSpecSupport {
-  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = false
+
+  override protected def supportsRejectingNonSerializableObjects: CapabilityFlag = CapabilityFlag.off()
 
   /** Override in order to customize timeouts used for expectMsg, in order to tune the awaits to your journal's perf */
   override def awaitDurationMillis: Long = (60 * sys.env.getOrElse("TEST_TIME_FACTOR", "1").toInt).seconds.toMillis

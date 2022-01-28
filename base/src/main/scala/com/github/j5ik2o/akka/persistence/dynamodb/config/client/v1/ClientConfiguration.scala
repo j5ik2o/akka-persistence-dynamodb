@@ -18,9 +18,9 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 import com.amazonaws.retry.RetryMode
 import com.amazonaws.{ DnsResolver, Protocol, ClientConfiguration => AWSClientConfiguration }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClassCheckUtils
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 import scala.collection.immutable._
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -69,15 +69,15 @@ object ClientConfiguration {
   val nonProxyHostsKey                         = "non-proxy-hosts"
   val proxyAuthenticationMethodsKey            = "proxy-authentication-methods"
 
-  val DefaultConnectionTimeout: FiniteDuration      = AWSClientConfiguration.DEFAULT_CONNECTION_TIMEOUT milliseconds
+  val DefaultConnectionTimeout: FiniteDuration      = AWSClientConfiguration.DEFAULT_CONNECTION_TIMEOUT.milliseconds
   val DefaultMaxConnections: Int                    = AWSClientConfiguration.DEFAULT_MAX_CONNECTIONS
   val DefaultV1RetryPolicyProviderClassName: String = classOf[RetryPolicyProvider.Default].getName
   val DefaultThrottleRetries: Boolean               = AWSClientConfiguration.DEFAULT_THROTTLE_RETRIES
-  val DefaultSocketTimeout: FiniteDuration          = AWSClientConfiguration.DEFAULT_SOCKET_TIMEOUT milliseconds
-  val DefaultRequestTimeout: FiniteDuration         = AWSClientConfiguration.DEFAULT_REQUEST_TIMEOUT milliseconds
+  val DefaultSocketTimeout: FiniteDuration          = AWSClientConfiguration.DEFAULT_SOCKET_TIMEOUT.milliseconds
+  val DefaultRequestTimeout: FiniteDuration         = AWSClientConfiguration.DEFAULT_REQUEST_TIMEOUT.milliseconds
 
   val DefaultClientExecutionTimeout: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_CLIENT_EXECUTION_TIMEOUT milliseconds
+    AWSClientConfiguration.DEFAULT_CLIENT_EXECUTION_TIMEOUT.milliseconds
   val DefaultUseReaper: Boolean                    = AWSClientConfiguration.DEFAULT_USE_REAPER
   val DefaultUseGZIP: Boolean                      = AWSClientConfiguration.DEFAULT_USE_GZIP
   val DefaultResponseMetadataCacheSize: Int        = AWSClientConfiguration.DEFAULT_RESPONSE_METADATA_CACHE_SIZE
@@ -85,10 +85,10 @@ object ClientConfiguration {
   val DefaultUseSecureRandom: Boolean              = false
   val DefaultUseExpectContinue: Boolean            = AWSClientConfiguration.DEFAULT_USE_EXPECT_CONTINUE
   val DefaultCacheResponseMetadata: Boolean        = AWSClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA
-  val DefaultConnectionMaxIdle: FiniteDuration     = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS milliseconds
+  val DefaultConnectionMaxIdle: FiniteDuration     = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS.milliseconds
 
   val DefaultValidateAfterInactivity: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS milliseconds
+    AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS.milliseconds
   val DefaultTcpKeepAlive: Boolean = AWSClientConfiguration.DEFAULT_TCP_KEEP_ALIVE
 
   val DefaultMaxConsecutiveRetiesBeforeThrottling: Int =
@@ -98,71 +98,73 @@ object ClientConfiguration {
   def fromConfig(config: Config): ClientConfiguration = {
     ClientConfiguration(
       connectionTimeout = config
-        .getOrElse[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
-      maxConnections = config.getOrElse[Int](maxConnectionsKey, DefaultMaxConnections),
-      maxErrorRetry = config.getAs[Int](maxErrorRetryKey),
-      retryMode = config.getAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
+        .valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
+      maxConnections = config.valueAs[Int](maxConnectionsKey, DefaultMaxConnections),
+      maxErrorRetry = config.valueOptAs[Int](maxErrorRetryKey),
+      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
       retryPolicyProviderClassName = {
         val className = config
-          .getAs[String](retryPolicyProviderClassNameKey).orElse(Some(DefaultV1RetryPolicyProviderClassName))
+          .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(Some(DefaultV1RetryPolicyProviderClassName))
         ClassCheckUtils.requireClass(classOf[RetryPolicyProvider], className)
       },
-      throttleRetries = config.getOrElse[Boolean](throttleRetriesKey, DefaultThrottleRetries),
-      localAddress = config.getAs[String](localAddressKey),
-      protocol = config.getAs[String](protocolKey).map(s => Protocol.valueOf(s)),
-      socketTimeout = config.getOrElse[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
-      requestTimeout = config.getOrElse[FiniteDuration](requestTimeoutKey, DefaultRequestTimeout),
-      clientExecutionTimeout =
-        config.getOrElse[FiniteDuration](clientExecutionTimeoutKey, DefaultClientExecutionTimeout),
-      userAgentPrefix = config.getAs[String](userAgentPrefixKey),
-      userAgentSuffix = config.getAs[String](userAgentSuffixKey),
-      useReaper = config.getOrElse[Boolean](useReaper, DefaultUseReaper),
-      useGzip = config.getOrElse[Boolean](useGzip, DefaultUseGZIP),
+      throttleRetries = config.valueAs[Boolean](throttleRetriesKey, DefaultThrottleRetries),
+      localAddress = config.valueOptAs[String](localAddressKey),
+      protocol = config.valueOptAs[String](protocolKey).map(s => Protocol.valueOf(s)),
+      socketTimeout = config.valueAs[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
+      requestTimeout = config.valueAs[FiniteDuration](requestTimeoutKey, DefaultRequestTimeout),
+      clientExecutionTimeout = config.valueAs[FiniteDuration](clientExecutionTimeoutKey, DefaultClientExecutionTimeout),
+      userAgentPrefix = config.valueOptAs[String](userAgentPrefixKey),
+      userAgentSuffix = config.valueOptAs[String](userAgentSuffixKey),
+      useReaper = config.valueAs[Boolean](useReaper, DefaultUseReaper),
+      useGzip = config.valueAs[Boolean](useGzip, DefaultUseGZIP),
       socketBufferSizeHint = {
-        (config.getAs[Int](socketSendBufferSizeHintKey), config.getAs[Int](socketReceiveBufferSizeHint)) match {
+        (
+          config.valueOptAs[Int](socketSendBufferSizeHintKey),
+          config.valueOptAs[Int](socketReceiveBufferSizeHint)
+        ) match {
           case (Some(s), Some(r)) => Some(SocketSendBufferSizeHint(s, r))
           case _                  => None
         }
       },
-      signerOverride = config.getAs[String](signerOverrideKey),
-      responseMetadataCacheSize = config.getOrElse[Int](responseMetadataCacheSizeKey, DefaultResponseMetadataCacheSize),
+      signerOverride = config.valueOptAs[String](signerOverrideKey),
+      responseMetadataCacheSize = config.valueAs[Int](responseMetadataCacheSizeKey, DefaultResponseMetadataCacheSize),
       dnsResolverProviderClassName = {
         val className =
-          config.getOrElse[String](dnsResolverProviderClassNameKey, DnsResolverProviderClassName)
+          config.valueAs[String](dnsResolverProviderClassNameKey, DnsResolverProviderClassName)
         ClassCheckUtils.requireClass(classOf[DnsResolverProvider], className)
       },
       dnsResolverClassName = {
-        val className = config.getAs[String](dnsResolverClassNameKey)
+        val className = config.valueOptAs[String](dnsResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[DnsResolver], className)
       },
       secureRandomProviderClassName = {
         val className =
-          config.getOrElse[String](secureRandomProviderClassNameKey, DefaultSecureRandomProviderClassName)
+          config.valueAs[String](secureRandomProviderClassNameKey, DefaultSecureRandomProviderClassName)
         ClassCheckUtils.requireClass(classOf[SecureRandomProvider], className)
       },
-      useSecureRandom = config.getOrElse(useSecureRandomKey, DefaultUseSecureRandom),
-      useExpectContinue = config.getOrElse[Boolean](useExpectContinueKey, DefaultUseExpectContinue),
-      cacheResponseMetadata = config.getOrElse[Boolean](cacheResponseMetadataKey, DefaultCacheResponseMetadata),
-      connectionTtl = config.getAs[Duration](connectionTtlKey),
+      useSecureRandom = config.valueAs(useSecureRandomKey, DefaultUseSecureRandom),
+      useExpectContinue = config.valueAs[Boolean](useExpectContinueKey, DefaultUseExpectContinue),
+      cacheResponseMetadata = config.valueAs[Boolean](cacheResponseMetadataKey, DefaultCacheResponseMetadata),
+      connectionTtl = config.valueOptAs[Duration](connectionTtlKey),
       connectionMaxIdle = config
-        .getOrElse[FiniteDuration](connectionMaxIdleKey, DefaultConnectionMaxIdle),
+        .valueAs[FiniteDuration](connectionMaxIdleKey, DefaultConnectionMaxIdle),
       validateAfterInactivity =
-        config.getOrElse[FiniteDuration](validateAfterInactivityKey, DefaultValidateAfterInactivity),
-      tcpKeepAlive = config.getOrElse[Boolean](tcpKeepAliveKey, DefaultTcpKeepAlive),
-      headers = config.getOrElse[Map[String, String]](headersKey, Map.empty),
+        config.valueAs[FiniteDuration](validateAfterInactivityKey, DefaultValidateAfterInactivity),
+      tcpKeepAlive = config.valueAs[Boolean](tcpKeepAliveKey, DefaultTcpKeepAlive),
+      headers = config.valueAs[Map[String, String]](headersKey, Map.empty),
       maxConsecutiveRetriesBeforeThrottling =
-        config.getOrElse[Int](maxConsecutiveRetriesBeforeThrottlingKey, DefaultMaxConsecutiveRetiesBeforeThrottling),
-      disableHostPrefixInjection = config.getAs[Boolean](disableHostPrefixInjectionKey),
-      proxyProtocol = config.getAs[String](proxyProtocolKey),
-      proxyHost = config.getAs[String](proxyHostKey),
-      proxyPort = config.getAs[Int](proxyPortKey),
-      disableSocketProxy = config.getAs[Boolean](disableSocketProxyKey),
-      proxyUsername = config.getAs[String](proxyUsernameKey),
-      proxyPassword = config.getAs[String](proxyPasswordKey),
-      proxyDomain = config.getAs[String](proxyDomainKey),
-      proxyWorkstation = config.getAs[String](proxyWorkstationKey),
-      nonProxyHosts = config.getAs[String](nonProxyHostsKey),
-      proxyAuthenticationMethods = config.getOrElse[Seq[String]](proxyAuthenticationMethodsKey, Seq.empty)
+        config.valueAs[Int](maxConsecutiveRetriesBeforeThrottlingKey, DefaultMaxConsecutiveRetiesBeforeThrottling),
+      disableHostPrefixInjection = config.valueOptAs[Boolean](disableHostPrefixInjectionKey),
+      proxyProtocol = config.valueOptAs[String](proxyProtocolKey),
+      proxyHost = config.valueOptAs[String](proxyHostKey),
+      proxyPort = config.valueOptAs[Int](proxyPortKey),
+      disableSocketProxy = config.valueOptAs[Boolean](disableSocketProxyKey),
+      proxyUsername = config.valueOptAs[String](proxyUsernameKey),
+      proxyPassword = config.valueOptAs[String](proxyPasswordKey),
+      proxyDomain = config.valueOptAs[String](proxyDomainKey),
+      proxyWorkstation = config.valueOptAs[String](proxyWorkstationKey),
+      nonProxyHosts = config.valueOptAs[String](nonProxyHostsKey),
+      proxyAuthenticationMethods = config.valueAs[Seq[String]](proxyAuthenticationMethodsKey, Seq.empty)
     )
   }
 }

@@ -261,7 +261,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     val serializedFutures = serializer.serialize(atomicWrites)
     val rowsToWriteFutures = serializedFutures.map { serializeFuture =>
-      serializeFuture.recoverWith { case ex =>
+      serializeFuture.recoverWith { case _ =>
         Future.successful(Seq.empty)
       }
     }

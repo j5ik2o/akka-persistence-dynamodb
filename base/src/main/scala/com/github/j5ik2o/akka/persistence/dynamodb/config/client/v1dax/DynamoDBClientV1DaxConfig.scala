@@ -17,7 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax
 
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 
 import scala.concurrent.duration._
 
@@ -58,24 +58,23 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1DaxConfig(
       sourceConfig = config,
-      dispatcherName = config.getAs[String](dispatcherNameKey),
-      connectionTimeout = config.getOrElse[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
-      requestTimeout = config.getOrElse[FiniteDuration](requestTimeoutKey, DefaultRequestTimeout),
-      healthCheckTimeout = config.getOrElse[FiniteDuration](healthCheckTimeoutKey, DefaultHealthCheckTimeout),
-      healthCheckInterval = config.getOrElse[FiniteDuration](healthCheckIntervalKey, DefaultHealthCheckInterval),
-      idleConnectionTimeout = config.getOrElse[FiniteDuration](idleConnectionTimeoutKey, DefaultIdleConnectionTimeout),
-      minIdleConnectionSize = config.getOrElse[Int](minIdleConnectionSizeKey, DefaultMinIdleConnectionSize),
-      writeRetries = config.getOrElse[Int](writeRetriesKey, DefaultWriteRetriesKey),
+      dispatcherName = config.valueOptAs(dispatcherNameKey),
+      connectionTimeout = config.valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
+      requestTimeout = config.valueAs[FiniteDuration](requestTimeoutKey, DefaultRequestTimeout),
+      healthCheckTimeout = config.valueAs[FiniteDuration](healthCheckTimeoutKey, DefaultHealthCheckTimeout),
+      healthCheckInterval = config.valueAs[FiniteDuration](healthCheckIntervalKey, DefaultHealthCheckInterval),
+      idleConnectionTimeout = config.valueAs[FiniteDuration](idleConnectionTimeoutKey, DefaultIdleConnectionTimeout),
+      minIdleConnectionSize = config.valueAs[Int](minIdleConnectionSizeKey, DefaultMinIdleConnectionSize),
+      writeRetries = config.valueAs[Int](writeRetriesKey, DefaultWriteRetriesKey),
       maxPendingConnectionsPerHost =
-        config.getOrElse[Int](maxPendingConnectionsPerHostKey, DefaultMaxPendingConnectionsPerHost),
-      readRetries = config.getOrElse[Int](readRetriesKey, DefaultReadRetries),
-      threadKeepAlive = config.getOrElse[FiniteDuration](threadKeepAliveKey, DefaultThreadKeepAlive),
-      clusterUpdateInterval = config.getOrElse[FiniteDuration](clusterUpdateIntervalKey, DefaultClusterUpdateInterval),
-      clusterUpdateThreshold =
-        config.getOrElse[FiniteDuration](clusterUpdateThresholdKey, DefaultClusterUpdateThreshold),
-      maxRetryDelay = config.getOrElse[FiniteDuration](maxRetryDelayKey, DefaultMaxRetryDelay),
+        config.valueAs[Int](maxPendingConnectionsPerHostKey, DefaultMaxPendingConnectionsPerHost),
+      readRetries = config.valueAs[Int](readRetriesKey, DefaultReadRetries),
+      threadKeepAlive = config.valueAs[FiniteDuration](threadKeepAliveKey, DefaultThreadKeepAlive),
+      clusterUpdateInterval = config.valueAs[FiniteDuration](clusterUpdateIntervalKey, DefaultClusterUpdateInterval),
+      clusterUpdateThreshold = config.valueAs[FiniteDuration](clusterUpdateThresholdKey, DefaultClusterUpdateThreshold),
+      maxRetryDelay = config.valueAs[FiniteDuration](maxRetryDelayKey, DefaultMaxRetryDelay),
       unhealthyConsecutiveErrorCount =
-        config.getOrElse[Int](unhealthyConsecutiveErrorCountKey, DefaultUnhealthyConsecutiveErrorCount)
+        config.valueAs[Int](unhealthyConsecutiveErrorCountKey, DefaultUnhealthyConsecutiveErrorCount)
     )
     logger.debug("result = {}", result)
     result

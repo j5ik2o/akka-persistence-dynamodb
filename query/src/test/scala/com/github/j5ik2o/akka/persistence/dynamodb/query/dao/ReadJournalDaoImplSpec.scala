@@ -15,12 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
-import java.net.URI
 import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestKit
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
@@ -32,15 +32,15 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
-import scala.concurrent.duration._
+import java.net.URI
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
 
 class ReadJournalDaoImplSpec
     extends TestKit(ActorSystem("ReadJournalDaoImplSpec", ConfigFactory.load("query-reference")))
@@ -51,7 +51,7 @@ class ReadJournalDaoImplSpec
 
   implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   val underlyingAsync: JavaDynamoDbAsyncClient = JavaDynamoDbAsyncClient
     .builder()
@@ -66,11 +66,11 @@ class ReadJournalDaoImplSpec
   private val serialization = SerializationExtension(system)
 
   private val journalPluginConfig: JournalPluginConfig =
-    JournalPluginConfig.fromConfig(system.settings.config.getOrElse[Config]("dynamo-db-journal", ConfigFactory.empty()))
+    JournalPluginConfig.fromConfig(system.settings.config.configAs("dynamo-db-journal", ConfigFactory.empty()))
 
   private val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(
-      system.settings.config.getOrElse[Config]("dynamo-db-read-journal", ConfigFactory.empty())
+      system.settings.config.configAs("dynamo-db-read-journal", ConfigFactory.empty())
     )
 
   implicit val ec: ExecutionContextExecutor = system.dispatcher

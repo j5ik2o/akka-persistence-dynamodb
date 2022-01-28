@@ -1,6 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import java.net.URI
 import akka.actor.ActorSystem
 import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
@@ -17,7 +16,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBSpecSupport
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -27,8 +25,9 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbClient
 }
 
-import scala.concurrent.duration._
+import java.net.URI
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
 
 class WriteJournalDaoImplSpec
     extends TestKit(ActorSystem("WriteJournalDaoImplSpec", ConfigFactory.load("query-reference")))
@@ -36,7 +35,7 @@ class WriteJournalDaoImplSpec
     with Matchers
     with ScalaFutures
     with DynamoDBSpecSupport {
-  implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   implicit val mat: ActorMaterializer = ActorMaterializer()
 
@@ -62,12 +61,12 @@ class WriteJournalDaoImplSpec
 
   private val journalPluginConfig: JournalPluginConfig =
     JournalPluginConfig.fromConfig(
-      system.settings.config.getOrElse[Config]("j5ik2o.dynamo-db-journal", ConfigFactory.empty())
+      system.settings.config.getConfig("j5ik2o.dynamo-db-journal").withFallback(ConfigFactory.empty())
     )
 
   private val queryPluginConfig: QueryPluginConfig =
     QueryPluginConfig.fromConfig(
-      system.settings.config.getOrElse[Config]("j5ik2o.dynamo-db-read-journal", ConfigFactory.empty())
+      system.settings.config.getConfig("j5ik2o.dynamo-db-read-journal").withFallback(ConfigFactory.empty())
     )
 
   implicit val ec: ExecutionContextExecutor = system.dispatcher

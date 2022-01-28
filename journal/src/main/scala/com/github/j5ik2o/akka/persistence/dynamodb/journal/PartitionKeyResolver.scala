@@ -1,15 +1,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
-import java.text.DecimalFormat
-
 import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import net.ceedubs.ficus.Ficus._
 
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.text.DecimalFormat
 import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }
 
@@ -88,7 +87,7 @@ object PartitionKeyResolver {
       with ToPersistenceIdOps {
 
     override def separator: String =
-      journalPluginConfig.sourceConfig.getOrElse[String]("persistence-id-separator", PersistenceId.Separator)
+      journalPluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {

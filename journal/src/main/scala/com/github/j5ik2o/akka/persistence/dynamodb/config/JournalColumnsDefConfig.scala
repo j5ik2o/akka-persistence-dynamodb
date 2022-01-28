@@ -15,10 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 object JournalColumnsDefConfig extends LoggingSupport {
 
@@ -36,15 +36,15 @@ object JournalColumnsDefConfig extends LoggingSupport {
     val result = JournalColumnsDefConfig(
       sourceConfig = config,
       partitionKeyColumnName =
-        config.getOrElse[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
-      sortKeyColumnName = config.getOrElse[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
+        config.valueAs[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
+      sortKeyColumnName = config.valueAs[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
       persistenceIdColumnName =
-        config.getOrElse[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
-      sequenceNrColumnName = config.getOrElse[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
-      deletedColumnName = config.getOrElse[String](deletedColumnNameKey, DefaultColumnsDef.DeletedColumnName),
-      messageColumnName = config.getOrElse[String](messageColumnNameKey, DefaultColumnsDef.MessageColumnName),
-      orderingColumnName = config.getOrElse[String](orderingColumnNameKey, DefaultColumnsDef.OrderingColumnName),
-      tagsColumnName = config.getOrElse[String](tagsColumnNameKey, DefaultColumnsDef.TagsColumnName)
+        config.valueAs[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
+      sequenceNrColumnName = config.valueAs[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
+      deletedColumnName = config.valueAs[String](deletedColumnNameKey, DefaultColumnsDef.DeletedColumnName),
+      messageColumnName = config.valueAs[String](messageColumnNameKey, DefaultColumnsDef.MessageColumnName),
+      orderingColumnName = config.valueAs[String](orderingColumnNameKey, DefaultColumnsDef.OrderingColumnName),
+      tagsColumnName = config.valueAs[String](tagsColumnNameKey, DefaultColumnsDef.TagsColumnName)
     )
     logger.debug("result = {}", result)
     result

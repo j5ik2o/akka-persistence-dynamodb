@@ -23,11 +23,10 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 import software.amazon.awssdk.core.retry.RetryMode
 import software.amazon.awssdk.metrics.MetricPublisher
-
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import scala.collection.immutable._
 import scala.concurrent.duration.FiniteDuration
 
@@ -57,7 +56,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV2Config(
       sourceConfig = config,
-      dispatcherName = config.getAs[String](dispatcherNameKey),
+      dispatcherName = config.valueOptAs[String](dispatcherNameKey),
       asyncClientConfig = {
         if (legacyConfigFormat) {
           logger.warn(
@@ -68,38 +67,40 @@ object DynamoDBClientV2Config extends LoggingSupport {
           )
           AsyncClientConfig.fromConfig(config)
         } else
-          AsyncClientConfig.fromConfig(config.getOrElse[Config](asyncKey, ConfigFactory.empty()))
+          AsyncClientConfig.fromConfig(config.configAs(asyncKey, ConfigFactory.empty()))
       },
-      syncClientConfig = SyncClientConfig.fromConfig(config.getOrElse[Config](syncKey, ConfigFactory.empty())),
-      headers = config.getOrElse[Map[String, Seq[String]]](headersKey, Map.empty),
+      syncClientConfig = SyncClientConfig.fromConfig(config.configAs(syncKey, ConfigFactory.empty())),
+      headers = config.mapAs[String](headersKey, Map.empty),
       retryPolicyProviderClassName = {
         val className = config
-          .getAs[String](retryPolicyProviderClassNameKey).orElse(Some(classOf[RetryPolicyProvider.Default].getName))
+          .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(
+            Some(classOf[RetryPolicyProvider.Default].getName)
+          )
         ClassCheckUtils.requireClass(classOf[RetryPolicyProvider], className)
       },
-      retryMode = config.getAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
+      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
       executionInterceptorsProviderClassName = {
-        val className = config.getOrElse[String](
+        val className = config.valueAs[String](
           executionInterceptorProviderClassNameKey,
           classOf[ExecutionInterceptorsProvider.Default].getName
         )
         ClassCheckUtils.requireClass(classOf[ExecutionInterceptorsProvider], className)
       },
       executionInterceptorClassNames = {
-        val classNames = config.getOrElse[Seq[String]](executionInterceptorClassNamesKey, Seq.empty)
-        classNames.map(s => ClassCheckUtils.requireClass(classOf[ExecutionInterceptor], s))
+        val classNames = config.valuesAs[String](executionInterceptorClassNamesKey, Seq.empty)
+        classNames.map(s => ClassCheckUtils.requireClass(classOf[ExecutionInterceptor], s)).toIndexedSeq
       },
-      apiCallTimeout = config.getAs[FiniteDuration](apiCallTimeoutKey),
-      apiCallAttemptTimeout = config.getAs[FiniteDuration](apiCallAttemptTimeoutKey),
+      apiCallTimeout = config.valueOptAs[FiniteDuration](apiCallTimeoutKey),
+      apiCallAttemptTimeout = config.valueOptAs[FiniteDuration](apiCallAttemptTimeoutKey),
       metricPublishersProviderClassName = {
-        val className = config.getOrElse[String](
+        val className = config.valueAs[String](
           metricPublisherProviderClassNameKey,
           classOf[MetricPublishersProvider.Default].getName
         )
         ClassCheckUtils.requireClass(classOf[MetricPublishersProvider], className)
       },
       metricPublisherClassNames = {
-        val classNames = config.getOrElse[Seq[String]](metricPublisherClassNameKey, Seq.empty)
+        val classNames = config.valuesAs[String](metricPublisherClassNameKey, Seq.empty)
         classNames.map(s => ClassCheckUtils.requireClass(classOf[MetricPublisher], s))
       }
     )
@@ -113,7 +114,7 @@ case class DynamoDBClientV2Config(
     dispatcherName: Option[String],
     asyncClientConfig: AsyncClientConfig,
     syncClientConfig: SyncClientConfig,
-    headers: Map[String, Seq[String]],
+    headers: scala.collection.Map[String, scala.collection.Seq[String]],
     retryPolicyProviderClassName: Option[String],
     retryMode: Option[RetryMode],
     executionInterceptorsProviderClassName: String,
@@ -121,5 +122,5 @@ case class DynamoDBClientV2Config(
     apiCallTimeout: Option[FiniteDuration],
     apiCallAttemptTimeout: Option[FiniteDuration],
     metricPublishersProviderClassName: String,
-    metricPublisherClassNames: Seq[String]
+    metricPublisherClassNames: scala.collection.Seq[String]
 )

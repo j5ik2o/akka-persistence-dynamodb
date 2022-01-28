@@ -36,7 +36,7 @@ abstract class CurrentPersistenceIds1Test(config: Config) extends QueryJournalSp
   }
 
   it should "find events from an offset" in {
-    withTestActors() { (actor1, actor2, actor3) =>
+    withTestActors() { (actor1, _, _) =>
       Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a Symbol("success")
 
       withCurrentEventsByPersistenceId()("my-1", 2, 3) { tp =>

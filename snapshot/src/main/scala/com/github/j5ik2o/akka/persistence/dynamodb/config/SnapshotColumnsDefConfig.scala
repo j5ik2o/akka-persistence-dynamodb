@@ -15,10 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 object SnapshotColumnsDefConfig extends LoggingSupport {
 
@@ -32,10 +32,10 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
     val result = SnapshotColumnsDefConfig(
       sourceConfig = config,
       persistenceIdColumnName =
-        config.getOrElse[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
-      sequenceNrColumnName = config.getOrElse[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
-      snapshotColumnName = config.getOrElse[String](snapshotColumnNameKey, DefaultColumnsDef.SnapshotColumnName),
-      createdColumnName = config.getOrElse[String](createdColumnNameKey, DefaultColumnsDef.CreatedColumnName)
+        config.valueAs[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
+      sequenceNrColumnName = config.valueAs[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
+      snapshotColumnName = config.valueAs[String](snapshotColumnNameKey, DefaultColumnsDef.SnapshotColumnName),
+      createdColumnName = config.valueAs[String](createdColumnNameKey, DefaultColumnsDef.CreatedColumnName)
     )
     logger.debug("result = {}", result)
     result

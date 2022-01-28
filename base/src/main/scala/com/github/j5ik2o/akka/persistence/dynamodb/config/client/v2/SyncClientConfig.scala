@@ -15,9 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
@@ -46,25 +46,25 @@ object SyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = SyncClientConfig(
       sourceConfig = config,
-      dispatcherName = config.getAs[String](dispatcherNameKey),
-      socketTimeout = config.getOrElse[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
-      connectionTimeout = config.getOrElse[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
+      dispatcherName = config.valueOptAs[String](dispatcherNameKey),
+      socketTimeout = config.valueAs[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
+      connectionTimeout = config.valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
       connectionAcquisitionTimeout =
-        config.getOrElse[FiniteDuration](connectionAcquisitionTimeoutKey, DefaultConnectionAcquisitionTimeout),
-      maxConnections = config.getOrElse[Int](maxConnectionsKey, DefaultMaxConnections),
-      localAddress = config.getAs[String](localAddressKey),
-      expectContinueEnabled = config.getAs[Boolean](expectContinueEnabledKey),
-      connectionTimeToLive = config.getOrElse[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
+        config.valueAs[FiniteDuration](connectionAcquisitionTimeoutKey, DefaultConnectionAcquisitionTimeout),
+      maxConnections = config.valueAs[Int](maxConnectionsKey, DefaultMaxConnections),
+      localAddress = config.valueOptAs[String](localAddressKey),
+      expectContinueEnabled = config.valueOptAs[Boolean](expectContinueEnabledKey),
+      connectionTimeToLive = config.valueAs[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
       maxIdleConnectionTimeout =
-        config.getOrElse[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
-      useConnectionReaper = config.getOrElse[Boolean](useConnectionReaperKey, DefaultUseConnectionReaper)
+        config.valueAs[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
+      useConnectionReaper = config.valueAs[Boolean](useConnectionReaperKey, DefaultUseConnectionReaper)
     )
     logger.debug("result = {}", result)
     result
   }
 }
 
-case class SyncClientConfig(
+final case class SyncClientConfig(
     sourceConfig: Config,
     dispatcherName: Option[String],
     socketTimeout: FiniteDuration,

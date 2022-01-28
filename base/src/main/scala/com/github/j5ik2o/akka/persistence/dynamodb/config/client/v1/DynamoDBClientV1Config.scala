@@ -21,7 +21,7 @@ import com.amazonaws.monitoring.{ CsmConfigurationProvider, MonitoringListener }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 
 import scala.collection.immutable._
 
@@ -45,46 +45,46 @@ object DynamoDBClientV1Config extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1Config(
       sourceConfig = config,
-      dispatcherName = config.getAs[String](dispatcherNameKey),
+      dispatcherName = config.valueOptAs[String](dispatcherNameKey),
       clientConfiguration =
-        ClientConfiguration.fromConfig(config.getOrElse[Config](clientConfigurationKey, ConfigFactory.empty())),
+        ClientConfiguration.fromConfig(config.configAs(clientConfigurationKey, ConfigFactory.empty())),
       requestMetricCollectorProviderClassName = {
         val className =
-          config.getOrElse(requestMetricCollectorProviderClassNameKey, DefaultRequestMetricCollectorProviderClassName)
+          config.valueAs(requestMetricCollectorProviderClassNameKey, DefaultRequestMetricCollectorProviderClassName)
         ClassCheckUtils.requireClass(classOf[RequestMetricCollectorProvider], className)
       },
       requestMetricCollectorClassName = {
-        val className = config.getAs[String](requestMetricCollectorClassNameKey)
+        val className = config.valueOptAs[String](requestMetricCollectorClassNameKey)
         ClassCheckUtils.requireClass(classOf[RequestMetricCollector], className)
       },
       monitoringListenerProviderClassName = {
         val className = config
-          .getOrElse(monitoringListenerProviderClassNameKey, DefaultMonitoringListenerProviderClassName)
+          .valueAs(monitoringListenerProviderClassNameKey, DefaultMonitoringListenerProviderClassName)
         ClassCheckUtils.requireClass(classOf[MonitoringListenerProvider], className)
       },
       monitoringListenerClassName = {
-        val className = config.getAs[String](monitoringListenerClassNameKey)
+        val className = config.valueOptAs[String](monitoringListenerClassNameKey)
         ClassCheckUtils.requireClass(classOf[MonitoringListener], className)
       },
       requestHandlersProviderClassName = {
         val className = config
-          .getOrElse[String](requestHandlersProviderClassNameKey, classOf[RequestHandlersProvider.Default].getName)
+          .valueAs[String](requestHandlersProviderClassNameKey, classOf[RequestHandlersProvider.Default].getName)
         ClassCheckUtils.requireClass(classOf[RequestHandlersProvider], className)
       },
       requestHandlerClassNames = {
-        val classNames = config.getOrElse[Seq[String]](requestHandlerClassNamesKey, Seq.empty)
-        classNames.map { className => ClassCheckUtils.requireClass(classOf[RequestHandler2], className) }
+        val classNames = config.valuesAs[String](requestHandlerClassNamesKey, Vector.empty)
+        classNames.map { className => ClassCheckUtils.requireClass(classOf[RequestHandler2], className) }.toIndexedSeq
       },
       csmConfigurationProviderProviderClassName = {
         val className = config
-          .getOrElse[String](
+          .valueAs[String](
             csmConfigurationProviderProviderClassNameKey,
             classOf[CsmConfigurationProviderProvider.Default].getName
           )
         ClassCheckUtils.requireClass(classOf[CsmConfigurationProviderProvider], className)
       },
       csmConfigurationProviderClassName = {
-        val className = config.getAs[String](csmConfigurationProviderClassNameKey)
+        val className = config.valueOptAs[String](csmConfigurationProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[CsmConfigurationProvider], className)
       }
     )

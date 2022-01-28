@@ -34,7 +34,7 @@ lazy val baseSettings = Seq(
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(
     Versions.scala212Version,
-    Versions.scala213Version,
+    Versions.scala213Version
   ),
   scalacOptions ++= (
     Seq(

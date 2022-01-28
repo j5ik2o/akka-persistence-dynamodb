@@ -7,17 +7,17 @@ object Dependencies {
     val scala213Version = "2.13.8"
     val scala3Version   = "3.0.1"
 
-    val scalaCollectionCompatVersion = "2.5.0"
+    val scalaCollectionCompatVersion = "2.6.0"
 
     val akka25Version = "2.5.32"
     val akka26Version = "2.6.10"
 
     val logbackVersion      = "1.2.10"
-    val slf4jVersion        = "1.7.32"
+    val slf4jVersion        = "1.7.35"
     val ficusVersion        = "1.5.1"
     val awsSdkV1Version     = "1.12.149"
     val awsSdkV1DaxVersion  = "1.0.221844.0"
-    val awsSdkV2Version     = "2.17.40"
+    val awsSdkV2Version     = "2.17.120"
     val reactiveAwsDynamoDB = "1.2.6"
 
     val scalaTest32Version      = "3.2.4"
@@ -69,7 +69,7 @@ object Dependencies {
   }
 
   object testcontainers {
-    val testcontainersVersion    = "1.16.0"
+    val testcontainersVersion    = "1.16.3"
     val testcontainers           = "org.testcontainers" % "testcontainers" % testcontainersVersion
     val testcontainersLocalStack = "org.testcontainers" % "localstack"     % testcontainersVersion
     val testcontainersKafka      = "org.testcontainers" % "kafka"          % testcontainersVersion

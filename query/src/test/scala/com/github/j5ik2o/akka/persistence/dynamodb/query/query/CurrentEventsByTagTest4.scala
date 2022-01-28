@@ -29,7 +29,7 @@ import scala.concurrent.duration._
 abstract class CurrentEventsByTagTest4(config: Config) extends QueryJournalSpec(config) {
 
   it should "persist and find a tagged event with one tag" in
-  withTestActors() { (actor1, actor2, actor3) =>
+  withTestActors() { (actor1, _, _) =>
     (actor1 ? withTags(1, "one2")).toTry should be a Symbol("success")
 
     withClue("query should find the event by tag") {

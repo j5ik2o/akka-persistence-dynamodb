@@ -30,7 +30,7 @@ import scala.concurrent.duration._
 abstract class CurrentPersistenceIds2Test(config: Config) extends QueryJournalSpec(config) {
 
   it should "find events for actors" in
-  withTestActors() { (actor1, actor2, actor3) =>
+  withTestActors() { (actor1, _, _) =>
     Future.sequence(Range.inclusive(1, 4).map(_ => actor1 ? "a")).toTry should be a Symbol("success")
 
     withCurrentEventsByPersistenceId()("my-1", 1, 1) { tp =>

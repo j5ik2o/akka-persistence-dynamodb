@@ -15,9 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
@@ -39,18 +39,18 @@ object BackoffConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = BackoffConfig(
       sourceConfig = config,
-      enabled = config.getOrElse(enabledKey, DefaultEnabled),
-      minBackoff = config.getOrElse[FiniteDuration](minBackoffKey, DefaultMinBackoff),
-      maxBackoff = config.getOrElse[FiniteDuration](maxBackoffKey, DefaultMaxBackoff),
-      randomFactor = config.getOrElse[Double](randomFactorKey, DefaultRandomFactor),
-      maxRestarts = config.getOrElse[Int](maxRestartsKey, DefaultMaxRestarts)
+      enabled = config.valueAs(enabledKey, DefaultEnabled),
+      minBackoff = config.valueAs[FiniteDuration](minBackoffKey, DefaultMinBackoff),
+      maxBackoff = config.valueAs[FiniteDuration](maxBackoffKey, DefaultMaxBackoff),
+      randomFactor = config.valueAs[Double](randomFactorKey, DefaultRandomFactor),
+      maxRestarts = config.valueAs[Int](maxRestartsKey, DefaultMaxRestarts)
     )
     logger.debug("result = {}", result)
     result
   }
 }
 
-case class BackoffConfig(
+final case class BackoffConfig(
     sourceConfig: Config,
     enabled: Boolean,
     minBackoff: FiniteDuration,

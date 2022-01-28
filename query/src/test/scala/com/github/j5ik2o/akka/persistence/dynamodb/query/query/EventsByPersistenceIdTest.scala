@@ -45,7 +45,7 @@ abstract class EventsByPersistenceIdTest(config: Config) extends QueryJournalSpe
     tp.cancel
   }
 
-  it should "complete when toSeqNr is reached" in withTestActors() { (actor1, actor2, actor3) =>
+  it should "complete when toSeqNr is reached" in withTestActors() { (actor1, _, _) =>
     actor1 ! "a"
     actor1 ! "a"
     actor1 ! "a"

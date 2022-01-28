@@ -1,12 +1,23 @@
 import Dependencies._
 import Dependencies.Versions._
 
-def crossScalacOptions(scalaVersion: String): Seq[String] = CrossVersion.partialVersion(scalaVersion) match {
-  case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
-    Seq.empty
-  case Some((2L, scalaMajor)) if scalaMajor <= 11 =>
-    Seq("-Yinline-warnings")
-}
+ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
+
+def crossScalacOptions(scalaVersion: String): Seq[String] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3L, _)) =>
+      Seq(
+        "-source:3.0-migration",
+        "-Xignore-scala2-macros"
+      )
+    case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+      Seq(
+        "-Ydelambdafy:method",
+        "-target:jvm-1.8",
+        "-Yrangepos",
+        "-Ywarn-unused"
+      )
+  }
 
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
@@ -21,7 +32,11 @@ lazy val baseSettings = Seq(
     )
   ),
   scalaVersion := Versions.scala213Version,
-  crossScalaVersions := Seq(Versions.scala211Version, Versions.scala212Version, Versions.scala213Version),
+  crossScalaVersions := Seq(
+    Versions.scala212Version,
+    Versions.scala213Version,
+    Versions.scala3Version
+  ),
   scalacOptions ++= (
     Seq(
       "-feature",
@@ -42,12 +57,19 @@ lazy val baseSettings = Seq(
     "Seasar Repository" at "https://maven.seasar.org/maven2/",
     "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
   ),
-  ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   Test / publishArtifact := false,
   Test / fork := true,
   Test / parallelExecution := false,
+  Compile / doc / sources := {
+    val old = (Compile / doc / sources).value
+    if (scalaVersion.value == scala3Version) {
+      Nil
+    } else {
+      old
+    }
+  },
   envVars := Map(
     "AWS_REGION" -> "ap-northeast-1"
   )
@@ -58,13 +80,16 @@ lazy val test = (project in file("test"))
   .settings(
     name := "akka-persistence-dynamodb-test",
     libraryDependencies ++= Seq(
-      iheart.ficus,
       amazonaws.dynamodb,
       testcontainers.testcontainers,
       dimafeng.testcontainerScala
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, scalaMajor)) =>
+          Seq(
+            akka.stream(akka26Version)
+          )
         case Some((2L, scalaMajor)) if scalaMajor == 13 =>
           Seq(
             akka.stream(akka26Version)
@@ -73,11 +98,6 @@ lazy val test = (project in file("test"))
           Seq(
             "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
             akka.stream(akka26Version)
-          )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
-          Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
-            akka.stream(akka25Version)
           )
       }
     }
@@ -99,6 +119,14 @@ lazy val base = (project in file("base"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.slf4j(akka26Version),
+            akka.stream(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
+          )
         case Some((2L, scalaMajor)) if scalaMajor == 13 =>
           Seq(
             akka.slf4j(akka26Version),
@@ -115,15 +143,6 @@ lazy val base = (project in file("base"))
             akka.testkit(akka26Version)             % Test,
             akka.streamTestkit(akka26Version)       % Test,
             scalatest.scalatest(scalaTest32Version) % Test
-          )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
-          Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
-            akka.slf4j(akka25Version),
-            akka.stream(akka25Version),
-            akka.testkit(akka25Version)             % Test,
-            akka.streamTestkit(akka25Version)       % Test,
-            scalatest.scalatest(scalaTest30Version) % Test
           )
       }
     },
@@ -146,7 +165,7 @@ lazy val journal = (project in file("journal"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+        case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
             akka.testkit(akka26Version)             % Test,
@@ -154,13 +173,13 @@ lazy val journal = (project in file("journal"))
             akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
-            akka.persistence(akka25Version),
-            akka.testkit(akka25Version)             % Test,
-            akka.streamTestkit(akka25Version)       % Test,
-            akka.persistenceTck(akka25Version)      % Test,
-            scalatest.scalatest(scalaTest30Version) % Test
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
@@ -183,7 +202,7 @@ lazy val snapshot = (project in file("snapshot"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+        case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
             akka.testkit(akka26Version)             % Test,
@@ -191,13 +210,13 @@ lazy val snapshot = (project in file("snapshot"))
             akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
-            akka.persistence(akka25Version),
-            akka.testkit(akka25Version)             % Test,
-            akka.streamTestkit(akka25Version)       % Test,
-            akka.persistenceTck(akka25Version)      % Test,
-            scalatest.scalatest(scalaTest30Version) % Test
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
@@ -220,7 +239,7 @@ lazy val query = (project in file("query"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+        case Some((3L, _)) =>
           Seq(
             akka.persistenceQuery(akka26Version),
             akka.testkit(akka26Version)             % Test,
@@ -228,13 +247,13 @@ lazy val query = (project in file("query"))
             akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
-        case Some((2L, scalaMajor)) if scalaMajor == 11 =>
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
-            akka.persistenceQuery(akka25Version),
-            akka.testkit(akka25Version)             % Test,
-            akka.streamTestkit(akka25Version)       % Test,
-            akka.persistenceTck(akka25Version)      % Test,
-            scalatest.scalatest(scalaTest30Version) % Test
+            akka.persistenceQuery(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
@@ -260,6 +279,11 @@ lazy val benchmark = (project in file("benchmark"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.slf4j(akka26Version),
+            akka.persistenceTyped(akka26Version)
+          )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.slf4j(akka26Version),

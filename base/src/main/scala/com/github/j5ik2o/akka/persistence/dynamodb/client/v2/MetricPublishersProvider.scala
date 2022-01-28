@@ -9,7 +9,7 @@ import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }
 
 trait MetricPublishersProvider {
-  def create: Seq[MetricPublisher]
+  def create: scala.collection.Seq[MetricPublisher]
 }
 
 object MetricPublishersProvider {
@@ -32,7 +32,7 @@ object MetricPublishersProvider {
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MetricPublishersProvider {
 
-    override def create: Seq[MetricPublisher] = {
+    override def create: scala.collection.Seq[MetricPublisher] = {
       val classNames = pluginConfig.clientConfig.v2ClientConfig.metricPublisherClassNames
       classNames.map { className =>
         dynamicAccess

@@ -15,11 +15,11 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
 
 object SnapshotPluginConfig extends LoggingSupport {
 
@@ -42,28 +42,27 @@ object SnapshotPluginConfig extends LoggingSupport {
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
-    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = SnapshotPluginConfig(
       sourceConfig = config,
       legacyConfigFormat,
-      tableName = config.getOrElse[String](tableNameKey, DefaultTableName),
-      columnsDefConfig =
-        SnapshotColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
-      consistentRead = config.getOrElse[Boolean](consistentReadKey, DefaultConsistentRead),
+      tableName = config.valueAs(tableNameKey, DefaultTableName),
+      columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
+      consistentRead = config.valueAs(consistentReadKey, DefaultConsistentRead),
       metricsReporterProviderClassName = {
         val className =
-          config.getOrElse[String](metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       metricsReporterClassName = {
-        val className = config.getAs[String](metricsReporterClassNameKey) // , DefaultMetricsReporterClassName)
+        val className = config.valueOptAs[String](metricsReporterClassNameKey) // , DefaultMetricsReporterClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
-      writeBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](writeBackoffKey, ConfigFactory.empty())),
-      readBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](readBackoffKey, ConfigFactory.empty())),
+      writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
+      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.getOrElse[Config](dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
+        .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
     logger.debug("result = {}", result)
     result

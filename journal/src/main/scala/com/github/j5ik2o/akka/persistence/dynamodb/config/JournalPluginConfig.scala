@@ -16,6 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
 import akka.stream.OverflowStrategy
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
@@ -27,7 +28,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
@@ -81,65 +81,65 @@ object JournalPluginConfig extends LoggingSupport {
 
   def fromConfig(config: Config): JournalPluginConfig = {
     logger.debug("config = {}", config)
-    val legacyConfigFormat = config.getOrElse[Boolean](legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = JournalPluginConfig(
       legacyConfigFormat,
       sourceConfig = config,
-      tableName = config.getOrElse[String](tableNameKey, DefaultTableName),
-      columnsDefConfig =
-        JournalColumnsDefConfig.fromConfig(config.getOrElse[Config](columnsDefKey, ConfigFactory.empty())),
-      getJournalRowsIndexName = config.getOrElse[String](getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
+      tableName = config.valueAs(tableNameKey, DefaultTableName),
+      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
+      getJournalRowsIndexName = config
+        .valueAs(getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
       // ---
-      tagSeparator = config.getOrElse[String](tagSeparatorKey, DefaultTagSeparator),
-      shardCount = config.getOrElse[Int](shardCountKey, DefaultShardCount),
+      tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
+      shardCount = config.valueAs(shardCountKey, DefaultShardCount),
       // ---
       partitionKeyResolverClassName = {
-        val className = config.getOrElse[String](partitionKeyResolverClassNameKey, DefaultPartitionKeyResolverClassName)
+        val className = config.valueAs(partitionKeyResolverClassNameKey, DefaultPartitionKeyResolverClassName)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolver], className)
       },
       partitionKeyResolverProviderClassName = {
-        val className = config
-          .getOrElse[String](partitionKeyResolverProviderClassNameKey, DefaultPartitionKeyResolverProviderClassName)
+        val className =
+          config.valueAs(partitionKeyResolverProviderClassNameKey, DefaultPartitionKeyResolverProviderClassName)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolverProvider], className)
       },
       sortKeyResolverClassName = {
-        val className = config.getOrElse[String](sortKeyResolverClassNameKey, DefaultSortKeyResolverClassName)
+        val className = config.valueAs(sortKeyResolverClassNameKey, DefaultSortKeyResolverClassName)
         ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
       },
       sortKeyResolverProviderClassName = {
         val className =
-          config.getOrElse[String](sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
+          config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
         ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
       },
       // ---
-      queueEnable = config.getOrElse[Boolean](queueEnableKey, DefaultQueueEnable),
-      queueBufferSize = config.getOrElse[Int](queueBufferSizeKey, DefaultQueueBufferSize),
-      queueOverflowStrategy = config.getOrElse[String](queueOverflowStrategyKey, DefaultQueueOverflowStrategy),
-      queueParallelism = config.getOrElse[Int](queueParallelismKey, DefaultQueueParallelism),
+      queueEnable = config.valueAs(queueEnableKey, DefaultQueueEnable),
+      queueBufferSize = config.valueAs(queueBufferSizeKey, DefaultQueueBufferSize),
+      queueOverflowStrategy = config.valueAs(queueOverflowStrategyKey, DefaultQueueOverflowStrategy),
+      queueParallelism = config.valueAs(queueParallelismKey, DefaultQueueParallelism),
       // ---
-      writeParallelism = config.getOrElse[Int](writeParallelismKey, DefaultWriteParallelism),
-      writeBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](writeBackoffKey, ConfigFactory.empty())),
+      writeParallelism = config.valueAs(writeParallelismKey, DefaultWriteParallelism),
+      writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
       // ---
-      queryBatchSize = config.getOrElse[Int](queryBatchSizeKey, DefaultQueryBatchSize),
-      replayBatchSize = config.getOrElse[Int](replayBatchSizeKey, DefaultReplayBatchSize),
-      replayBatchRefreshInterval = config.getAs[FiniteDuration](replayBatchRefreshIntervalKey),
-      readBackoffConfig = BackoffConfig.fromConfig(config.getOrElse[Config](readBackoffKey, ConfigFactory.empty())),
+      queryBatchSize = config.valueAs(queryBatchSizeKey, DefaultQueryBatchSize),
+      replayBatchSize = config.valueAs(replayBatchSizeKey, DefaultReplayBatchSize),
+      replayBatchRefreshInterval = config.valueOptAs[FiniteDuration](replayBatchRefreshIntervalKey),
+      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
       // ---
-      softDeleted = config.getOrElse[Boolean](softDeleteKey, DefaultSoftDeleted),
+      softDeleted = config.valueAs(softDeleteKey, DefaultSoftDeleted),
       metricsReporterClassName = {
-        val className = config.getAs[String](metricsReporterClassNameKey)
+        val className = config.valueOptAs[String](metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       metricsReporterProviderClassName = {
         val className =
-          config.getOrElse[String](metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       clientConfig = DynamoDBClientConfig
-        .fromConfig(config.getOrElse[Config](dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat),
+        .fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat),
       journalRowDriverWrapperClassName = {
-        val className = config.getAs[String]("journal-row-driver-wrapper-class-name")
+        val className = config.valueOptAs[String]("journal-row-driver-wrapper-class-name")
         ClassCheckUtils.requireClass(classOf[JournalRowWriteDriver], className)
       }
     )

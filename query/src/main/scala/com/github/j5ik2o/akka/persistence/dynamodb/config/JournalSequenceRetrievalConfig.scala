@@ -15,9 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
@@ -31,11 +31,11 @@ object JournalSequenceRetrievalConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = JournalSequenceRetrievalConfig(
       sourceConfig = config,
-      batchSize = config.getOrElse[Int](batchSizeKey, 10000),
-      maxTries = config.getOrElse[Int](maxTriesKey, 10),
-      queryDelay = config.getOrElse[FiniteDuration](queryDelayKey, 1.second),
-      maxBackoffQueryDelay = config.getOrElse[FiniteDuration]("max-backoff-query-delay", 1.minute),
-      askTimeout = config.getOrElse[FiniteDuration]("ask-timeout", 1.second)
+      batchSize = config.valueAs(batchSizeKey, 10000),
+      maxTries = config.valueAs(maxTriesKey, 10),
+      queryDelay = config.valueAs[FiniteDuration](queryDelayKey, 1.second),
+      maxBackoffQueryDelay = config.valueAs[FiniteDuration]("max-backoff-query-delay", 1.minute),
+      askTimeout = config.valueAs[FiniteDuration]("ask-timeout", 1.second)
     )
     logger.debug("result = {}", result)
     result

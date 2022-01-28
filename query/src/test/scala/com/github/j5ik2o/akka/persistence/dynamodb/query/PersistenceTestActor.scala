@@ -45,7 +45,7 @@ class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
       debug(s"Deleted up to: $msg")
       ref ! Success(s"deleted-$toSequenceNr")
       context.become(receiveCommand)
-    case msg @ DeleteMessagesFailure(t, toSequenceNr) =>
+    case msg @ DeleteMessagesFailure(t, _) =>
       debug(s"Failed deleting events: $msg")
       ref ! akka.actor.Status.Failure(t)
       context.become(receiveCommand)
@@ -57,7 +57,7 @@ class PersistenceTestActor(id: Int) extends PersistentActor with ActorLogging {
       debug(s"Deleting up to: '$toSequenceNr'")
       context.become(deleteCmd(sender()))
 
-    case event @ Tagged(payload: Any, tags) =>
+    case event @ Tagged(payload: Any, _) =>
       persist(event.copy(payload = s"$payload-$state")) { _ =>
         increment()
         sender() ! event

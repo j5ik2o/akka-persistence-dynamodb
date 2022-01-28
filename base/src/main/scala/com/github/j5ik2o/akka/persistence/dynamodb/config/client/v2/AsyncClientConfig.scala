@@ -15,10 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 
@@ -77,30 +77,30 @@ object AsyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = AsyncClientConfig(
       sourceConfig = config,
-      maxConcurrency = config.getOrElse[Int](maxConcurrencyKey, DefaultMaxConcurrency),
+      maxConcurrency = config.valueAs[Int](maxConcurrencyKey, DefaultMaxConcurrency),
       maxPendingConnectionAcquires =
-        config.getOrElse[Int](maxPendingConnectionAcquiresKey, DefaultMaxPendingConnectionAcquires),
-      readTimeout = config.getOrElse[FiniteDuration](readTimeoutKey, DefaultReadTimeout),
-      writeTimeout = config.getOrElse[FiniteDuration](writeTimeoutKey, DefaultWriteTimeout),
-      connectionTimeout = config.getOrElse[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
+        config.valueAs[Int](maxPendingConnectionAcquiresKey, DefaultMaxPendingConnectionAcquires),
+      readTimeout = config.valueAs[FiniteDuration](readTimeoutKey, DefaultReadTimeout),
+      writeTimeout = config.valueAs[FiniteDuration](writeTimeoutKey, DefaultWriteTimeout),
+      connectionTimeout = config.valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
       connectionAcquisitionTimeout =
-        config.getOrElse[FiniteDuration](connectionAcquisitionTimeoutKey, DefaultConnectionAcquisitionTimeout),
-      connectionTimeToLive = config.getOrElse[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
+        config.valueAs[FiniteDuration](connectionAcquisitionTimeoutKey, DefaultConnectionAcquisitionTimeout),
+      connectionTimeToLive = config.valueAs[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
       maxIdleConnectionTimeout =
-        config.getOrElse[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
-      useConnectionReaper = config.getOrElse[Boolean](useConnectionReaperKey, DefaultUseConnectionReaperKey),
-      threadsOfEventLoopGroup = config.getAs[Int](threadsOfEventLoopGroupKey),
-      useHttp2 = config.getOrElse[Boolean](useHttp2Key, DefaultUseHttp2Key),
-      http2MaxStreams = config.getOrElse[Long](http2MaxStreamsKey, DefaultHttp2MaxStreams),
-      http2InitialWindowSize = config.getOrElse[Int](http2InitialWindowSizeKey, DefaultHttp2InitialWindowSize),
-      http2HealthCheckPingPeriod = config.getAs[FiniteDuration](http2HealthCheckPingPeriodKey)
+        config.valueAs[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
+      useConnectionReaper = config.valueAs[Boolean](useConnectionReaperKey, DefaultUseConnectionReaperKey),
+      threadsOfEventLoopGroup = config.valueOptAs[Int](threadsOfEventLoopGroupKey),
+      useHttp2 = config.valueAs[Boolean](useHttp2Key, DefaultUseHttp2Key),
+      http2MaxStreams = config.valueAs[Long](http2MaxStreamsKey, DefaultHttp2MaxStreams),
+      http2InitialWindowSize = config.valueAs[Int](http2InitialWindowSizeKey, DefaultHttp2InitialWindowSize),
+      http2HealthCheckPingPeriod = config.valueOptAs[FiniteDuration](http2HealthCheckPingPeriodKey)
     )
     logger.debug("result = {}", result)
     result
   }
 }
 
-case class AsyncClientConfig(
+final case class AsyncClientConfig(
     sourceConfig: Config,
     maxConcurrency: Int,
     maxPendingConnectionAcquires: Int,

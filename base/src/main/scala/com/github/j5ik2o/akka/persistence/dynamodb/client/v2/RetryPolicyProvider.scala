@@ -4,7 +4,7 @@ import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.retry.RetryPolicy
 
-import scala.collection.immutable._
+import scala.collection.immutable.Seq
 
 trait RetryPolicyProvider {
   def create: RetryPolicy

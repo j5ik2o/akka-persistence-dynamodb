@@ -16,6 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
+  AwsCredentialsProviderProvider,
   ExecutionInterceptorsProvider,
   MetricPublishersProvider,
   RetryPolicyProvider
@@ -27,23 +28,27 @@ import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 import software.amazon.awssdk.core.retry.RetryMode
 import software.amazon.awssdk.metrics.MetricPublisher
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+
 import scala.collection.immutable._
 import scala.concurrent.duration.FiniteDuration
 
 object DynamoDBClientV2Config extends LoggingSupport {
 
-  val dispatcherNameKey                        = "dispatcher-name"
-  val asyncKey                                 = "async"
-  val syncKey                                  = "sync"
-  val headersKey                               = "headers"
-  val retryModeKey                             = "retry-mode"
-  val retryPolicyProviderClassNameKey          = "retry-policy-provider-class-name"
-  val executionInterceptorClassNamesKey        = "execution-interceptor-class-names"
-  val executionInterceptorProviderClassNameKey = "execution-interceptor-provider-class-name"
-  val apiCallTimeoutKey                        = "api-call-timeout"
-  val apiCallAttemptTimeoutKey                 = "api-call-attempt-timeout"
-  val metricPublisherProviderClassNameKey      = "metric-publishers-provider-class-names"
-  val metricPublisherClassNameKey              = "metric-publisher-class-names"
+  val dispatcherNameKey                          = "dispatcher-name"
+  val asyncKey                                   = "async"
+  val syncKey                                    = "sync"
+  val headersKey                                 = "headers"
+  val retryModeKey                               = "retry-mode"
+  val retryPolicyProviderClassNameKey            = "retry-policy-provider-class-name"
+  val executionInterceptorClassNamesKey          = "execution-interceptor-class-names"
+  val executionInterceptorProviderClassNameKey   = "execution-interceptor-provider-class-name"
+  val apiCallTimeoutKey                          = "api-call-timeout"
+  val apiCallAttemptTimeoutKey                   = "api-call-attempt-timeout"
+  val metricPublisherProviderClassNameKey        = "metric-publishers-provider-class-names"
+  val metricPublisherClassNameKey                = "metric-publisher-class-names"
+  val awsCredentialsProviderProviderClassNameKey = "aws-credentials-provider-provider-class-name"
+  val awsCredentialsProviderClassNameKey         = "aws-credentials-provider-class-name"
 
   val keyNames: Seq[String] =
     Seq(dispatcherNameKey, asyncKey, syncKey, retryModeKey, apiCallTimeoutKey, apiCallAttemptTimeoutKey)
@@ -102,6 +107,17 @@ object DynamoDBClientV2Config extends LoggingSupport {
       metricPublisherClassNames = {
         val classNames = config.valuesAs[String](metricPublisherClassNameKey, Seq.empty)
         classNames.map(s => ClassCheckUtils.requireClass(classOf[MetricPublisher], s))
+      },
+      awsCredentialsProviderProviderClassName = {
+        val className = config.valueAs[String](
+          awsCredentialsProviderProviderClassNameKey,
+          classOf[AwsCredentialsProviderProvider.Default].getName
+        )
+        ClassCheckUtils.requireClass(classOf[AwsCredentialsProviderProvider], className)
+      },
+      awsCredentialsProviderClassName = {
+        val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
+        ClassCheckUtils.requireClass(classOf[AwsCredentialsProvider], className)
       }
     )
     logger.debug("result = {}", result)
@@ -122,5 +138,7 @@ case class DynamoDBClientV2Config(
     apiCallTimeout: Option[FiniteDuration],
     apiCallAttemptTimeout: Option[FiniteDuration],
     metricPublishersProviderClassName: String,
-    metricPublisherClassNames: scala.collection.Seq[String]
+    metricPublisherClassNames: scala.collection.Seq[String],
+    awsCredentialsProviderProviderClassName: String,
+    awsCredentialsProviderClassName: Option[String]
 )

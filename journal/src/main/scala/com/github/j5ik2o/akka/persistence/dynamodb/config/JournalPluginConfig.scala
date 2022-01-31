@@ -149,7 +149,7 @@ object JournalPluginConfig extends LoggingSupport {
 
 }
 
-case class JournalPluginConfig(
+final case class JournalPluginConfig(
     legacyConfigFormat: Boolean,
     sourceConfig: Config,
     tableName: String,

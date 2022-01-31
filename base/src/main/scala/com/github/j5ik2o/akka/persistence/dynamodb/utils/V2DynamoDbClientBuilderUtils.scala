@@ -16,8 +16,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.net.URI
-
 import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
@@ -40,6 +40,8 @@ object V2DynamoDbClientBuilderUtils {
     val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
+    val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+
     var builder =
       DynamoDbClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
@@ -49,6 +51,7 @@ object V2DynamoDbClientBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
+        awsCredentialsProviderProvider.create.foreach { cp => builder = builder.credentialsProvider(cp) }
     }
     pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
     pluginConfig.clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }
@@ -62,6 +65,8 @@ object V2DynamoDbClientBuilderUtils {
     val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
+    val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+
     var builder =
       DynamoDbAsyncClient
         .builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
@@ -71,6 +76,7 @@ object V2DynamoDbClientBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
+        awsCredentialsProviderProvider.create.foreach { cp => builder = builder.credentialsProvider(cp) }
     }
     pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }
     pluginConfig.clientConfig.region.foreach { r => builder = builder.region(Region.of(r)) }

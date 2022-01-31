@@ -20,6 +20,7 @@ import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
+  AWSCredentialsProviderProvider,
   CsmConfigurationProviderProvider,
   MonitoringListenerProvider,
   RequestHandlersProvider,
@@ -36,6 +37,7 @@ object V1DynamoDBClientBuilderUtils {
     val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
     val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
     val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
 
     val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
 
@@ -50,6 +52,9 @@ object V1DynamoDBClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
+        credentialsProviderProvider.create.foreach { cp =>
+          builder.setCredentials(cp)
+        }
     }
     (pluginConfig.clientConfig.region, pluginConfig.clientConfig.endpoint) match {
       case (Some(r), Some(e)) =>
@@ -68,6 +73,7 @@ object V1DynamoDBClientBuilderUtils {
     val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
     val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
     val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
 
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
 
@@ -82,7 +88,11 @@ object V1DynamoDBClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
+        credentialsProviderProvider.create.foreach { cp =>
+          builder.setCredentials(cp)
+        }
     }
+
     (pluginConfig.clientConfig.region, pluginConfig.clientConfig.endpoint) match {
       case (Some(r), Some(e)) =>
         builder.setEndpointConfiguration(new EndpointConfiguration(e, r))

@@ -34,7 +34,7 @@ object CsmConfigurationProviderProvider {
       extends CsmConfigurationProviderProvider {
 
     override def create: Option[CsmConfigurationProvider] = {
-      val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.monitoringListenerClassName
+      val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.csmConfigurationProviderClassName
       classNameOpt.map { className =>
         dynamicAccess
           .createInstanceFor[CsmConfigurationProvider](
@@ -46,7 +46,7 @@ object CsmConfigurationProviderProvider {
           ) match {
           case Success(value) => value
           case Failure(ex) =>
-            throw new PluginException("Failed to initialize MonitoringListener", Some(ex))
+            throw new PluginException("Failed to initialize CsmConfigurationProvider", Some(ex))
         }
       }
     }

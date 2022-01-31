@@ -5,7 +5,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 
-import scala.collection.immutable._
+import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }
 
 trait ExecutionInterceptorsProvider {

@@ -16,8 +16,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
-import java.io.IOException
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.persistence.SnapshotMetadata
@@ -27,6 +25,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ StreamReadClient,
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.serialization.ByteArraySnapshotSerializer
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{
@@ -34,10 +33,12 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
+import java.io.IOException
 import scala.compat.java8.OptionConverters._
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.jdk.CollectionConverters._
 
-class V2SnapshotDaoImpl(
+final class V2SnapshotDaoImpl(
     system: ActorSystem,
     asyncClient: Option[JavaDynamoDbAsyncClient],
     syncClient: Option[JavaDynamoDbSyncClient],
@@ -59,7 +60,7 @@ class V2SnapshotDaoImpl(
   private val streamWriteClient =
     new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
 
-  private val serializer = new ByteArraySnapshotSerializer(serialization)
+  private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
     val req = DeleteItemRequest
@@ -81,7 +82,9 @@ class V2SnapshotDaoImpl(
     }
   }
 
-  override def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed] = {
+  override def deleteAllSnapshots(
+      persistenceId: PersistenceId
+  )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -101,7 +104,7 @@ class V2SnapshotDaoImpl(
   override def deleteUpToMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
-  ): Source[Unit, NotUsed] = {
+  )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -118,7 +121,9 @@ class V2SnapshotDaoImpl(
     queryDelete(queryRequest)
   }
 
-  override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long): Source[Unit, NotUsed] = {
+  override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long)(implicit
+      ec: ExecutionContext
+  ): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -145,7 +150,7 @@ class V2SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
-  ): Source[Unit, NotUsed] = {
+  )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -168,7 +173,28 @@ class V2SnapshotDaoImpl(
     queryDelete(queryRequest)
   }
 
-  override def latestSnapshot(persistenceId: PersistenceId): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+  private def deserialize(
+      rowOpt: Option[Map[String, AttributeValue]]
+  )(implicit ec: ExecutionContext): Future[Option[(SnapshotMetadata, Any)]] = {
+    rowOpt match {
+      case Some(row) =>
+        serializer
+          .deserialize(
+            SnapshotRow(
+              persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
+              sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
+              snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
+              created = row(columnsDefConfig.createdColumnName).n.toLong
+            )
+          ).map(Some(_))
+      case None =>
+        Future.successful(None)
+    }
+  }
+
+  override def latestSnapshot(
+      persistenceId: PersistenceId
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -190,35 +216,19 @@ class V2SnapshotDaoImpl(
       .single(queryRequest).via(streamReadClient.queryFlow)
       .flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
-      }.map { rows =>
-        rows.map { javaRow =>
-          val row = javaRow.asScala
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-      }
+      }.mapAsync(1)(deserialize)
   }
 
   override def snapshotForMaxTimestamp(
       persistenceId: PersistenceId,
       maxTimestamp: Long
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -243,35 +253,19 @@ class V2SnapshotDaoImpl(
     Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
-      }.map { rows =>
-        rows.map { javaRow =>
-          val row = javaRow.asScala
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-      }
+      }.mapAsync(1)(deserialize)
   }
 
   override def snapshotForMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -290,36 +284,20 @@ class V2SnapshotDaoImpl(
     Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
-      }.map { rows =>
-        rows.map { javaRow =>
-          val row = javaRow.asScala
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-      }
+      }.mapAsync(1)(deserialize)
   }
 
   override def snapshotForMaxSequenceNrAndMaxTimestamp(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -344,35 +322,21 @@ class V2SnapshotDaoImpl(
     Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
-          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).headOption)
+          Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
         else {
           val statusCode = response.sdkHttpResponse().statusCode()
           val statusText = response.sdkHttpResponse().statusText()
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
-      }.map { rows =>
-        rows.map { javaRow =>
-          val row = javaRow.asScala
-          serializer
-            .deserialize(
-              SnapshotRow(
-                persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).s),
-                sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).n.toLong),
-                snapshot = row(columnsDefConfig.snapshotColumnName).b.asByteArray(),
-                created = row(columnsDefConfig.createdColumnName).n.toLong
-              )
-            ) match {
-            case Right(value) => value
-            case Left(ex)     => throw ex
-          }
-        }
-      }
+      }.mapAsync(1)(deserialize)
   }
 
-  override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any): Source[Unit, NotUsed] = {
-    serializer
-      .serialize(snapshotMetadata, snapshot) match {
-      case Right(snapshotRow) =>
+  override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any)(implicit
+      ec: ExecutionContext
+  ): Source[Unit, NotUsed] = {
+    Source
+      .future(serializer.serialize(snapshotMetadata, snapshot))
+      .flatMapConcat { snapshotRow =>
         val req = PutItemRequest
           .builder()
           .tableName(tableName)
@@ -398,9 +362,8 @@ class V2SnapshotDaoImpl(
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
           }
         }
-      case Left(ex) =>
-        Source.failed(ex)
-    }
+
+      }
   }
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {

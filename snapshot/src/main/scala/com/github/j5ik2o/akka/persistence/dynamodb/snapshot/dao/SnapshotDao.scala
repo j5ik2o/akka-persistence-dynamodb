@@ -21,40 +21,48 @@ import akka.persistence.SnapshotMetadata
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
+import scala.concurrent.ExecutionContext
+
 trait SnapshotDao {
 
-  def deleteAllSnapshots(persistenceId: PersistenceId): Source[Unit, NotUsed]
+  def deleteAllSnapshots(persistenceId: PersistenceId)(implicit ec: ExecutionContext): Source[Unit, NotUsed]
 
-  def deleteUpToMaxSequenceNr(persistenceId: PersistenceId, maxSequenceNr: SequenceNumber): Source[Unit, NotUsed]
+  def deleteUpToMaxSequenceNr(persistenceId: PersistenceId, maxSequenceNr: SequenceNumber)(implicit
+      ec: ExecutionContext
+  ): Source[Unit, NotUsed]
 
-  def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long): Source[Unit, NotUsed]
+  def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long)(implicit
+      ec: ExecutionContext
+  ): Source[Unit, NotUsed]
 
   def deleteUpToMaxSequenceNrAndMaxTimestamp(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
-  ): Source[Unit, NotUsed]
+  )(implicit ec: ExecutionContext): Source[Unit, NotUsed]
 
-  def latestSnapshot(persistenceId: PersistenceId): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  def latestSnapshot(persistenceId: PersistenceId)(implicit
+      ec: ExecutionContext
+  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
   def snapshotForMaxTimestamp(
       persistenceId: PersistenceId,
       timestamp: Long
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
   def snapshotForMaxSequenceNr(
       persistenceId: PersistenceId,
       sequenceNr: SequenceNumber
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
   def snapshotForMaxSequenceNrAndMaxTimestamp(
       persistenceId: PersistenceId,
       sequenceNr: SequenceNumber,
       timestamp: Long
-  ): Source[Option[(SnapshotMetadata, Any)], NotUsed]
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed]
 
   def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed]
 
-  def save(snapshotMetadata: SnapshotMetadata, snapshot: Any): Source[Unit, NotUsed]
+  def save(snapshotMetadata: SnapshotMetadata, snapshot: Any)(implicit ec: ExecutionContext): Source[Unit, NotUsed]
 
 }

@@ -20,7 +20,7 @@ import akka.persistence.PersistentRepr
 import akka.serialization.{ AsyncSerializer, Serialization, Serializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 
 import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
@@ -75,7 +75,7 @@ class ByteArrayJournalSerializer(
       index: Option[Int]
   )(implicit ec: ExecutionContext): Future[JournalRow] = {
     val pid        = PersistenceId(persistentRepr.persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalSerializeJournal(context))
 
     val future = for {
@@ -104,7 +104,7 @@ class ByteArrayJournalSerializer(
       journalRow: JournalRow
   )(implicit ec: ExecutionContext): Future[(PersistentRepr, Set[String], Long)] = {
     val pid        = journalRow.persistenceId
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalDeserializeJournal(context))
 
     val future = for {

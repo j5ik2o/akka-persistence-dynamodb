@@ -1,21 +1,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
-import java.util.UUID
-
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
+import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
 
 import scala.collection.immutable._
 import scala.util.{ Failure, Success }
-
-trait Context {
-  def id: UUID
-  def persistenceId: PersistenceId
-  def data: Option[Any]
-  def withData(value: Option[Any]): Context
-}
 
 trait MetricsReporter {
 
@@ -73,13 +64,6 @@ trait MetricsReporter {
 }
 
 object MetricsReporter {
-
-  case class DefaultContext(id: UUID, persistenceId: PersistenceId, data: Option[Any]) extends Context {
-    override def withData(value: Option[Any]): Context = copy(data = value)
-  }
-
-  def newContext(id: UUID, persistenceId: PersistenceId, data: Option[Any] = None): Context =
-    DefaultContext(id, persistenceId, data)
 
   class None(pluginConfig: PluginConfig) extends MetricsReporter {
     override def beforeJournalAsyncWriteMessages(context: Context): Context = { context }

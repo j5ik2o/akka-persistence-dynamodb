@@ -7,5 +7,7 @@ trait PluginConfig {
   val tableName: String
   val metricsReporterProviderClassName: String
   val metricsReporterClassName: Option[String]
+  val traceReporterProviderClassName: String
+  val traceReporterClassName: Option[String]
   val clientConfig: DynamoDBClientConfig
 }

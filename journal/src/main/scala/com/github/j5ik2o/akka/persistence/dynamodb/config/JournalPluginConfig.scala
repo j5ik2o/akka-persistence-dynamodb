@@ -26,6 +26,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
   SortKeyResolverProvider
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -56,6 +57,8 @@ object JournalPluginConfig extends LoggingSupport {
   val softDeleteKey                            = "soft-delete"
   val metricsReporterClassNameKey              = "metrics-reporter-class-name"
   val metricsReporterProviderClassNameKey      = "metrics-reporter-provider-class-name"
+  val traceReporterClassNameKey                = "trace-reporter-class-name"
+  val traceReporterProviderClassNameKey        = "trace-reporter-provider-class-name"
   val dynamoCbClientKey                        = "dynamo-db-client"
 
   val DefaultLegacyConfigFormat: Boolean                   = false
@@ -78,6 +81,8 @@ object JournalPluginConfig extends LoggingSupport {
   val DefaultSoftDeleted                                   = true
   val DefaultMetricsReporterClassName: String              = classOf[MetricsReporter.None].getName
   val DefaultMetricsReporterProviderClassName: String      = classOf[MetricsReporterProvider.Default].getName
+  val DefaultTraceReporterClassName: String                = classOf[TraceReporter.None].getName
+  val DefaultTraceReporterProviderClassName: String        = classOf[TraceReporterProvider.Default].getName
 
   def fromConfig(config: Config): JournalPluginConfig = {
     logger.debug("config = {}", config)
@@ -136,6 +141,15 @@ object JournalPluginConfig extends LoggingSupport {
           config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
+      traceReporterProviderClassName = {
+        val className =
+          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+        ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
+      },
+      traceReporterClassName = {
+        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        ClassCheckUtils.requireClass(classOf[TraceReporter], className)
+      },
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat),
       journalRowDriverWrapperClassName = {
@@ -174,6 +188,8 @@ final case class JournalPluginConfig(
     softDeleted: Boolean,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
+    traceReporterProviderClassName: String,
+    traceReporterClassName: Option[String],
     clientConfig: DynamoDBClientConfig,
     journalRowDriverWrapperClassName: Option[String]
 ) extends JournalPluginBaseConfig {

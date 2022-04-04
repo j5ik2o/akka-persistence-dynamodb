@@ -18,6 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -29,6 +30,8 @@ object SnapshotPluginConfig extends LoggingSupport {
   val consistentReadKey                   = "consistent-read"
   val metricsReporterClassNameKey         = "metrics-reporter-class-name"
   val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
+  val traceReporterClassNameKey           = "trace-reporter-class-name"
+  val traceReporterProviderClassNameKey   = "trace-reporter-provider-class-name"
   val dynamoDbClientKey                   = "dynamo-db-client"
   val writeBackoffKey                     = "write-backoff"
   val readBackoffKey                      = "read-backoff"
@@ -39,6 +42,8 @@ object SnapshotPluginConfig extends LoggingSupport {
   val DefaultConsistentRead: Boolean                  = false
   val DefaultMetricsReporterClassName: String         = classOf[MetricsReporter.None].getName
   val DefaultMetricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
+  val DefaultTraceReporterClassName: String           = classOf[TraceReporter.None].getName
+  val DefaultTraceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
@@ -56,8 +61,17 @@ object SnapshotPluginConfig extends LoggingSupport {
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       metricsReporterClassName = {
-        val className = config.valueOptAs[String](metricsReporterClassNameKey) // , DefaultMetricsReporterClassName)
+        val className = config.valueOptAs[String](metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
+      },
+      traceReporterProviderClassName = {
+        val className =
+          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+        ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
+      },
+      traceReporterClassName = {
+        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        ClassCheckUtils.requireClass(classOf[TraceReporter], className)
       },
       writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
       readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
@@ -79,6 +93,8 @@ final case class SnapshotPluginConfig(
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
     writeBackoffConfig: BackoffConfig,
+    traceReporterProviderClassName: String,
+    traceReporterClassName: Option[String],
     readBackoffConfig: BackoffConfig,
     clientConfig: DynamoDBClientConfig
 ) extends PluginConfig {

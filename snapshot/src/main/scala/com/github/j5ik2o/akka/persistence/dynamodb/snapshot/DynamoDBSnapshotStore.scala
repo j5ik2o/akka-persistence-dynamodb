@@ -17,7 +17,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
 import java.util.UUID
-
 import akka.actor.ExtendedActorSystem
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
@@ -28,7 +27,7 @@ import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
@@ -124,7 +123,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       criteria: SnapshotSelectionCriteria
   ): Future[Option[SelectedSnapshot]] = {
     val pid        = PersistenceId(persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreLoadAsync(context))
     val result = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
@@ -153,7 +152,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
     val pid        = PersistenceId(metadata.persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
     val future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
     future.onComplete {
@@ -167,7 +166,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] = {
     val pid        = PersistenceId(metadata.persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
     val future = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
@@ -184,7 +183,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
     val pid        = PersistenceId(persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteWithCriteriaAsync(context))
     val future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>

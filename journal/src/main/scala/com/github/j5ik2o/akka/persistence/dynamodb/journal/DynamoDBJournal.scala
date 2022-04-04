@@ -32,11 +32,12 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils._
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{
@@ -144,6 +145,7 @@ object DynamoDBJournal {
 }
 
 class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
+
   import DynamoDBJournal._
 
   private val id = UUID.randomUUID()
@@ -174,6 +176,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   protected val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(dynamicAccess, journalPluginConfig)
     metricsReporterProvider.create
+  }
+
+  protected val traceReporter: Option[TraceReporter] = {
+    val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, journalPluginConfig)
+    traceReporterProvider.create
   }
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
@@ -254,7 +261,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def asyncWriteMessages(atomicWrites: immutable.Seq[AtomicWrite]): Future[immutable.Seq[Try[Unit]]] = {
     val persistenceId = atomicWrites.head.persistenceId
     val pid           = PersistenceId(persistenceId)
-    val context       = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context       = Context.newContext(UUID.randomUUID(), pid)
     val newContext    = metricsReporter.fold(context)(_.beforeJournalAsyncWriteMessages(context))
 
     implicit val ec: ExecutionContext = pluginExecutor
@@ -301,7 +308,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         }
     }
 
-    val future = execute
+    val future = traceReporter.fold(execute)(_.traceJournalAsyncWriteMessages(newContext)(execute))
 
     writeInProgress.put(persistenceId, future)
     future.onComplete { result: Try[Seq[Try[Unit]]] =>
@@ -318,7 +325,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
     val pid        = PersistenceId(persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncDeleteMessagesTo(context))
 
     implicit val ec: ExecutionContext = defaultExecutionContext
@@ -341,7 +348,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     implicit val ec: ExecutionContext = defaultExecutionContext
 
     val pid        = PersistenceId(persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReplayMessages(context))
     val future = journalDao
       .getMessagesAsPersistentReprWithBatch(
@@ -367,12 +374,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
     implicit val ec: ExecutionContext = defaultExecutionContext
     val pid                           = PersistenceId(persistenceId)
-    val context                       = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context                       = Context.newContext(UUID.randomUUID(), pid)
     val newContext                    = metricsReporter.fold(context)(_.beforeJournalAsyncReadHighestSequenceNr(context))
+
     def fetchHighestSeqNr(): Future[Long] = {
       journalDao
         .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
     }
+
     val future = writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()
       case Some(f) =>
@@ -411,7 +420,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     implicit val ec: ExecutionContext = pluginExecutor
 
     val pid        = PersistenceId(persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncUpdateEvent(context))
     val write      = PersistentRepr(message, sequenceNumber, persistenceId)
 

@@ -18,6 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -41,6 +42,8 @@ object QueryPluginConfig extends LoggingSupport {
   val journalSequenceRetrievalKey         = "journal-sequence-retrieval"
   val metricsReporterClassNameKey         = "metrics-reporter-class-name"
   val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
+  val traceReporterClassNameKey           = "trace-reporter-class-name"
+  val traceReporterProviderClassNameKey   = "trace-reporter-provider-class-name"
   val dynamoDbClientKey                   = "dynamo-db-client"
 
   val DefaultLegacyConfigFormat: Boolean              = false
@@ -56,6 +59,8 @@ object QueryPluginConfig extends LoggingSupport {
   val DefaultConsistentRead: Boolean                  = false
   val DefaultMetricsReporterClassName: String         = classOf[MetricsReporter.None].getName
   val DefaultMetricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
+  val DefaultTraceReporterClassName: String           = classOf[TraceReporter.None].getName
+  val DefaultTraceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
 
   def fromConfig(config: Config): QueryPluginConfig = {
     logger.debug("config = {}", config)
@@ -87,6 +92,15 @@ object QueryPluginConfig extends LoggingSupport {
         val className = config.valueOptAs(metricsReporterClassNameKey) // DefaultMetricsReporterClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
+      traceReporterProviderClassName = {
+        val className =
+          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+        ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
+      },
+      traceReporterClassName = {
+        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        ClassCheckUtils.requireClass(classOf[TraceReporter], className)
+      },
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
@@ -114,6 +128,8 @@ case class QueryPluginConfig(
     journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
+    traceReporterProviderClassName: String,
+    traceReporterClassName: Option[String],
     clientConfig: DynamoDBClientConfig
 ) extends JournalPluginBaseConfig {
   require(shardCount > 1)

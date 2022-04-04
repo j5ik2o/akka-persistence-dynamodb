@@ -20,7 +20,7 @@ import akka.persistence.SnapshotMetadata
 import akka.persistence.serialization.Snapshot
 import akka.serialization.{ AsyncSerializer, Serialization, Serializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.SnapshotRow
 
 import java.util.UUID
@@ -70,7 +70,7 @@ final class ByteArraySnapshotSerializer(serialization: Serialization, metricsRep
       snapshot: Any
   )(implicit ec: ExecutionContext): Future[SnapshotRow] = {
     val pid        = PersistenceId(metadata.persistenceId)
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), pid)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSerializeSnapshot(context))
 
     val future = for {
@@ -94,7 +94,7 @@ final class ByteArraySnapshotSerializer(serialization: Serialization, metricsRep
   }
 
   override def deserialize(snapshotRow: SnapshotRow)(implicit ec: ExecutionContext): Future[(SnapshotMetadata, Any)] = {
-    val context    = MetricsReporter.newContext(UUID.randomUUID(), snapshotRow.persistenceId)
+    val context    = Context.newContext(UUID.randomUUID(), snapshotRow.persistenceId)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeserializeSnapshot(context))
 
     val future = for {

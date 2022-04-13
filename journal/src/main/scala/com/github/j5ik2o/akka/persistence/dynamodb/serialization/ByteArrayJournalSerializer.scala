@@ -80,7 +80,7 @@ class ByteArrayJournalSerializer(
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalSerializeJournal(context))
 
-    val future = for {
+    def future = for {
       serializer <- serializerAsync
       serialized <- toBinaryAsync(serializer, persistentRepr)
     } yield JournalRow(
@@ -109,7 +109,7 @@ class ByteArrayJournalSerializer(
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalDeserializeJournal(context))
 
-    val future = for {
+    def future = for {
       serializer   <- serializerAsync
       deserialized <- fromBinaryAsync(serializer, journalRow.message)
     } yield (deserialized, decodeTags(journalRow.tags, separator), journalRow.ordering)

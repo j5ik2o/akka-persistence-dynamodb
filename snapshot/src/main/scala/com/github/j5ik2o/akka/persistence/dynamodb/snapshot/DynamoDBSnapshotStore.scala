@@ -194,7 +194,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         )
       case _ => Source.empty
     }
-    val future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
+    def future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreLoadAsync(context)(future))
     traced.onComplete {
       case Success(_) =>
@@ -209,7 +209,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(metadata.persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
-    val future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+    def future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
     val traced     = traceReporter.fold(future)(_.traceSnapshotStoreSaveAsync(context)(future))
     traced.onComplete {
       case Success(_) =>
@@ -224,7 +224,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(metadata.persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
-    val future = snapshotDao
+    def future = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())
@@ -242,7 +242,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteWithCriteriaAsync(context))
-    val future = criteria match {
+    def future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
       case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>

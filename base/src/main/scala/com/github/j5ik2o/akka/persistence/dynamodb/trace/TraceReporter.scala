@@ -13,12 +13,37 @@ trait TraceReporter {
 
   def traceJournalAsyncWriteMessages[T](context: Context)(f: => Future[T]): Future[T]
 
+  def traceJournalAsyncDeleteMessagesTo[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceJournalAsyncReplayMessages[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceJournalAsyncReadHighestSequenceNr[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceJournalAsyncUpdateEvent[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceJournalSerializeJournal[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceJournalDeserializeJournal[T](context: Context)(f: => Future[T]): Future[T]
+
 }
 
 object TraceReporter {
 
   class None(pluginConfig: PluginConfig) extends TraceReporter {
     def traceJournalAsyncWriteMessages[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalAsyncDeleteMessagesTo[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalAsyncReplayMessages[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalAsyncReadHighestSequenceNr[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalAsyncUpdateEvent[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalSerializeJournal[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceJournalDeserializeJournal[T](context: Context)(f: => Future[T]): Future[T] = f
+
   }
 
 }

@@ -184,7 +184,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator, metricsReporter)
+    new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator, metricsReporter, traceReporter)
   private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
 
@@ -333,13 +333,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceJournalAsyncDeleteMessagesTo(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncDeleteMessagesTo(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalAsyncDeleteMessagesTo(newContext, ex))
     }
-    future
+    traced
   }
 
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
@@ -362,13 +363,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceJournalAsyncReplayMessages(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncReplayMessages(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalAsyncReplayMessages(newContext, ex))
     }
-    future
+    traced
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
@@ -389,13 +391,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         // If the previous write failed then we can ignore this
         f.recover { case _ => () }.flatMap(_ => fetchHighestSeqNr())
     }
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceJournalAsyncReadHighestSequenceNr(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncReadHighestSequenceNr(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalAsyncReadHighestSequenceNr(newContext, ex))
     }
-    future
+    traced
   }
 
   override def postStop(): Unit = {
@@ -427,13 +430,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     serializer
       .serialize(write).flatMap { serializedRow =>
         val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
-        future.onComplete {
+        val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))
+        traced.onComplete {
           case Success(_) =>
             metricsReporter.foreach(_.afterJournalAsyncUpdateEvent(newContext))
           case Failure(ex) =>
             metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(newContext, ex))
         }
-        future
+        traced
       }.recoverWith { case _ =>
         Future.failed(
           new IllegalArgumentException(

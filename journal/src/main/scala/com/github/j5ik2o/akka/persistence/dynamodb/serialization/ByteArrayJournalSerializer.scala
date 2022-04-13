@@ -21,6 +21,7 @@ import akka.serialization.{ AsyncSerializer, Serialization, Serializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
@@ -29,7 +30,8 @@ import scala.util.{ Failure, Success }
 class ByteArrayJournalSerializer(
     serialization: Serialization,
     separator: String,
-    metricsReporter: Option[MetricsReporter]
+    metricsReporter: Option[MetricsReporter],
+    traceReporter: Option[TraceReporter]
 ) extends FlowPersistentReprSerializer[JournalRow] {
 
   private def serializerAsync: Future[Serializer] = {
@@ -89,15 +91,15 @@ class ByteArrayJournalSerializer(
       System.currentTimeMillis(),
       encodeTags(tags, separator)
     )
+    val traced = traceReporter.fold(future)(_.traceJournalSerializeJournal(context)(future))
 
-    future.onComplete {
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalSerializeJournal(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalSerializeJournal(newContext, ex))
     }
-
-    future
+    traced
   }
 
   override def deserialize(
@@ -112,14 +114,15 @@ class ByteArrayJournalSerializer(
       deserialized <- fromBinaryAsync(serializer, journalRow.message)
     } yield (deserialized, decodeTags(journalRow.tags, separator), journalRow.ordering)
 
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceJournalDeserializeJournal(context)(future))
+
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalDeserializeJournal(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalDeserializeJournal(newContext, ex))
     }
-
-    future
+    traced
   }
 
 }

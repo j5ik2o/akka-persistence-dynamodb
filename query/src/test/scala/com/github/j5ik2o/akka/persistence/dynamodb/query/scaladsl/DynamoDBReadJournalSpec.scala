@@ -115,7 +115,7 @@ class DynamoDBReadJournalSpec
   private val serialization = SerializationExtension(system)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, ",", None)
+    new ByteArrayJournalSerializer(serialization, ",", None, None)
 
   val queryProcessor =
     new V2QueryProcessor(

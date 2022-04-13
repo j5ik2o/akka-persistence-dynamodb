@@ -56,6 +56,7 @@ import scala.collection.immutable._
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.event.LoggingAdapter
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 
 object DynamoDBReadJournal {
   final val Identifier = "j5ik2o.dynamo-db-read-journal"
@@ -108,10 +109,15 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     metricsReporterProvider.create
   }
 
+  protected val traceReporter: Option[TraceReporter] = {
+    val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, queryPluginConfig)
+    traceReporterProvider.create
+  }
+
   private val serialization: Serialization = SerializationExtension(system)
 
   private val serializer: FlowPersistentReprSerializer[JournalRow] =
-    new ByteArrayJournalSerializer(serialization, queryPluginConfig.tagSeparator, metricsReporter)
+    new ByteArrayJournalSerializer(serialization, queryPluginConfig.tagSeparator, metricsReporter, traceReporter)
 
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
   private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _

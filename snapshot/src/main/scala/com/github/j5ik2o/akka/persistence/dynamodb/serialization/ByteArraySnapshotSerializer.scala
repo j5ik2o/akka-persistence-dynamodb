@@ -22,13 +22,17 @@ import akka.serialization.{ AsyncSerializer, Serialization, Serializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.SnapshotRow
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-final class ByteArraySnapshotSerializer(serialization: Serialization, metricsReporter: Option[MetricsReporter])
-    extends SnapshotSerializer[SnapshotRow] {
+final class ByteArraySnapshotSerializer(
+    serialization: Serialization,
+    metricsReporter: Option[MetricsReporter],
+    traceReporter: Option[TraceReporter]
+) extends SnapshotSerializer[SnapshotRow] {
 
   private def serializerAsync: Future[Serializer] = {
     try Future.successful(serialization.serializerFor(classOf[Snapshot]))
@@ -82,15 +86,15 @@ final class ByteArraySnapshotSerializer(serialization: Serialization, metricsRep
       metadata.timestamp,
       serialized
     )
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreSerializeSnapshot(context)(future))
 
-    future.onComplete {
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreSerializeSnapshot(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreSerializeSnapshot(newContext, ex))
     }
-
-    future
+    traced
   }
 
   override def deserialize(snapshotRow: SnapshotRow)(implicit ec: ExecutionContext): Future[(SnapshotMetadata, Any)] = {
@@ -105,15 +109,15 @@ final class ByteArraySnapshotSerializer(serialization: Serialization, metricsRep
         SnapshotMetadata(snapshotRow.persistenceId.asString, snapshotRow.sequenceNumber.value, snapshotRow.created)
       (snapshotMetadata, deserialized.data)
     }
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreDeserializeSnapshot(context)(future))
 
-    future.onComplete {
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreDeserializeSnapshot(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreDeserializeSnapshot(newContext, ex))
     }
-
-    future
+    traced
   }
 
 }

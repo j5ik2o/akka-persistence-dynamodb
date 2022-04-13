@@ -27,6 +27,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.serialization.ByteArraySnapshotSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -39,7 +40,8 @@ final class V1SnapshotDaoImpl(
     syncClient: Option[AmazonDynamoDB],
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig,
-    metricsReporter: Option[MetricsReporter]
+    metricsReporter: Option[MetricsReporter],
+    traceReporter: Option[TraceReporter]
 ) extends SnapshotDao {
   (asyncClient, syncClient) match {
     case (None, None) =>
@@ -55,7 +57,7 @@ final class V1SnapshotDaoImpl(
   private val streamWriteClient =
     new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
 
-  private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter)
+  private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 
   override def deleteAllSnapshots(
       persistenceId: PersistenceId

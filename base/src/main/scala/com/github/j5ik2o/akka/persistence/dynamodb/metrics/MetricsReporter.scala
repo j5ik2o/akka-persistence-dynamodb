@@ -8,8 +8,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
 import scala.collection.immutable._
 import scala.util.{ Failure, Success }
 
-/**
-  * MetricsReporter.
+/** MetricsReporter.
   */
 trait MetricsReporter {
 

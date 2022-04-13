@@ -9,8 +9,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-/**
-  * TraceReporter.
+/** TraceReporter.
   */
 trait TraceReporter {
 

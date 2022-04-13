@@ -77,7 +77,7 @@ final class ByteArraySnapshotSerializer(
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSerializeSnapshot(context))
 
-    val future = for {
+    def future = for {
       serializer <- serializerAsync
       serialized <- toBinaryAsync(serializer, Snapshot(snapshot))
     } yield SnapshotRow(
@@ -101,7 +101,7 @@ final class ByteArraySnapshotSerializer(
     val context    = Context.newContext(UUID.randomUUID(), snapshotRow.persistenceId)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeserializeSnapshot(context))
 
-    val future = for {
+    def future = for {
       serializer   <- serializerAsync
       deserialized <- fromBinaryAsync(serializer, snapshotRow.snapshot)
     } yield {

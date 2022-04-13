@@ -330,10 +330,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     implicit val ec: ExecutionContext = defaultExecutionContext
 
-    val future = journalDao
+    def future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
     val traced = traceReporter.fold(future)(_.traceJournalAsyncDeleteMessagesTo(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncDeleteMessagesTo(newContext))
@@ -351,7 +352,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReplayMessages(context))
-    val future = journalDao
+    def future = journalDao
       .getMessagesAsPersistentReprWithBatch(
         persistenceId,
         fromSequenceNr,
@@ -384,7 +385,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
     }
 
-    val future = writeInProgress.get(persistenceId) match {
+    def future = writeInProgress.get(persistenceId) match {
       case None    => fetchHighestSeqNr()
       case Some(f) =>
         // we must fetch the highest sequence number after the previous write has completed
@@ -429,7 +430,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     serializer
       .serialize(write).flatMap { serializedRow =>
-        val future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
+        def future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
         val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))
         traced.onComplete {
           case Success(_) =>

@@ -8,6 +8,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
 import scala.collection.immutable._
 import scala.util.{ Failure, Success }
 
+/**
+  * MetricsReporter.
+  */
 trait MetricsReporter {
 
   def beforeJournalAsyncWriteMessages(context: Context): Context = { context }

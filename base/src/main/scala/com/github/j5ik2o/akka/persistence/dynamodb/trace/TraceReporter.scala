@@ -9,6 +9,9 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
+/**
+  * TraceReporter.
+  */
 trait TraceReporter {
 
   def traceJournalAsyncWriteMessages[T](context: Context)(f: => Future[T]): Future[T]

@@ -16,8 +16,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import java.util.UUID
 import akka.actor.ExtendedActorSystem
+import akka.event.LoggingAdapter
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
 import akka.serialization.SerializationExtension
@@ -29,6 +29,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, C
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{
@@ -36,9 +37,9 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
+import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
-import akka.event.LoggingAdapter
 
 object DynamoDBSnapshotStore {
 
@@ -72,6 +73,11 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     metricsReporterProvider.create
   }
 
+  protected val traceReporter: Option[TraceReporter] = {
+    val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, pluginConfig)
+    traceReporterProvider.create
+  }
+
   override def postStop(): Unit = {
     if (v2JavaAsyncClient != null)
       v2JavaAsyncClient.close()
@@ -87,32 +93,80 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           case ClientType.Async =>
             val client =
               ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaAsyncClient = c)
-            new V2SnapshotDaoImpl(system, Some(client), None, serialization, pluginConfig, metricsReporter)
+            new V2SnapshotDaoImpl(
+              system,
+              Some(client),
+              None,
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
           case ClientType.Sync =>
             val client =
               ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)(c =>
                 v2JavaSyncClient = c
               )
-            new V2SnapshotDaoImpl(system, None, Some(client), serialization, pluginConfig, metricsReporter)
+            new V2SnapshotDaoImpl(
+              system,
+              None,
+              Some(client),
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
         }
       case ClientVersion.V1 =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
-            new V1SnapshotDaoImpl(system, Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(
+              system,
+              Some(v1JavaAsyncClient),
+              None,
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
           case ClientType.Sync =>
             v1JavaSyncClient =
               ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
-            new V1SnapshotDaoImpl(system, None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(
+              system,
+              None,
+              Some(v1JavaSyncClient),
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
         }
       case ClientVersion.V1Dax =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             v1JavaAsyncClient = ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(system, Some(v1JavaAsyncClient), None, serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(
+              system,
+              Some(v1JavaAsyncClient),
+              None,
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
           case ClientType.Sync =>
             v1JavaSyncClient = ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
-            new V1SnapshotDaoImpl(system, None, Some(v1JavaSyncClient), serialization, pluginConfig, metricsReporter)
+            new V1SnapshotDaoImpl(
+              system,
+              None,
+              Some(v1JavaSyncClient),
+              serialization,
+              pluginConfig,
+              metricsReporter,
+              traceReporter
+            )
         }
 
     }
@@ -141,13 +195,14 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case _ => Source.empty
     }
     val future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreLoadAsync(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreLoadAsync(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreLoadAsync(newContext, ex))
     }
-    future
+    traced
   }
 
   override def saveAsync(metadata: SnapshotMetadata, snapshot: Any): Future[Unit] = {
@@ -155,13 +210,14 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
     val future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
-    future.onComplete {
+    val traced     = traceReporter.fold(future)(_.traceSnapshotStoreSaveAsync(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreSaveAsync(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreSaveAsync(newContext, ex))
     }
-    future
+    traced
   }
 
   override def deleteAsync(metadata: SnapshotMetadata): Future[Unit] = {
@@ -172,13 +228,14 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreDeleteAsync(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreDeleteAsync(newContext, ex))
     }
-    future
+    traced
   }
 
   override def deleteAsync(persistenceId: String, criteria: SnapshotSelectionCriteria): Future[Unit] = {
@@ -200,13 +257,14 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           ).map(_ => ())
       case _ => Future.successful(())
     }
-    future.onComplete {
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreDeleteWithCriteriaAsync(context)(future))
+    traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreDeleteWithCriteriaAsync(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreDeleteWithCriteriaAsync(newContext, ex))
     }
-    future
+    traced
   }
 
 }

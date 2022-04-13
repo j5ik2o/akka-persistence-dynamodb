@@ -25,6 +25,18 @@ trait TraceReporter {
 
   def traceJournalDeserializeJournal[T](context: Context)(f: => Future[T]): Future[T]
 
+  def traceSnapshotStoreLoadAsync[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceSnapshotStoreSaveAsync[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceSnapshotStoreDeleteAsync[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceSnapshotStoreDeleteWithCriteriaAsync[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceSnapshotStoreSerializeSnapshot[T](context: Context)(f: => Future[T]): Future[T]
+
+  def traceSnapshotStoreDeserializeSnapshot[T](context: Context)(f: => Future[T]): Future[T]
+
 }
 
 object TraceReporter {
@@ -43,6 +55,18 @@ object TraceReporter {
     def traceJournalSerializeJournal[T](context: Context)(f: => Future[T]): Future[T] = f
 
     def traceJournalDeserializeJournal[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreLoadAsync[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreSaveAsync[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreDeleteAsync[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreDeleteWithCriteriaAsync[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreSerializeSnapshot[T](context: Context)(f: => Future[T]): Future[T] = f
+
+    def traceSnapshotStoreDeserializeSnapshot[T](context: Context)(f: => Future[T]): Future[T] = f
 
   }
 

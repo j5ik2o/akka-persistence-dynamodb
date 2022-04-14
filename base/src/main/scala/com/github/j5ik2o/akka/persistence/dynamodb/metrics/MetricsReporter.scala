@@ -10,7 +10,7 @@ import scala.util.{ Failure, Success }
 
 /** MetricsReporter.
   */
-trait MetricsReporter {
+abstract class MetricsReporter(val pluginConfig: PluginConfig) {
 
   def beforeJournalAsyncWriteMessages(context: Context): Context = { context }
   def afterJournalAsyncWriteMessages(context: Context): Unit = {}
@@ -67,7 +67,7 @@ trait MetricsReporter {
 
 object MetricsReporter {
 
-  class None(pluginConfig: PluginConfig) extends MetricsReporter {
+  class None(pluginConfig: PluginConfig) extends MetricsReporter(pluginConfig) {
     override def beforeJournalAsyncWriteMessages(context: Context): Context = { context }
     override def afterJournalAsyncWriteMessages(context: Context): Unit = {}
     override def errorJournalAsyncWriteMessages(context: Context, ex: Throwable): Unit = {}

@@ -15,7 +15,7 @@ class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
 }
 
-class MetricsReporterImpl extends MetricsReporter
+class MetricsReporterImpl(pluginConfig: PluginConfig) extends MetricsReporter(pluginConfig)
 
 class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
   "config" - {

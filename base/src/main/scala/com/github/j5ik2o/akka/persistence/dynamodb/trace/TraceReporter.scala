@@ -12,7 +12,7 @@ import scala.util.{ Failure, Success }
 
 /** TraceReporter.
   */
-trait TraceReporter {
+abstract class TraceReporter(val pluginConfig: PluginConfig) {
 
   def traceJournalAsyncWriteMessages[T](@unused context: Context)(f: => Future[T]): Future[T] = f
 
@@ -44,7 +44,7 @@ trait TraceReporter {
 
 object TraceReporter {
 
-  final class None(@unused pluginConfig: PluginConfig) extends TraceReporter
+  final class None(pluginConfig: PluginConfig) extends TraceReporter(pluginConfig)
 
 }
 

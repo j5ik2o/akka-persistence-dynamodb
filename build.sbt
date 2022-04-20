@@ -288,11 +288,6 @@ lazy val benchmark = (project in file("benchmark"))
             akka.slf4j(akka26Version),
             akka.persistenceTyped(akka26Version)
           )
-        case _ =>
-          Seq(
-            akka.slf4j(akka25Version),
-            akka.persistence(akka25Version)
-          )
       }
     }
   )

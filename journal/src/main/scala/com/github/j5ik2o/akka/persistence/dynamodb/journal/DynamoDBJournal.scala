@@ -266,8 +266,8 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     implicit val ec: ExecutionContext = pluginExecutor
 
-    val serializedFutures = serializer.serialize(atomicWrites)
-    val rowsToWriteFutures = serializedFutures.map { serializeFuture =>
+    def serializedFutures = serializer.serialize(atomicWrites)
+    def rowsToWriteFutures = serializedFutures.map { serializeFuture =>
       serializeFuture.recoverWith { case _ =>
         Future.successful(Seq.empty)
       }
@@ -333,6 +333,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     def future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
       .runWith(Sink.head).map(_ => ())
+
     val traced = traceReporter.fold(future)(_.traceJournalAsyncDeleteMessagesTo(context)(future))
 
     traced.onComplete {
@@ -352,6 +353,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReplayMessages(context))
+
     def future = journalDao
       .getMessagesAsPersistentReprWithBatch(
         persistenceId,
@@ -364,7 +366,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))
       .runForeach(recoveryCallback)
       .map(_ => ())
+
     val traced = traceReporter.fold(future)(_.traceJournalAsyncReplayMessages(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncReplayMessages(newContext))
@@ -392,13 +396,16 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         // If the previous write failed then we can ignore this
         f.recover { case _ => () }.flatMap(_ => fetchHighestSeqNr())
     }
+
     val traced = traceReporter.fold(future)(_.traceJournalAsyncReadHighestSequenceNr(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterJournalAsyncReadHighestSequenceNr(newContext))
       case Failure(ex) =>
         metricsReporter.foreach(_.errorJournalAsyncReadHighestSequenceNr(newContext, ex))
     }
+
     traced
   }
 
@@ -428,17 +435,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncUpdateEvent(context))
     val write      = PersistentRepr(message, sequenceNumber, persistenceId)
 
-    serializer
+    def future = serializer
       .serialize(write).flatMap { serializedRow =>
-        def future = journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
-        val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))
-        traced.onComplete {
-          case Success(_) =>
-            metricsReporter.foreach(_.afterJournalAsyncUpdateEvent(newContext))
-          case Failure(ex) =>
-            metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(newContext, ex))
-        }
-        traced
+        journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
       }.recoverWith { case _ =>
         Future.failed(
           new IllegalArgumentException(
@@ -447,5 +446,15 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         )
       }
 
+    val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))
+
+    traced.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterJournalAsyncUpdateEvent(newContext))
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorJournalAsyncUpdateEvent(newContext, ex))
+    }
+
+    traced
   }
 }

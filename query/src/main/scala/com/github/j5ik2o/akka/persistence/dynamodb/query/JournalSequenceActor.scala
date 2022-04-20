@@ -61,8 +61,7 @@ object JournalSequenceActor {
     def nonEmpty: Boolean = !isEmpty
   }
 
-  /** Efficient representation of missing elements using NumericRanges.
-    * It can be seen as a collection of OrderingIds
+  /** Efficient representation of missing elements using NumericRanges. It can be seen as a collection of OrderingIds
     */
   private case class MissingElements(elements: Seq[Range[OrderingId]]) {
 
@@ -115,9 +114,9 @@ object JournalSequenceActor {
 
 }
 
-/** To support the EventsByTag query, this actor keeps track of which rows are visible in the database.
-  * This is required to guarantee the EventByTag does not skip any rows in case rows with a higher (ordering) id are
-  * visible in the database before rows with a lower (ordering) id.
+/** To support the EventsByTag query, this actor keeps track of which rows are visible in the database. This is required
+  * to guarantee the EventByTag does not skip any rows in case rows with a higher (ordering) id are visible in the
+  * database before rows with a lower (ordering) id.
   */
 class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequenceRetrievalConfig)(implicit
     materializer: Materializer
@@ -141,11 +140,15 @@ class JournalSequenceActor(readJournalDao: ReadJournalDao, config: JournalSequen
     }
   }
 
-  /** @param currentMaxOrdering The highest ordering value for which it is known that no missing elements exist
-    * @param missingByCounter   A map with missing orderingIds. The key of the map is the count at which the missing elements
-    *                           can be assumed to be "skipped ids" (they are no longer assumed missing).
-    * @param moduloCounter      A counter which is incremented every time a new query have been executed, modulo `maxTries`
-    * @param previousDelay      The last used delay (may change in case failures occur)
+  /** @param currentMaxOrdering
+    *   The highest ordering value for which it is known that no missing elements exist
+    * @param missingByCounter
+    *   A map with missing orderingIds. The key of the map is the count at which the missing elements can be assumed to
+    *   be "skipped ids" (they are no longer assumed missing).
+    * @param moduloCounter
+    *   A counter which is incremented every time a new query have been executed, modulo `maxTries`
+    * @param previousDelay
+    *   The last used delay (may change in case failures occur)
     */
   private def receive(
       currentMaxOrdering: OrderingId,

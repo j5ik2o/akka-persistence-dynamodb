@@ -66,8 +66,7 @@ object DynamoDBReadJournal {
   /** Keep querying - used when we are sure that there is more events to fetch */
   private case object Continue extends FlowControl
 
-  /** Keep querying with delay - used when we have consumed all events,
-    * but want to poll for future events
+  /** Keep querying with delay - used when we have consumed all events, but want to poll for future events
     */
   private case object ContinueDelayed extends FlowControl
 
@@ -275,13 +274,13 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
       )
   }
 
-  /** Same type of query as [[EventsByTagQuery#eventsByTag]] but the event stream
-    * is completed immediately when it reaches the end of the "result set". Events that are
-    * stored after the query is completed are not included in the event stream.
+  /** Same type of query as [[EventsByTagQuery#eventsByTag]] but the event stream is completed immediately when it
+    * reaches the end of the "result set". Events that are stored after the query is completed are not included in the
+    * event stream.
     *
-    * akka-persistence-jdbc has implemented this feature by using a LIKE %tag% query on the tags column.
-    * A consequence of this is that tag names must be chosen wisely: for example when querying the tag `User`,
-    * events with the tag `UserEmail` will also be returned (since User is a substring of UserEmail).
+    * akka-persistence-jdbc has implemented this feature by using a LIKE %tag% query on the tags column. A consequence
+    * of this is that tag names must be chosen wisely: for example when querying the tag `User`, events with the tag
+    * `UserEmail` will also be returned (since User is a substring of UserEmail).
     *
     * The returned event stream is ordered by `offset`.
     */
@@ -306,10 +305,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     }
   }
 
-  /** @param terminateAfterOffset If None, the stream never completes. If a Some, then the stream will complete once a
-    *                             query has been executed which might return an event with this offset (or a higher offset).
-    *                             The stream may include offsets higher than the value in terminateAfterOffset, since the last batch
-    *                             will be returned completely.
+  /** @param terminateAfterOffset
+    *   If None, the stream never completes. If a Some, then the stream will complete once a query has been executed
+    *   which might return an event with this offset (or a higher offset). The stream may include offsets higher than
+    *   the value in terminateAfterOffset, since the last batch will be returned completely.
     */
   private def eventsByTag(
       tag: String,
@@ -325,7 +324,7 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         def retrieveNextBatch() = {
           for {
             queryUntil <- journalSequenceActor.ask(GetMaxOrderingId).mapTo[MaxOrderingId]
-            xs         <- currentJournalEventsByTag(tag, from, batchSize, queryUntil).runWith(Sink.seq)
+            xs <- currentJournalEventsByTag(tag, from, batchSize, queryUntil).runWith(Sink.seq)
           } yield {
             val hasMoreEvents = xs.size == batchSize
             val nextControl: FlowControl =
@@ -370,23 +369,21 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
 
   /** Query events that have a specific tag.
     *
-    * akka-persistence-jdbc has implemented this feature by using a LIKE %tag% query on the tags column.
-    * A consequence of this is that tag names must be chosen wisely: for example when querying the tag `User`,
-    * events with the tag `UserEmail` will also be returned (since User is a substring of UserEmail).
+    * akka-persistence-jdbc has implemented this feature by using a LIKE %tag% query on the tags column. A consequence
+    * of this is that tag names must be chosen wisely: for example when querying the tag `User`, events with the tag
+    * `UserEmail` will also be returned (since User is a substring of UserEmail).
     *
-    * The consumer can keep track of its current position in the event stream by storing the
-    * `offset` and restart the query from a given `offset` after a crash/restart.
+    * The consumer can keep track of its current position in the event stream by storing the `offset` and restart the
+    * query from a given `offset` after a crash/restart.
     *
-    * For akka-persistence-jdbc the `offset` corresponds to the `ordering` column in the Journal table.
-    * The `ordering` is a sequential id number that uniquely identifies the position of each event within
-    * the event stream.
+    * For akka-persistence-jdbc the `offset` corresponds to the `ordering` column in the Journal table. The `ordering`
+    * is a sequential id number that uniquely identifies the position of each event within the event stream.
     *
     * The returned event stream is ordered by `offset`.
     *
-    * The stream is not completed when it reaches the end of the currently stored events,
-    * but it continues to push new events when new events are persisted.
-    * Corresponding query that is completed when it reaches the end of the currently
-    * stored events is provided by [[CurrentEventsByTagQuery#currentEventsByTag]].
+    * The stream is not completed when it reaches the end of the currently stored events, but it continues to push new
+    * events when new events are persisted. Corresponding query that is completed when it reaches the end of the
+    * currently stored events is provided by [[CurrentEventsByTagQuery#currentEventsByTag]].
     */
   override def eventsByTag(tag: String, offset: Offset): Source[EventEnvelope, NotUsed] = eventsByTag(tag, offset.value)
 

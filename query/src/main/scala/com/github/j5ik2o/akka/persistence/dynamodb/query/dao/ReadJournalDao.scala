@@ -31,9 +31,9 @@ trait ReadJournalDao {
     */
   def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed]
 
-  /** Returns a Source of deserialized data for certain tag from an offset. The result is sorted by
-    * the global ordering of the events.
-    * Each element with be a try with a PersistentRepr, set of tags, and a Long representing the global ordering of events
+  /** Returns a Source of deserialized data for certain tag from an offset. The result is sorted by the global ordering
+    * of the events. Each element with be a try with a PersistentRepr, set of tags, and a Long representing the global
+    * ordering of events
     */
   def eventsByTagAsJournalRow(tag: String, offset: Long, maxOffset: Long, max: Long): Source[JournalRow, NotUsed]
 
@@ -54,13 +54,17 @@ trait ReadJournalDao {
       deleted: Option[Boolean] = Some(false)
   ): Source[JournalRow, NotUsed]
 
-  /** @param offset Minimum value to retrieve
-    * @param limit Maximum number of values to retrieve
-    * @return A Source of journal event sequence numbers (corresponding to the Ordering column)
+  /** @param offset
+    *   Minimum value to retrieve
+    * @param limit
+    *   Maximum number of values to retrieve
+    * @return
+    *   A Source of journal event sequence numbers (corresponding to the Ordering column)
     */
   def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed]
 
-  /** @return The value of the maximum (ordering) id in the journal
+  /** @return
+    *   The value of the maximum (ordering) id in the journal
     */
   def maxJournalSequence(): Source[Long, NotUsed]
 }

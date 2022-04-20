@@ -23,8 +23,8 @@ case class JournalRow(
   override def equals(other: Any): Boolean = other match {
     case that: JournalRow =>
       (that canEqual this) &&
-        persistenceId == that.persistenceId &&
-        sequenceNumber == that.sequenceNumber
+      persistenceId == that.persistenceId &&
+      sequenceNumber == that.sequenceNumber
     case _ => false
   }
 

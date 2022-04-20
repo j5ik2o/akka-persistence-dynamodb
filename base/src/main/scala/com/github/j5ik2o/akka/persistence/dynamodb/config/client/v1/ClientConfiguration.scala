@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
 import com.amazonaws.retry.RetryMode
-import com.amazonaws.{ DnsResolver, Protocol, ClientConfiguration => AWSClientConfiguration }
+import com.amazonaws.{ ClientConfiguration => AWSClientConfiguration, DnsResolver, Protocol }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClassCheckUtils
@@ -85,7 +85,7 @@ object ClientConfiguration {
   val DefaultUseSecureRandom: Boolean              = false
   val DefaultUseExpectContinue: Boolean            = AWSClientConfiguration.DEFAULT_USE_EXPECT_CONTINUE
   val DefaultCacheResponseMetadata: Boolean        = AWSClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA
-  val DefaultConnectionMaxIdle: FiniteDuration     = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS.milliseconds
+  val DefaultConnectionMaxIdle: FiniteDuration = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS.milliseconds
 
   val DefaultValidateAfterInactivity: FiniteDuration =
     AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS.milliseconds

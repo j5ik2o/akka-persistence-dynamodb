@@ -25,8 +25,7 @@ object DaoSupport {
   /** Keep querying - used when we are sure that there is more events to fetch */
   private case object Continue extends FlowControl
 
-  /** Keep querying with delay - used when we have consumed all events,
-    * but want to poll for future events
+  /** Keep querying with delay - used when we have consumed all events, but want to poll for future events
     */
   private case object ContinueDelayed extends FlowControl
 

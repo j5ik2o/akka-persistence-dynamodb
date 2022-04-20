@@ -143,9 +143,8 @@ abstract class QueryJournalSpec(config: Config)
   }
 
   /** The returned event stream is ordered by sequence number,
-    * i.e. the same order as the PersistentActor persisted the events.
-    * The same prefix of stream elements (in same order) are returned for multiple
-    * executions of the query, except for when events have been deleted.
+    * i.e. the same order as the PersistentActor persisted the events. The same prefix of stream elements (in same
+    * order) are returned for multiple executions of the query, except for when events have been deleted.
     */
   def withCurrentEventsByPersistenceId(within: FiniteDuration = WITH_IN)(
       persistenceId: String,

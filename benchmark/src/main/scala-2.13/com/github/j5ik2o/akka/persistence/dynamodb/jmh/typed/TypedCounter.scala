@@ -28,6 +28,6 @@ object TypedCounter {
         state + event
       }
     )
-  //.withRetention(RetentionCriteria.snapshotEvery(100, 1))
+  // .withRetention(RetentionCriteria.snapshotEvery(100, 1))
   }
 }

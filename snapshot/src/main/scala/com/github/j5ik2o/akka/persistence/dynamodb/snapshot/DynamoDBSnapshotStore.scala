@@ -179,23 +179,28 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreLoadAsync(context))
-    val result = criteria match {
-      case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
-        snapshotDao.latestSnapshot(PersistenceId(persistenceId))
-      case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
-        snapshotDao.snapshotForMaxTimestamp(PersistenceId(persistenceId), maxTimestamp)
-      case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
-        snapshotDao.snapshotForMaxSequenceNr(PersistenceId(persistenceId), SequenceNumber(maxSequenceNr))
-      case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
-        snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(
-          PersistenceId(persistenceId),
-          SequenceNumber(maxSequenceNr),
-          maxTimestamp
-        )
-      case _ => Source.empty
+
+    def future = {
+      val result = criteria match {
+        case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
+          snapshotDao.latestSnapshot(PersistenceId(persistenceId))
+        case SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp, _, _) =>
+          snapshotDao.snapshotForMaxTimestamp(PersistenceId(persistenceId), maxTimestamp)
+        case SnapshotSelectionCriteria(maxSequenceNr, Long.MaxValue, _, _) =>
+          snapshotDao.snapshotForMaxSequenceNr(PersistenceId(persistenceId), SequenceNumber(maxSequenceNr))
+        case SnapshotSelectionCriteria(maxSequenceNr, maxTimestamp, _, _) =>
+          snapshotDao.snapshotForMaxSequenceNrAndMaxTimestamp(
+            PersistenceId(persistenceId),
+            SequenceNumber(maxSequenceNr),
+            maxTimestamp
+          )
+        case _ => Source.empty
+      }
+      result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
     }
-    def future = result.map(_.map(toSelectedSnapshot)).runWith(Sink.head)
+
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreLoadAsync(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreLoadAsync(newContext))
@@ -209,8 +214,10 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(metadata.persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
-    def future     = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
-    val traced     = traceReporter.fold(future)(_.traceSnapshotStoreSaveAsync(context)(future))
+
+    def future = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+
+    val traced = traceReporter.fold(future)(_.traceSnapshotStoreSaveAsync(context)(future))
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreSaveAsync(newContext))
@@ -224,11 +231,14 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(metadata.persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
+
     def future = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())
+
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreDeleteAsync(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreDeleteAsync(newContext))
@@ -242,6 +252,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteWithCriteriaAsync(context))
+
     def future = criteria match {
       case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
         snapshotDao.deleteAllSnapshots(pid).runWith(Sink.ignore).map(_ => ())
@@ -257,7 +268,9 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
           ).map(_ => ())
       case _ => Future.successful(())
     }
+
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreDeleteWithCriteriaAsync(context)(future))
+
     traced.onComplete {
       case Success(_) =>
         metricsReporter.foreach(_.afterSnapshotStoreDeleteWithCriteriaAsync(newContext))

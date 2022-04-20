@@ -102,7 +102,7 @@ final class ByteArraySnapshotSerializer(
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeserializeSnapshot(context))
 
     def future = for {
-      serializer   <- serializerAsync
+      serializer <- serializerAsync
       deserialized <- fromBinaryAsync(serializer, snapshotRow.snapshot)
     } yield {
       val snapshotMetadata =

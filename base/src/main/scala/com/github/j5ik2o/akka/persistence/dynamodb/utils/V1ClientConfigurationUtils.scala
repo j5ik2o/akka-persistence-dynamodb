@@ -52,7 +52,7 @@ object V1ClientConfigurationUtils {
         .setClientExecutionTimeout(clientExecutionTimeout.toMillis.toInt)
     result.setUseReaper(useReaper)
 
-    //* public ClientConfiguration withThrottledRetries(boolean use) {
+    // * public ClientConfiguration withThrottledRetries(boolean use) {
     result.setMaxConsecutiveRetriesBeforeThrottling(maxConsecutiveRetriesBeforeThrottling)
     result.setUseGzip(useGzip)
     socketBufferSizeHint.foreach { v => result.setSocketBufferSizeHints(v.send, v.receive) }

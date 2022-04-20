@@ -320,8 +320,8 @@ final class V1SnapshotDaoImpl(
               columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                 .withS(snapshotRow.persistenceId.asString),
               columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(snapshotRow.sequenceNumber.asString),
-              columnsDefConfig.snapshotColumnName   -> new AttributeValue().withB(ByteBuffer.wrap(snapshotRow.snapshot)),
-              columnsDefConfig.createdColumnName    -> new AttributeValue().withN(snapshotRow.created.toString)
+              columnsDefConfig.snapshotColumnName -> new AttributeValue().withB(ByteBuffer.wrap(snapshotRow.snapshot)),
+              columnsDefConfig.createdColumnName  -> new AttributeValue().withN(snapshotRow.created.toString)
             ).asJava
           )
         Source.single(req).via(streamWriteClient.putItemFlow).flatMapConcat { response =>

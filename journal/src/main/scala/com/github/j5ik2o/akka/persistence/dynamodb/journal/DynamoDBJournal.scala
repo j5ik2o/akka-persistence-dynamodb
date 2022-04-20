@@ -382,7 +382,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     implicit val ec: ExecutionContext = defaultExecutionContext
     val pid                           = PersistenceId(persistenceId)
     val context                       = Context.newContext(UUID.randomUUID(), pid)
-    val newContext                    = metricsReporter.fold(context)(_.beforeJournalAsyncReadHighestSequenceNr(context))
+    val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReadHighestSequenceNr(context))
 
     def fetchHighestSeqNr(): Future[Long] = {
       journalDao

@@ -45,14 +45,14 @@ object ConfigHelper {
        |    }
        |    v1 {
        |    ${if (requestHandlerClassNames.nonEmpty) {
-      s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
-    } else ""}
+                           s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
+                         } else ""}
        |      dispatcher-name = "journal-blocking-io-dispatcher"
        |    } 
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {
-      s"""journal-row-driver-wrapper-class-name = "${journalRowDriverWrapperClassName.get}" """
-    } else ""}
+                           s"""journal-row-driver-wrapper-class-name = "${journalRowDriverWrapperClassName.get}" """
+                         } else ""}
        |  columns-def {
        |    sort-key-column-name = ${if (legacyJournalMode) "sequence-nr" else "skey"}
        |  }

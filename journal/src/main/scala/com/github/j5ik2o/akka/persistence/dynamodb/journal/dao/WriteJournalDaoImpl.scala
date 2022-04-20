@@ -61,7 +61,7 @@ class WriteJournalDaoImpl(
     case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase()      => OverflowStrategy.dropNew
     case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase()         => OverflowStrategy.fail
     case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() => OverflowStrategy.backpressure
-    case _                                                                            => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
+    case _ => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
   }
 
   private def internalPutStream(promise: Promise[Long], rows: Seq[JournalRow]): Future[Done] = {

@@ -434,17 +434,17 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncUpdateEvent(context))
 
     def future = {
-      val write      = PersistentRepr(message, sequenceNumber, persistenceId)
+      val write = PersistentRepr(message, sequenceNumber, persistenceId)
       serializer
         .serialize(write).flatMap { serializedRow =>
-        journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
-      }.recoverWith { case _ =>
-        Future.failed(
-          new IllegalArgumentException(
-            s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNumber]"
+          journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
+        }.recoverWith { case _ =>
+          Future.failed(
+            new IllegalArgumentException(
+              s"Failed to serialize ${write.getClass} for update of [$persistenceId] @ [$sequenceNumber]"
+            )
           )
-        )
-      }
+        }
     }
 
     val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))

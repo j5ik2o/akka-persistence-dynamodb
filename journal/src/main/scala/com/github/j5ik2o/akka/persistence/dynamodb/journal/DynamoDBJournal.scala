@@ -266,24 +266,23 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     implicit val ec: ExecutionContext = pluginExecutor
 
-    def serializedFutures = serializer.serialize(atomicWrites)
-    def rowsToWriteFutures = serializedFutures.map { serializeFuture =>
-      serializeFuture.recoverWith { case _ =>
-        Future.successful(Seq.empty)
-      }
-    }
-
-    def resultWhenWriteComplete(implicit ec: ExecutionContext): Future[Vector[Future[Unit]]] = {
-      Future.sequence(serializedFutures).map(_ => true).recover { case _ => false }.map { b =>
-        if (b) {
-          Vector.empty
-        } else {
-          serializedFutures.toVector.map(s => s.map(_ => ()))
+    def execute(implicit ec: ExecutionContext): Future[Vector[Try[Unit]]] = {
+      val serializedFutures = serializer.serialize(atomicWrites)
+      val rowsToWriteFutures = serializedFutures.map { serializeFuture =>
+        serializeFuture.recoverWith { case _ =>
+          Future.successful(Seq.empty)
         }
       }
-    }
+      val resultWhenWriteComplete: Future[Vector[Future[Unit]]] = {
+        Future.sequence(serializedFutures).map(_ => true).recover { case _ => false }.map { b =>
+          if (b) {
+            Vector.empty
+          } else {
+            serializedFutures.toVector.map(s => s.map(_ => ()))
+          }
+        }
+      }
 
-    def execute(implicit ec: ExecutionContext): Future[Vector[Try[Unit]]] = {
       Future
         .traverse(rowsToWriteFutures) { rowsToWriteFuture =>
           rowsToWriteFuture.flatMap { rowsToWrite =>
@@ -433,10 +432,11 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncUpdateEvent(context))
-    val write      = PersistentRepr(message, sequenceNumber, persistenceId)
 
-    def future = serializer
-      .serialize(write).flatMap { serializedRow =>
+    def future = {
+      val write      = PersistentRepr(message, sequenceNumber, persistenceId)
+      serializer
+        .serialize(write).flatMap { serializedRow =>
         journalDao.updateMessage(serializedRow).runWith(Sink.ignore)
       }.recoverWith { case _ =>
         Future.failed(
@@ -445,6 +445,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           )
         )
       }
+    }
 
     val traced = traceReporter.fold(future)(_.traceJournalAsyncUpdateEvent(context)(future))
 

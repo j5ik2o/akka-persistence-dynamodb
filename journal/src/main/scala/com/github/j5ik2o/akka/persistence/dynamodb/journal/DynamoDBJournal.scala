@@ -359,7 +359,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
         fromSequenceNr,
         toSequenceNr,
         journalPluginConfig.replayBatchSize,
-        journalPluginConfig.replayBatchRefreshInterval.map((_ -> system.scheduler))
+        journalPluginConfig.replayBatchRefreshInterval.map(_ -> system.scheduler)
       )
       .take(max)
       .mapAsync(1)(deserializedRepr => Future.fromTry(deserializedRepr))

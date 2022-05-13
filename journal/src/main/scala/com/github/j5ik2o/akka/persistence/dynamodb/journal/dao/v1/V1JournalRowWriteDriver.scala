@@ -70,27 +70,27 @@ final class V1JournalRowWriteDriver(
   override def singlePutJournalRowFlow: Flow[JournalRow, Long, NotUsed] = Flow[JournalRow].flatMapConcat { journalRow =>
     val pkey = partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
     val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
-    val request = new PutItemRequest()
+    val request = new PutItemRequest
       .withTableName(pluginConfig.tableName)
       .withItem(
         (Map(
-          pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue
             .withS(pkey),
-          pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue
             .withS(skey),
-          pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue
             .withS(journalRow.persistenceId.asString),
-          pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue
             .withN(journalRow.sequenceNumber.asString),
-          pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue
             .withN(journalRow.ordering.toString),
-          pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue
             .withBOOL(journalRow.deleted),
-          pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
+          pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue
             .withB(ByteBuffer.wrap(journalRow.message))
         ) ++ journalRow.tags
           .map { tag =>
-            Map(pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue().withS(tag))
+            Map(pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue.withS(tag))
           }.getOrElse(
             Map.empty
           )).asJava
@@ -133,29 +133,29 @@ final class V1JournalRowWriteDriver(
             val deleted  = journalRow.deleted
             val message  = ByteBuffer.wrap(journalRow.message)
             val tagsOpt  = journalRow.tags
-            new WriteRequest()
+            new WriteRequest
               .withPutRequest(
-                new PutRequest()
+                new PutRequest
                   .withItem(
                     (Map(
-                      pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue
                         .withS(pkey),
-                      pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue
                         .withS(skey),
-                      pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue
                         .withS(pid),
-                      pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue
                         .withN(seqNr),
-                      pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue
                         .withN(ordering),
-                      pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValue
                         .withBOOL(deleted),
-                      pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue()
+                      pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValue
                         .withB(message)
                     ) ++ tagsOpt
                       .map { tags =>
                         Map(
-                          pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
+                          pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue
                             .withS(tags)
                         )
                       }.getOrElse(Map.empty)).asJava
@@ -164,7 +164,7 @@ final class V1JournalRowWriteDriver(
           }).flatMapConcat { requestItems =>
             Source
               .single(
-                new BatchWriteItemRequest()
+                new BatchWriteItemRequest
                   .withRequestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava)
               ).via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
           }
@@ -181,12 +181,12 @@ final class V1JournalRowWriteDriver(
         else {
           Source
             .single(persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
-              new WriteRequest().withDeleteRequest(
-                new DeleteRequest().withKey(
+              new WriteRequest.withDeleteRequest(
+                new DeleteRequest.withKey(
                   Map(
-                    pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                    pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue
                       .withS(persistenceIdWithSeqNr.persistenceId.asString),
-                    pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
+                    pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue.withN(
                       persistenceIdWithSeqNr.sequenceNumber.asString
                     )
                   ).asJava
@@ -195,7 +195,7 @@ final class V1JournalRowWriteDriver(
             }).flatMapConcat { requestItems =>
               Source
                 .single(
-                  new BatchWriteItemRequest()
+                  new BatchWriteItemRequest
                     .withRequestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava)
                 ).via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
             }
@@ -205,12 +205,12 @@ final class V1JournalRowWriteDriver(
 
   override def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] = {
     Flow[PersistenceIdWithSeqNr].flatMapConcat { persistenceIdWithSeqNr =>
-      val deleteRequest = new DeleteItemRequest()
+      val deleteRequest = new DeleteItemRequest
         .withKey(
           Map(
-            pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+            pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue
               .withS(persistenceIdWithSeqNr.persistenceId.asString),
-            pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
+            pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue.withN(
               persistenceIdWithSeqNr.sequenceNumber.asString
             )
           ).asJava
@@ -231,34 +231,34 @@ final class V1JournalRowWriteDriver(
     val pkey = journalRow.partitionKey(partitionKeyResolver).asString
     val skey = journalRow.sortKey(sortKeyResolver).asString
     def createUpdateRequest =
-      new UpdateItemRequest()
+      new UpdateItemRequest
         .withTableName(pluginConfig.tableName).withKey(
           Map(
-            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue
               .withS(pkey),
-            pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+            pluginConfig.columnsDefConfig.sortKeyColumnName -> new AttributeValue
               .withS(skey)
           ).asJava
         ).withAttributeUpdates(
           (Map(
-            pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValueUpdate()
+            pluginConfig.columnsDefConfig.messageColumnName -> new AttributeValueUpdate
               .withAction(AttributeAction.PUT).withValue(
-                new AttributeValue().withB(ByteBuffer.wrap(journalRow.message))
+                new AttributeValue.withB(ByteBuffer.wrap(journalRow.message))
               ),
             pluginConfig.columnsDefConfig.orderingColumnName ->
-            new AttributeValueUpdate()
+            new AttributeValueUpdate
               .withAction(AttributeAction.PUT).withValue(
-                new AttributeValue().withN(journalRow.ordering.toString)
+                new AttributeValue.withN(journalRow.ordering.toString)
               ),
-            pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValueUpdate()
+            pluginConfig.columnsDefConfig.deletedColumnName -> new AttributeValueUpdate
               .withAction(AttributeAction.PUT).withValue(
-                new AttributeValue().withBOOL(journalRow.deleted)
+                new AttributeValue.withBOOL(journalRow.deleted)
               )
           ) ++ journalRow.tags
             .map { tag =>
               Map(
-                pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValueUpdate()
-                  .withAction(AttributeAction.PUT).withValue(new AttributeValue().withS(tag))
+                pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValueUpdate
+                  .withAction(AttributeAction.PUT).withValue(new AttributeValue.withS(tag))
               )
             }.getOrElse(Map.empty)).asJava
         )

@@ -89,7 +89,7 @@ class V2QueryProcessor(
       .map(_.sortBy(journalRow => (journalRow.persistenceId.asString, journalRow.sequenceNumber.value)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
-        val index = new AtomicLong()
+        val index = new AtomicLong
         journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
       }
       .filter(journalRow => journalRow.ordering > offset && journalRow.ordering <= maxOffset)

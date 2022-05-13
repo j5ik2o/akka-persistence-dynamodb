@@ -169,7 +169,7 @@ class WriteJournalDaoImplSpec
         v1.deleted shouldBe v2.deleted
         v1.ordering shouldBe v2.ordering
         v1.tags shouldBe v2.tags
-        (v1.message sameElements v2.message) shouldBe true
+        v1.message sameElements v2.message shouldBe true
       }
     }
     "update" in {

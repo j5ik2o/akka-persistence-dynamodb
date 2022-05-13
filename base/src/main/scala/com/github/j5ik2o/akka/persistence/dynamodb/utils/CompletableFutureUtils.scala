@@ -15,7 +15,7 @@ object CompletableFutureUtils {
 
   def toCompletableFuture[T](future: Future[T])(implicit executor: Executor): CompletableFuture[T] = {
     if (future.isDone) {
-      val cf = new CompletableFuture[T]()
+      val cf = new CompletableFuture[T]
       try {
         cf.complete(future.get())
         cf

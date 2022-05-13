@@ -11,7 +11,7 @@ object V1DaxClientConfigUtils {
 
   def setup(dynamoDBClientConfig: DynamoDBClientConfig): ClientConfig = {
     import dynamoDBClientConfig.v1DaxClientConfig._
-    val result = new ClientConfig()
+    val result = new ClientConfig
     if (connectionTimeout != Duration.Zero)
       result
         .setConnectTimeout(

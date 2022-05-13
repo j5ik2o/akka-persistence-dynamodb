@@ -116,19 +116,19 @@ trait DynamoDBContainerHelper {
   def createSnapshotTable(): Unit = {
     val listTablesResult = dynamoDBClient.listTables(2)
     if (!listTablesResult.getTableNames.asScala.exists(_.contains(snapshotTableName))) {
-      val createRequest = new CreateTableRequest()
+      val createRequest = new CreateTableRequest
         .withTableName(snapshotTableName).withAttributeDefinitions(
           Seq(
-            new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N)
+            new AttributeDefinition.withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N)
           ).asJava
         ).withKeySchema(
           Seq(
-            new KeySchemaElement().withAttributeName("persistence-id").withKeyType(KeyType.HASH),
-            new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
+            new KeySchemaElement.withAttributeName("persistence-id").withKeyType(KeyType.HASH),
+            new KeySchemaElement.withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
           ).asJava
         ).withProvisionedThroughput(
-          new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+          new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
         )
       val createResponse = dynamoDBClient.createTable(createRequest)
       require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)
@@ -138,46 +138,46 @@ trait DynamoDBContainerHelper {
   private def createLegacyJournalTable(): Unit = {
     val listTablesResult = dynamoDBClient.listTables(2)
     if (!listTablesResult.getTableNames.asScala.exists(_.contains(journalTableName))) {
-      val createRequest = new CreateTableRequest()
+      val createRequest = new CreateTableRequest
         .withTableName(journalTableName)
         .withAttributeDefinitions(
           Seq(
-            new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N),
-            new AttributeDefinition().withAttributeName("tags").withAttributeType(ScalarAttributeType.S)
+            new AttributeDefinition.withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N),
+            new AttributeDefinition.withAttributeName("tags").withAttributeType(ScalarAttributeType.S)
           ).asJava
         ).withKeySchema(
           Seq(
-            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH),
-            new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
+            new KeySchemaElement.withAttributeName("pkey").withKeyType(KeyType.HASH),
+            new KeySchemaElement.withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
           ).asJava
         ).withProvisionedThroughput(
-          new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+          new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
         ).withGlobalSecondaryIndexes(
           Seq(
-            new GlobalSecondaryIndex()
+            new GlobalSecondaryIndex
               .withIndexName("TagsIndex").withKeySchema(
                 Seq(
-                  new KeySchemaElement().withAttributeName("tags").withKeyType(KeyType.HASH)
+                  new KeySchemaElement.withAttributeName("tags").withKeyType(KeyType.HASH)
                 ).asJava
-              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+              ).withProjection(new Projection.withProjectionType(ProjectionType.ALL))
               .withProvisionedThroughput(
-                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+                new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
               ),
-            new GlobalSecondaryIndex()
+            new GlobalSecondaryIndex
               .withIndexName("GetJournalRowsIndex").withKeySchema(
                 Seq(
-                  new KeySchemaElement().withAttributeName("persistence-id").withKeyType(KeyType.HASH),
-                  new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
+                  new KeySchemaElement.withAttributeName("persistence-id").withKeyType(KeyType.HASH),
+                  new KeySchemaElement.withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
                 ).asJava
-              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+              ).withProjection(new Projection.withProjectionType(ProjectionType.ALL))
               .withProvisionedThroughput(
-                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+                new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
               )
           ).asJava
         ).withStreamSpecification(
-          new StreamSpecification().withStreamEnabled(true).withStreamViewType(StreamViewType.NEW_IMAGE)
+          new StreamSpecification.withStreamEnabled(true).withStreamViewType(StreamViewType.NEW_IMAGE)
         )
       val createResponse = dynamoDBClient.createTable(createRequest)
       require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)
@@ -187,47 +187,47 @@ trait DynamoDBContainerHelper {
   protected def createJournalTable(): Unit = {
     val listTablesResult = dynamoDBClient.listTables(2)
     if (!listTablesResult.getTableNames.asScala.exists(_.contains(journalTableName))) {
-      val createRequest = new CreateTableRequest()
+      val createRequest = new CreateTableRequest
         .withTableName(journalTableName)
         .withAttributeDefinitions(
           Seq(
-            new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("skey").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
-            new AttributeDefinition().withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N),
-            new AttributeDefinition().withAttributeName("tags").withAttributeType(ScalarAttributeType.S)
+            new AttributeDefinition.withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("skey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition.withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N),
+            new AttributeDefinition.withAttributeName("tags").withAttributeType(ScalarAttributeType.S)
           ).asJava
         ).withKeySchema(
           Seq(
-            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH),
-            new KeySchemaElement().withAttributeName("skey").withKeyType(KeyType.RANGE)
+            new KeySchemaElement.withAttributeName("pkey").withKeyType(KeyType.HASH),
+            new KeySchemaElement.withAttributeName("skey").withKeyType(KeyType.RANGE)
           ).asJava
         ).withProvisionedThroughput(
-          new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+          new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
         ).withGlobalSecondaryIndexes(
           Seq(
-            new GlobalSecondaryIndex()
+            new GlobalSecondaryIndex
               .withIndexName("TagsIndex").withKeySchema(
                 Seq(
-                  new KeySchemaElement().withAttributeName("tags").withKeyType(KeyType.HASH)
+                  new KeySchemaElement.withAttributeName("tags").withKeyType(KeyType.HASH)
                 ).asJava
-              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+              ).withProjection(new Projection.withProjectionType(ProjectionType.ALL))
               .withProvisionedThroughput(
-                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+                new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
               ),
-            new GlobalSecondaryIndex()
+            new GlobalSecondaryIndex
               .withIndexName("GetJournalRowsIndex").withKeySchema(
                 Seq(
-                  new KeySchemaElement().withAttributeName("persistence-id").withKeyType(KeyType.HASH),
-                  new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
+                  new KeySchemaElement.withAttributeName("persistence-id").withKeyType(KeyType.HASH),
+                  new KeySchemaElement.withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
                 ).asJava
-              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+              ).withProjection(new Projection.withProjectionType(ProjectionType.ALL))
               .withProvisionedThroughput(
-                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+                new ProvisionedThroughput.withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
               )
           ).asJava
         ).withStreamSpecification(
-          new StreamSpecification().withStreamEnabled(true).withStreamViewType(StreamViewType.NEW_IMAGE)
+          new StreamSpecification.withStreamEnabled(true).withStreamViewType(StreamViewType.NEW_IMAGE)
         )
       val createResponse = dynamoDBClient.createTable(createRequest)
       require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)

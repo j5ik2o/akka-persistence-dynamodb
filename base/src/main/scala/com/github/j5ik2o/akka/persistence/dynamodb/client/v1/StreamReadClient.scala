@@ -75,7 +75,7 @@ class StreamReadClient(
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
             val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
             val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.getCount) < max }) {
+            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => count + response.getCount < max }) {
               log.debug("next loop: count = {}, response.count = {}", count, response.getCount)
               loop(
                 queryRequest,
@@ -144,7 +144,7 @@ class StreamReadClient(
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
             val lastEvaluatedKey = Option(response.getLastEvaluatedKey).map(_.asScala.toMap)
             val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.getCount) < max }) {
+            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => count + response.getCount < max }) {
               log.debug("next loop: count = {}, response.count = {}", count, response.getCount)
               loop(
                 scanRequest,

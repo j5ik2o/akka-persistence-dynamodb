@@ -17,7 +17,7 @@ import scala.jdk.CollectionConverters._
 object V1ClientConfigurationUtils {
 
   def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientConfiguration = {
-    val result = new ClientConfiguration()
+    val result = new ClientConfiguration
     import pluginConfig.clientConfig.v1ClientConfig.clientConfiguration._
     protocol.foreach { v => result.setProtocol(v) }
     result.setMaxConnections(maxConnections)

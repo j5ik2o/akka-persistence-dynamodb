@@ -83,7 +83,7 @@ class StreamReadClient(
               Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
             val lastEvaluatedKey = Option(response.lastEvaluatedKey).map { _.asScala.toMap }.getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source(items))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.count()) < max }) {
+            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => count + response.count() < max }) {
               log.debug("next loop: count = {}, response.count = {}", count, response.count())
               loop(
                 queryRequest,
@@ -156,7 +156,7 @@ class StreamReadClient(
             Option(response.items).map(_.asScala.toVector).map(_.map(_.asScala.toMap)).getOrElse(Vector.empty)
             val lastEvaluatedKey = Option(response.lastEvaluatedKey).map { _.asScala.toMap }.getOrElse(Map.empty)
             val combinedSource   = Source.combine(acc, Source.single(response))(Concat(_))
-            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => (count + response.count()) < max }) {
+            if (lastEvaluatedKey.nonEmpty && maxOpt.fold(true) { max => count + response.count() < max }) {
               log.debug("next loop: count = {}, response.count = {}", count, response.count())
               loop(
                 scanRequest,

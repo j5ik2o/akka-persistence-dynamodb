@@ -32,6 +32,6 @@ object SecureRandomProvider {
   }
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends SecureRandomProvider {
-    override def create: SecureRandom = new SecureRandom()
+    override def create: SecureRandom = new SecureRandom
   }
 }

@@ -95,7 +95,7 @@ object PartitionKeyResolver {
       val df           = new DecimalFormat("0000000000000000000000000000000000000000")
       val bytes        = persistenceId.asString.reverse.getBytes(StandardCharsets.UTF_8)
       val hash         = BigInt(md5.digest(bytes))
-      val mod          = (hash.abs % journalPluginConfig.shardCount) + 1
+      val mod          = hash.abs % journalPluginConfig.shardCount + 1
       val modelNameOpt = persistenceId.prefix
       val pkey = modelNameOpt match {
         case Some(modelName) =>

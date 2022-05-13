@@ -32,7 +32,7 @@ class V1QueryProcessor(
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 
   override def allPersistenceIds(max: Long): Source[PersistenceId, NotUsed] = {
-    val scanRequest = new ScanRequest()
+    val scanRequest = new ScanRequest
       .withTableName(pluginConfig.tableName)
       .withSelect(Select.SPECIFIC_ATTRIBUTES)
       .withAttributesToGet(columnsDefConfig.deletedColumnName, columnsDefConfig.persistenceIdColumnName)
@@ -57,7 +57,7 @@ class V1QueryProcessor(
       maxOffset: Long,
       max: Long
   ): Source[JournalRow, NotUsed] = {
-    val scanRequest = new ScanRequest()
+    val scanRequest = new ScanRequest
       .withTableName(pluginConfig.tableName)
       .withIndexName(pluginConfig.tagsIndexName)
       .withFilterExpression("contains(#tags, :tag)")
@@ -66,7 +66,7 @@ class V1QueryProcessor(
       )
       .withExpressionAttributeValues(
         Map(
-          ":tag" -> new AttributeValue().withS(tag)
+          ":tag" -> new AttributeValue.withS(tag)
         ).asJava
       )
       .withLimit(pluginConfig.scanBatchSize)
@@ -79,7 +79,7 @@ class V1QueryProcessor(
       .map(_.sortBy(journalRow => (journalRow.persistenceId.asString, journalRow.sequenceNumber.value)))
       .mapConcat(_.toVector)
       .statefulMapConcat { () =>
-        val index = new AtomicLong()
+        val index = new AtomicLong
         journalRow => List(journalRow.withOrdering(index.incrementAndGet()))
       }
       .filter(journalRow => journalRow.ordering > offset && journalRow.ordering <= maxOffset)
@@ -88,7 +88,7 @@ class V1QueryProcessor(
   }
 
   override def journalSequence(offset: Long, limit: Long): Source[Long, NotUsed] = {
-    val scanRequest = new ScanRequest()
+    val scanRequest = new ScanRequest
       .withTableName(pluginConfig.tableName).withSelect(Select.SPECIFIC_ATTRIBUTES).withAttributesToGet(
         columnsDefConfig.orderingColumnName
       ).withLimit(pluginConfig.scanBatchSize)

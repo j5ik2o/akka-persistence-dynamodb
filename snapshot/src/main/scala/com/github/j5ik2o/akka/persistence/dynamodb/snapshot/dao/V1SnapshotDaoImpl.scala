@@ -62,16 +62,16 @@ final class V1SnapshotDaoImpl(
   override def deleteAllSnapshots(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":min" -> new AttributeValue().withN(0.toString),
-          ":max" -> new AttributeValue().withN(Long.MaxValue.toString)
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":min" -> new AttributeValue.withN(0.toString),
+          ":max" -> new AttributeValue.withN(Long.MaxValue.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
     queryDelete(queryRequest)
@@ -81,16 +81,16 @@ final class V1SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":min" -> new AttributeValue().withN(0.toString),
-          ":max" -> new AttributeValue().withN(maxSequenceNr.asString)
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":min" -> new AttributeValue.withN(0.toString),
+          ":max" -> new AttributeValue.withN(maxSequenceNr.asString)
         ).asJava
       ).withConsistentRead(consistentRead)
     queryDelete(queryRequest)
@@ -99,7 +99,7 @@ final class V1SnapshotDaoImpl(
   override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long)(implicit
       ec: ExecutionContext
   ): Source[Unit, NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
@@ -111,10 +111,10 @@ final class V1SnapshotDaoImpl(
         ).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid"          -> new AttributeValue().withS(persistenceId.asString),
-          ":min"          -> new AttributeValue().withN(0.toString),
-          ":max"          -> new AttributeValue().withN(Long.MaxValue.toString),
-          ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
+          ":pid"          -> new AttributeValue.withS(persistenceId.asString),
+          ":min"          -> new AttributeValue.withN(0.toString),
+          ":max"          -> new AttributeValue.withN(Long.MaxValue.toString),
+          ":maxTimestamp" -> new AttributeValue.withN(maxTimestamp.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
     queryDelete(queryRequest)
@@ -125,7 +125,7 @@ final class V1SnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
@@ -137,10 +137,10 @@ final class V1SnapshotDaoImpl(
         ).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid"          -> new AttributeValue().withS(persistenceId.asString),
-          ":min"          -> new AttributeValue().withN(0.toString),
-          ":max"          -> new AttributeValue().withN(maxSequenceNr.asString),
-          ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
+          ":pid"          -> new AttributeValue.withS(persistenceId.asString),
+          ":min"          -> new AttributeValue.withN(0.toString),
+          ":max"          -> new AttributeValue.withN(maxSequenceNr.asString),
+          ":maxTimestamp" -> new AttributeValue.withN(maxTimestamp.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
     queryDelete(queryRequest)
@@ -165,16 +165,16 @@ final class V1SnapshotDaoImpl(
   override def latestSnapshot(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":min" -> new AttributeValue().withN(0.toString),
-          ":max" -> new AttributeValue().withN(Long.MaxValue.toString)
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":min" -> new AttributeValue.withN(0.toString),
+          ":max" -> new AttributeValue.withN(Long.MaxValue.toString)
         ).asJava
       )
       .withScanIndexForward(false)
@@ -196,7 +196,7 @@ final class V1SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
@@ -208,10 +208,10 @@ final class V1SnapshotDaoImpl(
         ).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid"          -> new AttributeValue().withS(persistenceId.asString),
-          ":min"          -> new AttributeValue().withN(0.toString),
-          ":max"          -> new AttributeValue().withN(Long.MaxValue.toString),
-          ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
+          ":pid"          -> new AttributeValue.withS(persistenceId.asString),
+          ":min"          -> new AttributeValue.withN(0.toString),
+          ":max"          -> new AttributeValue.withN(Long.MaxValue.toString),
+          ":maxTimestamp" -> new AttributeValue.withN(maxTimestamp.toString)
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
@@ -230,16 +230,16 @@ final class V1SnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":min" -> new AttributeValue().withN(0.toString),
-          ":max" -> new AttributeValue().withN(maxSequenceNr.asString)
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":min" -> new AttributeValue.withN(0.toString),
+          ":max" -> new AttributeValue.withN(maxSequenceNr.asString)
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
@@ -259,7 +259,7 @@ final class V1SnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
-    val queryRequest = new QueryRequest()
+    val queryRequest = new QueryRequest
       .withTableName(tableName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
@@ -271,10 +271,10 @@ final class V1SnapshotDaoImpl(
         ).asJava
       ).withExpressionAttributeValues(
         Map(
-          ":pid"          -> new AttributeValue().withS(persistenceId.asString),
-          ":min"          -> new AttributeValue().withN(0.toString),
-          ":max"          -> new AttributeValue().withN(maxSequenceNr.asString),
-          ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
+          ":pid"          -> new AttributeValue.withS(persistenceId.asString),
+          ":min"          -> new AttributeValue.withN(0.toString),
+          ":max"          -> new AttributeValue.withN(maxSequenceNr.asString),
+          ":maxTimestamp" -> new AttributeValue.withN(maxTimestamp.toString)
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
@@ -290,11 +290,11 @@ final class V1SnapshotDaoImpl(
   }
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
-    val req = new DeleteItemRequest()
+    val req = new DeleteItemRequest
       .withTableName(tableName).withKey(
         Map(
-          columnsDefConfig.persistenceIdColumnName -> new AttributeValue().withS(persistenceId.asString),
-          columnsDefConfig.sequenceNrColumnName    -> new AttributeValue().withN(sequenceNr.asString)
+          columnsDefConfig.persistenceIdColumnName -> new AttributeValue.withS(persistenceId.asString),
+          columnsDefConfig.sequenceNrColumnName    -> new AttributeValue.withN(sequenceNr.asString)
         ).asJava
       )
     Source.single(req).via(streamWriteClient.deleteItemFlow).flatMapConcat { response =>
@@ -313,15 +313,15 @@ final class V1SnapshotDaoImpl(
     Source
       .future(serializer.serialize(snapshotMetadata, snapshot))
       .flatMapConcat { snapshotRow =>
-        val req = new PutItemRequest()
+        val req = new PutItemRequest
           .withTableName(tableName)
           .withItem(
             Map(
-              columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+              columnsDefConfig.persistenceIdColumnName -> new AttributeValue
                 .withS(snapshotRow.persistenceId.asString),
-              columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(snapshotRow.sequenceNumber.asString),
-              columnsDefConfig.snapshotColumnName -> new AttributeValue().withB(ByteBuffer.wrap(snapshotRow.snapshot)),
-              columnsDefConfig.createdColumnName  -> new AttributeValue().withN(snapshotRow.created.toString)
+              columnsDefConfig.sequenceNrColumnName -> new AttributeValue.withN(snapshotRow.sequenceNumber.asString),
+              columnsDefConfig.snapshotColumnName   -> new AttributeValue.withB(ByteBuffer.wrap(snapshotRow.snapshot)),
+              columnsDefConfig.createdColumnName    -> new AttributeValue.withN(snapshotRow.created.toString)
             ).asJava
           )
         Source.single(req).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
@@ -353,18 +353,18 @@ final class V1SnapshotDaoImpl(
           )
         }
       }.map { rows =>
-        new BatchWriteItemRequest()
+        new BatchWriteItemRequest
           .withRequestItems(
             Map(
               tableName -> rows.map { row =>
-                new WriteRequest()
+                new WriteRequest
                   .withDeleteRequest(
-                    new DeleteRequest()
+                    new DeleteRequest
                       .withKey(
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
+                          columnsDefConfig.persistenceIdColumnName -> new AttributeValue
                             .withS(row.persistenceId.asString),
-                          columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
+                          columnsDefConfig.sequenceNrColumnName -> new AttributeValue
                             .withN(row.sequenceNumber.asString)
                         ).asJava
                       )

@@ -109,7 +109,7 @@ final class V1JournalRowReadDriver(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): QueryRequest = {
-    new QueryRequest()
+    new QueryRequest
       .withTableName(pluginConfig.tableName)
       .withIndexName(pluginConfig.getJournalRowsIndexName)
       .withKeyConditionExpression(
@@ -126,10 +126,10 @@ final class V1JournalRowReadDriver(
       )
       .withExpressionAttributeValues(
         (Map(
-          ":id" -> new AttributeValue().withS(persistenceId.asString)
+          ":id" -> new AttributeValue.withS(persistenceId.asString)
         ) ++ deleted
-          .map(d => Map(":flg" -> new AttributeValue().withBOOL(d))).getOrElse(Map.empty) ++ fromSequenceNr
-          .map(nr => Map(":nr" -> new AttributeValue().withN(nr.asString))).getOrElse(Map.empty)).asJava
+          .map(d => Map(":flg" -> new AttributeValue.withBOOL(d))).getOrElse(Map.empty) ++ fromSequenceNr
+          .map(nr => Map(":nr" -> new AttributeValue.withN(nr.asString))).getOrElse(Map.empty)).asJava
       ).withScanIndexForward(false)
       .withLimit(1)
   }
@@ -139,7 +139,7 @@ final class V1JournalRowReadDriver(
       toSequenceNr: SequenceNumber,
       deleted: Boolean
   ): QueryRequest = {
-    new QueryRequest()
+    new QueryRequest
       .withTableName(pluginConfig.tableName)
       .withIndexName(pluginConfig.getJournalRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr <= :snr")
@@ -153,9 +153,9 @@ final class V1JournalRowReadDriver(
       )
       .withExpressionAttributeValues(
         Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":snr" -> new AttributeValue().withN(toSequenceNr.asString),
-          ":flg" -> new AttributeValue().withBOOL(deleted)
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":snr" -> new AttributeValue.withN(toSequenceNr.asString),
+          ":flg" -> new AttributeValue.withBOOL(deleted)
         ).asJava
       )
       .withLimit(pluginConfig.queryBatchSize)
@@ -168,7 +168,7 @@ final class V1JournalRowReadDriver(
       deleted: Option[Boolean],
       limit: Int
   ): QueryRequest = {
-    new QueryRequest()
+    new QueryRequest
       .withTableName(pluginConfig.tableName).withIndexName(
         pluginConfig.getJournalRowsIndexName
       ).withKeyConditionExpression(
@@ -183,10 +183,10 @@ final class V1JournalRowReadDriver(
       )
       .withExpressionAttributeValues(
         (Map(
-          ":pid" -> new AttributeValue().withS(persistenceId.asString),
-          ":min" -> new AttributeValue().withN(fromSequenceNr.asString),
-          ":max" -> new AttributeValue().withN(toSequenceNr.asString)
-        ) ++ deleted.map(b => Map(":flg" -> new AttributeValue().withBOOL(b))).getOrElse(Map.empty)).asJava
+          ":pid" -> new AttributeValue.withS(persistenceId.asString),
+          ":min" -> new AttributeValue.withN(fromSequenceNr.asString),
+          ":max" -> new AttributeValue.withN(toSequenceNr.asString)
+        ) ++ deleted.map(b => Map(":flg" -> new AttributeValue.withBOOL(b))).getOrElse(Map.empty)).asJava
       ).withLimit(limit)
   }
 

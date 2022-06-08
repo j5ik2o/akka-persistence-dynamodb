@@ -28,10 +28,13 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |DynamoDB support|✓|✓|-|
 |Write Sharding|✓|✓|-|
 |Non-blocking I/O|✓|-|-|
+|back pressure|✓|-|-|
+|AWS Client Version| v1,dax,v2 | v1 | - |
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
 |State Plugin|✓|-|✓|
 |Query Plugin|✓|-|✓|
+
 
 ### DynamoDB Support
 

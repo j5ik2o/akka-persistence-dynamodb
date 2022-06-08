@@ -359,7 +359,7 @@ j5ik2o.dynamo-db-snapshot {
 }
 ```
 
-### akka-persistence state plugin
+## akka-persistence state plugin
 
 Just this, if you like the default settings.
 

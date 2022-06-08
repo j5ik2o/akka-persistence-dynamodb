@@ -82,7 +82,7 @@ lazy val test = (project in file("test"))
       amazonaws.dynamodb,
       testcontainers.testcontainers,
       dimafeng.testcontainerScala,
-      "net.java.dev.jna" % "jna" % "5.7.0"
+      "net.java.dev.jna" % "jna" % "5.11.0"
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {

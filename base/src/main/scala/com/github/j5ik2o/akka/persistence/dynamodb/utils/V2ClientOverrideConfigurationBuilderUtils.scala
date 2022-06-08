@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.time.{ Duration => JavaDuration }
-
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
   ExecutionInterceptorsProvider,
@@ -11,6 +9,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 
+import java.time.{ Duration => JavaDuration }
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 

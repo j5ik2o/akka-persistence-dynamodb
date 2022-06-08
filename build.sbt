@@ -81,7 +81,8 @@ lazy val test = (project in file("test"))
     libraryDependencies ++= Seq(
       amazonaws.dynamodb,
       testcontainers.testcontainers,
-      dimafeng.testcontainerScala
+      dimafeng.testcontainerScala,
+      "net.java.dev.jna" % "jna" % "5.7.0"
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -158,6 +159,43 @@ lazy val journal = (project in file("journal"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-journal",
+    libraryDependencies ++= Seq(
+      "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
+    ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
+          )
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
+          )
+      }
+    },
+    dependencyOverrides ++= Seq(
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", snapshot % "test->compile")
+
+lazy val state = (project in file("state"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-state",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
       "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
@@ -300,7 +338,7 @@ lazy val root = (project in file("."))
     name := "akka-persistence-dynamodb-root",
     publish / skip := true
   )
-  .aggregate(test, base, journal, snapshot, query, benchmark)
+  .aggregate(test, base, journal, snapshot, state, query, benchmark)
 
 // --- Custom commands
 addCommandAlias("lint", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck;scalafixAll --check")

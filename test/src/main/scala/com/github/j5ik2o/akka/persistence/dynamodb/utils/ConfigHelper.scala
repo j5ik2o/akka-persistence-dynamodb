@@ -18,6 +18,7 @@ object ConfigHelper {
     val configString = s"""
        |akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
        |akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
+       |akka.persistence.state.plugin = "j5ik2o.dynamo-db-state"
        |j5ik2o.dynamo-db-journal {
        |  legacy-config-format = $legacyConfigFormat
        |  shard-count = 1024
@@ -73,6 +74,23 @@ object ConfigHelper {
        |  }
        |}
        |
+       |j5ik2o.dynamo-db-state {
+       |  dynamo-db-client {
+       |    region = "ap-northeast-1"
+       |    access-key-id = "x"
+       |    secret-access-key = "x"
+       |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
+       |    client-version = "${clientVersion.toLowerCase}"
+       |    client-type = "${clientType.toLowerCase()}"
+       |    v2 {
+       |      dispatcher-name = "state-blocking-io-dispatcher"
+       |    }
+       |    v1 {
+       |      dispatcher-name = "state-blocking-io-dispatcher"
+       |    }
+       |  }
+       |}
+       |
        |j5ik2o.dynamo-db-read-journal {
        |  query-batch-size = 1
        |  dynamo-db-client {
@@ -91,11 +109,20 @@ object ConfigHelper {
        |    fixed-pool-size = 64
        |  }
        |}
+       |
        |snapshot-blocking-io-dispatcher {
        |  type = "Dispatcher"
        |  executor = "thread-pool-executor"
        |  thread-pool-executor {
        |    fixed-pool-size = 64 
+       |  }
+       |}
+       |
+       |state-blocking-io-dispatcher {
+       |  type = "Dispatcher"
+       |  executor = "thread-pool-executor"
+       |  thread-pool-executor {
+       |    fixed-pool-size = 64
        |  }
        |}
        """.stripMargin

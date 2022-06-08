@@ -1,0 +1,19 @@
+{
+  "TableName": "State",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "pkey",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "KeyType": "HASH",
+      "AttributeName": "pkey"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "WriteCapacityUnits": 10,
+    "ReadCapacityUnits": 10
+  }
+}

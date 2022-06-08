@@ -15,14 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.net.InetAddress
-import java.time.{ Duration => JavaDuration }
-
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.apache.ApacheHttpClient
 import software.amazon.awssdk.http.nio.netty.{ Http2Configuration, NettyNioAsyncHttpClient, SdkEventLoopGroup }
 
+import java.net.InetAddress
+import java.time.{ Duration => JavaDuration }
 import scala.concurrent.duration.Duration
 
 object V2HttpClientBuilderUtils {

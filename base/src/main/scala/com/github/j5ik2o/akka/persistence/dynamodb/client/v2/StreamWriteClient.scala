@@ -2,7 +2,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function

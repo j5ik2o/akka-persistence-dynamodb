@@ -1,11 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
-import java.security.SecureRandom
-
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 
+import java.security.SecureRandom
 import scala.collection.immutable._
 import scala.util.{ Failure, Success }
 

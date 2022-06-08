@@ -40,6 +40,12 @@ abstract class TraceReporter(val pluginConfig: PluginConfig) {
 
   def traceSnapshotStoreDeserializeSnapshot[T](@unused context: Context)(f: => Future[T]): Future[T] = f
 
+  def traceStateStoreGetObject[T](@unused context: Context)(f: => Future[T]): Future[T] = f
+
+  def traceStateStoreUpsertObject[T](@unused context: Context)(f: => Future[T]): Future[T] = f
+
+  def traceStateStoreDeleteObject[T](@unused context: Context)(f: => Future[T]): Future[T] = f
+
 }
 
 object TraceReporter {

@@ -77,7 +77,7 @@ By the way, `akka/akka-persistence-dynamodb` maybe has a heavy maintenance cost 
 
 ## Installation
 
-Add the following to your sbt build (2.11.x, 2.12.x, 2.13.x):
+Add the following to your sbt build (2.12.x, 2.13.x):
 
 ```scala
 val version = "..."

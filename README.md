@@ -30,6 +30,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |Non-blocking I/O|✓|-|-|
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
+|State Plugin|✓|-|✓|
 |Query Plugin|✓|-|✓|
 
 ### DynamoDB Support

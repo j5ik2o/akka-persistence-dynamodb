@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.net.InetAddress
-
 import akka.actor.DynamicAccess
 import com.amazonaws.{ ClientConfiguration, Protocol, ProxyAuthenticationMethod }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
@@ -11,6 +9,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
+import java.net.InetAddress
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 

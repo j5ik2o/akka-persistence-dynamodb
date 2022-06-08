@@ -2,7 +2,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
@@ -12,12 +11,15 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, Plugi
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model.{
   AttributeValue,
+  GetItemRequest,
+  GetItemResponse,
   QueryRequest,
   QueryResponse,
   ScanRequest,
   ScanResponse
 }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
+
 import scala.jdk.CollectionConverters._
 import scala.compat.java8.OptionConverters._
 
@@ -30,6 +32,34 @@ class StreamReadClient(
 ) {
 
   private val log = system.log
+
+  def getFlow: Flow[GetItemRequest, GetItemResponse, NotUsed] = {
+    val flow =
+      ((asyncClient, syncClient) match {
+        case (Some(c), None) =>
+          JavaFlow
+            .create[GetItemRequest]().mapAsync(
+              1,
+              new function.Function[GetItemRequest, CompletableFuture[GetItemResponse]] {
+                override def apply(request: GetItemRequest): CompletableFuture[GetItemResponse] = c.getItem(request)
+              }
+            ).asScala
+        case (None, Some(c)) =>
+          Flow[GetItemRequest].map { request => c.getItem(request) }.withV2Dispatcher(pluginConfig)
+        case _ =>
+          throw new IllegalStateException("invalid state")
+      }).log("getFlow")
+    if (readBackoffConfig.enabled)
+      RestartFlow
+        .withBackoff(
+          minBackoff = readBackoffConfig.minBackoff,
+          maxBackoff = readBackoffConfig.maxBackoff,
+          randomFactor = readBackoffConfig.randomFactor,
+          maxRestarts = readBackoffConfig.maxRestarts
+        ) { () => flow }
+    else flow
+
+  }
 
   def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
     val flow =

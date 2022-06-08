@@ -64,6 +64,18 @@ abstract class MetricsReporter(val pluginConfig: PluginConfig) {
   def beforeSnapshotStoreDeserializeSnapshot(context: Context): Context                            = { context }
   def afterSnapshotStoreDeserializeSnapshot(@unused context: Context): Unit                        = {}
   def errorSnapshotStoreDeserializeSnapshot(@unused context: Context, @unused ex: Throwable): Unit = {}
+
+  def beforeStateStoreUpsertObject(context: Context): Context                            = { context }
+  def afterStateStoreUpsertObject(@unused context: Context): Unit                        = {}
+  def errorStateStoreUpsertObject(@unused context: Context, @unused ex: Throwable): Unit = {}
+
+  def beforeStateStoreGetObject(context: Context): Context                            = { context }
+  def afterStateStoreGetObject(@unused context: Context): Unit                        = {}
+  def errorStateStoreGetObject(@unused context: Context, @unused ex: Throwable): Unit = {}
+
+  def beforeStateStoreDeleteObject(context: Context): Context                            = { context }
+  def afterStateStoreDeleteObject(@unused context: Context): Unit                        = {}
+  def errorStateStoreDeleteObject(@unused context: Context, @unused ex: Throwable): Unit = {}
 }
 
 object MetricsReporter {

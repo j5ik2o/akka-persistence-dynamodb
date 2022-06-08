@@ -54,6 +54,7 @@ trait DynamoDBContainerHelper {
 
   val journalTableName  = "Journal"
   val snapshotTableName = "Snapshot"
+  val stateTableName    = "State"
 
   protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500.milliseconds
 
@@ -82,6 +83,7 @@ trait DynamoDBContainerHelper {
     Thread.sleep(500)
     deleteJournalTable()
     deleteSnapshotTable()
+    deleteStateTable()
     Thread.sleep(500)
   }
 
@@ -94,6 +96,7 @@ trait DynamoDBContainerHelper {
     else
       createJournalTable()
     createSnapshotTable()
+    createStateTable()
     waitDynamoDBLocal(Seq(journalTableName, snapshotTableName))
   }
 
@@ -111,6 +114,14 @@ trait DynamoDBContainerHelper {
       dynamoDBClient.deleteTable(snapshotTableName)
     val result = dynamoDBClient.listTables(2)
     require(!result.getTableNames.asScala.exists(_.contains(snapshotTableName)))
+  }
+
+  private def deleteStateTable(): Unit = {
+    val listTablesResult = dynamoDBClient.listTables(2)
+    if (listTablesResult.getTableNames.asScala.exists(_.contains(stateTableName)))
+      dynamoDBClient.deleteTable(stateTableName)
+    val result = dynamoDBClient.listTables(2)
+    require(!result.getTableNames.asScala.exists(_.contains(stateTableName)))
   }
 
   def createSnapshotTable(): Unit = {
@@ -233,4 +244,25 @@ trait DynamoDBContainerHelper {
       require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)
     }
   }
+
+  def createStateTable(): Unit = {
+    val listTablesResult = dynamoDBClient.listTables(2)
+    if (!listTablesResult.getTableNames.asScala.exists(_.contains(stateTableName))) {
+      val createRequest = new CreateTableRequest()
+        .withTableName(stateTableName).withAttributeDefinitions(
+          Seq(
+            new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S)
+          ).asJava
+        ).withKeySchema(
+          Seq(
+            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH)
+          ).asJava
+        ).withProvisionedThroughput(
+          new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+        )
+      val createResponse = dynamoDBClient.createTable(createRequest)
+      require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)
+    }
+  }
+
 }

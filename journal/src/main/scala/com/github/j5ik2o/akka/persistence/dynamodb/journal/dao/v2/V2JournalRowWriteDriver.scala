@@ -228,7 +228,9 @@ final class V2JournalRowWriteDriver(
                   BatchWriteItemRequest
                     .builder().requestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava).build()
                 )
-                .via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+                .via(streamClient.recursiveBatchWriteItemFlow).map { _ =>
+                  requestItems.size.toLong
+                }
             }
       }.withAttributes(logLevels)
 
@@ -300,7 +302,9 @@ final class V2JournalRowWriteDriver(
                 BatchWriteItemRequest
                   .builder().requestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava).build()
               )
-              .via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+              .via(streamClient.recursiveBatchWriteItemFlow).map { _ =>
+                requestItems.size.toLong
+              }
           }.withAttributes(logLevels)
       }
 

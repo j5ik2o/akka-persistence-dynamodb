@@ -166,7 +166,9 @@ final class V1JournalRowWriteDriver(
               .single(
                 new BatchWriteItemRequest()
                   .withRequestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava)
-              ).via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+              ).via(streamClient.recursiveBatchWriteItemFlow).map { _ =>
+                requestItems.size.toLong
+              }
           }
       }.withAttributes(logLevels)
   }
@@ -197,7 +199,9 @@ final class V1JournalRowWriteDriver(
                 .single(
                   new BatchWriteItemRequest()
                     .withRequestItems(Map(pluginConfig.tableName -> requestItems.asJava).asJava)
-                ).via(streamClient.recursiveBatchWriteItemFlow).map { _ => requestItems.size.toLong }
+                ).via(streamClient.recursiveBatchWriteItemFlow).map { _ =>
+                  requestItems.size.toLong
+                }
             }
         }
       }

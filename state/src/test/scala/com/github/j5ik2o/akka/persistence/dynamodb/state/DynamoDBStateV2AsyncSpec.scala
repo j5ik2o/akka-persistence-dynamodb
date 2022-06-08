@@ -1,0 +1,61 @@
+package com.github.j5ik2o.akka.persistence.dynamodb.state
+
+import akka.persistence.state.DurableStateStoreRegistry
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{ DynamoDBDurableStateStoreV2, StateSpecBase }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
+import org.testcontainers.DockerClientFactory
+
+object DynamoDBStateV2AsyncSpec {
+  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
+}
+
+class DynamoDBStateV2AsyncSpec
+    extends StateSpecBase(
+      ConfigHelper
+        .config(
+          Some("state-reference"),
+          legacyConfigFormat = false,
+          legacyJournalMode = false,
+          dynamoDBHost = DynamoDBStateV2AsyncSpec.dynamoDBHost,
+          dynamoDBPort = DynamoDBStateV2AsyncSpec.dynamoDBPort,
+          clientVersion = ClientVersion.V2.toString,
+          clientType = ClientType.Async.toString
+        )
+    )
+    with ScalaFutures
+    with DynamoDBSpecSupport {
+
+  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+
+  override protected lazy val dynamoDBPort: Int = DynamoDBStateV2AsyncSpec.dynamoDBPort
+
+  "A durable state store plugin" - {
+    "instantiate a JdbcDurableDataStore successfully" in {
+      val store = DurableStateStoreRegistry
+        .get(system)
+        .durableStateStoreFor[DynamoDBDurableStateStoreV2[String]](DynamoDBDurableStateStoreProvider.Identifier)
+
+      store.upsertObject("1", 1, "ABC", "").futureValue()
+      val result = store.getObject("1").futureValue()
+
+      result.value shouldBe Some("ABC")
+
+      store shouldBe a[DynamoDBDurableStateStoreV2[_]]
+      store.system.settings.config shouldBe system.settings.config
+    }
+  }
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    createTable()
+  }
+
+  override def afterAll(): Unit = {
+    deleteTable()
+    super.afterAll()
+  }
+}

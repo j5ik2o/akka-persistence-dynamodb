@@ -53,7 +53,7 @@ final class DynamoDBDurableStateStoreV1[A](
     new v1.StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
 
   protected val serialization: Serialization = SerializationExtension(system)
-  private val akkaSerialization              = new AkkaSerialization(serialization)
+  private val akkaSerialization              = new AkkaSerialization(serialization, metricsReporter, traceReporter)
 
   override def getRawObject(persistenceId: String): Future[GetRawObjectResult[A]] = {
     val pid        = PersistenceId(persistenceId)
@@ -89,7 +89,7 @@ final class DynamoDBDurableStateStoreV1[A](
                   val ordering       = item(pluginConfig.columnsDefConfig.orderingColumnName).getN.toLong
                   val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
                   val payloadFuture: Future[GetRawObjectResult[A]] = akkaSerialization
-                    .deserialize(akkaSerialized).map { payload =>
+                    .deserialize(persistenceId, akkaSerialized).map { payload =>
                       GetRawObjectResult
                         .Just(
                           pkey.asString,
@@ -149,7 +149,7 @@ final class DynamoDBDurableStateStoreV1[A](
     def future = {
       val tableName = tableNameResolver.resolve(pid)
       val pkey      = partitionKeyResolver.resolve(pid)
-      val request = akkaSerialization.serialize(value).map { serialized =>
+      val request = akkaSerialization.serialize(persistenceId, value).map { serialized =>
         new PutItemRequest()
           .withTableName(tableName.asString)
           .withItem(

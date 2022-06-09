@@ -86,6 +86,7 @@ final class ByteArraySnapshotSerializer(
       metadata.timestamp,
       serialized
     )
+
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreSerializeSnapshot(context)(future))
 
     traced.onComplete {
@@ -94,6 +95,7 @@ final class ByteArraySnapshotSerializer(
       case Failure(ex) =>
         metricsReporter.foreach(_.errorSnapshotStoreSerializeSnapshot(newContext, ex))
     }
+
     traced
   }
 

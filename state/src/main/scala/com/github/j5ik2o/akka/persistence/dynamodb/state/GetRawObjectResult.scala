@@ -6,7 +6,7 @@ object GetRawObjectResult {
   final case class Just[A](
       pkey: String,
       persistenceId: String,
-      value: Option[A],
+      value: A,
       revision: Long,
       serializerId: Int,
       serializerManifest: Option[String],

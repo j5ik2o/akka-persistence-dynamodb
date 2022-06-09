@@ -89,23 +89,23 @@ final class DynamoDBDurableStateStoreV2[A](
                   val tag            = item.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.s)
                   val ordering       = item(pluginConfig.columnsDefConfig.orderingColumnName).n.toLong
                   val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
-                  val payload =
+                  val payloadFuture: Future[GetRawObjectResult[A]] =
                     akkaSerialization
-                      .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
-                        A
-                      ]]
-                  Source.single(
-                    GetRawObjectResult
-                      .Just(
-                        pkey.asString,
-                        persistenceId,
-                        payload,
-                        revision,
-                        serializerId,
-                        serializerManifest,
-                        tag,
-                        ordering
-                      )
+                      .deserialize(akkaSerialized).map { payload =>
+                        GetRawObjectResult
+                          .Just(
+                            pkey.asString,
+                            persistenceId,
+                            payload.asInstanceOf[A],
+                            revision,
+                            serializerId,
+                            serializerManifest,
+                            tag,
+                            ordering
+                          )
+                      }
+                  Source.future(
+                    payloadFuture
                   )
                 } else {
                   Source.single(GetRawObjectResult.Empty)
@@ -138,7 +138,7 @@ final class DynamoDBDurableStateStoreV2[A](
       case GetRawObjectResult.Empty =>
         GetObjectResult(None, 0)
       case GetRawObjectResult.Just(_, _, value, revision, _, _, _, _) =>
-        GetObjectResult(value, revision)
+        GetObjectResult(Some(value), revision)
     }
   }
 
@@ -178,7 +178,7 @@ final class DynamoDBDurableStateStoreV2[A](
           ).build()
       }
       Source
-        .future(Future.fromTry(request)).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
+        .future(request).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
           if (response.sdkHttpResponse().isSuccessful) {
             Source.single(Done)
           } else {

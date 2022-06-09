@@ -138,11 +138,11 @@ final class DynamoDBDurableStateStoreV2[A](
               pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
                 .builder().n(System.currentTimeMillis().toString).build()
             ) ++ (if (tag.isEmpty) Map.empty
-            else
-              Map(
-                pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()
-              ))
-              ++ serialized.serializerManifest
+                  else
+                    Map(
+                      pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()
+                    ))
+            ++ serialized.serializerManifest
               .map(v =>
                 Map(pluginConfig.columnsDefConfig.serializerManifestColumnName -> AttributeValue.builder().s(v).build())
               ).getOrElse(Map.empty)).asJava

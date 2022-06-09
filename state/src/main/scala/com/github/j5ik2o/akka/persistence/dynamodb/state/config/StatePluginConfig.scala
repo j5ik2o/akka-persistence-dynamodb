@@ -29,6 +29,7 @@ object StatePluginConfig extends LoggingSupport {
   val DefaultTraceReporterProviderClassName: String        = classOf[TraceReporterProvider.Default].getName
 
   val tableNameKey                             = "table-name"
+  val columnsDefKey                            = "columns-def"
   val tagSeparatorKey                          = "tag-separator"
   val shardCountKey                            = "shard-count"
   val partitionKeyResolverClassNameKey         = "partition-key-resolver-class-name"
@@ -45,9 +46,10 @@ object StatePluginConfig extends LoggingSupport {
 
   def fromConfig(config: Config): StatePluginConfig = {
     logger.debug("config = {}", config)
-    new StatePluginConfig(
+    val result = new StatePluginConfig(
       sourceConfig = config,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
+      columnsDefConfig = StateColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
       shardCount = config.valueAs(shardCountKey, DefaultShardCount),
       tableNameResolverClassName = {
@@ -91,12 +93,15 @@ object StatePluginConfig extends LoggingSupport {
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat = false)
     )
+    logger.debug("result = {}", result)
+    result
   }
 }
 
 final case class StatePluginConfig(
     sourceConfig: Config,
     tableName: String,
+    columnsDefConfig: StateColumnsDefConfig,
     tableNameResolverClassName: String,
     tableNameResolverProviderClassName: String,
     tagSeparator: String,

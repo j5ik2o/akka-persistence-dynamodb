@@ -17,15 +17,19 @@ package com.github.j5ik2o.akka.persistence.dynamodb.const
 
 object DefaultColumnsDef {
 
-  val PartitionKeyColumnName  = "pkey"
-  val SortKeyColumnName       = "skey"
-  val OrderingColumnName      = "ordering"
-  val DeletedColumnName       = "deleted"
-  val MessageColumnName       = "message"
-  val PersistenceIdColumnName = "persistence-id"
-  val SequenceNrColumnName    = "sequence-nr"
-  val TagsColumnName          = "tags"
-  val SnapshotColumnName      = "snapshot"
-  val CreatedColumnName       = "created"
+  val PartitionKeyColumnName       = "pkey"
+  val SortKeyColumnName            = "skey"
+  val OrderingColumnName           = "ordering"
+  val DeletedColumnName            = "deleted"
+  val MessageColumnName            = "message"
+  val PayloadColumnName            = "payload"
+  val SerializerIdColumnName       = "serializer-id"
+  val SerializerManifestColumnName = "serializer-manifest"
+  val PersistenceIdColumnName      = "persistence-id"
+  val SequenceNrColumnName         = "sequence-nr"
+  val RevisionNrColumnName         = "revision"
+  val TagsColumnName               = "tags"
+  val SnapshotColumnName           = "snapshot"
+  val CreatedColumnName            = "created"
 
 }

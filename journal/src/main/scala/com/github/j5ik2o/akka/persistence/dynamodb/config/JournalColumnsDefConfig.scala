@@ -52,7 +52,7 @@ object JournalColumnsDefConfig extends LoggingSupport {
 
 }
 
-case class JournalColumnsDefConfig(
+final case class JournalColumnsDefConfig(
     sourceConfig: Config,
     partitionKeyColumnName: String,
     sortKeyColumnName: String,

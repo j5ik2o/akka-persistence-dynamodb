@@ -11,8 +11,13 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{ AkkaSerialization, PartitionKeyResolver, TableNameResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{
+  AkkaSerialization,
+  AkkaSerialized,
+  PartitionKeyResolver,
+  TableNameResolver
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.io.IOException
@@ -38,12 +43,14 @@ final class DynamoDBDurableStateStoreV1[A](
 
   private val writeBackoffConfig: BackoffConfig = pluginConfig.writeBackoffConfig
   private val readBackoffConfig: BackoffConfig  = pluginConfig.readBackoffConfig
+
   private val streamWriteClient: v1.StreamWriteClient =
     new v1.StreamWriteClient(system, asyncClient, syncClient, pluginConfig, writeBackoffConfig)
   private val streamReadClient: v1.StreamReadClient =
     new v1.StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
 
   protected val serialization: Serialization = SerializationExtension(system)
+  private val akkaSerialization              = new AkkaSerialization(serialization)
 
   override def getObject(persistenceId: String): Future[GetObjectResult[A]] = {
     val pid        = PersistenceId(persistenceId)
@@ -56,7 +63,7 @@ final class DynamoDBDurableStateStoreV1[A](
       .withTableName(tableName.asString)
       .withKey(
         Map(
-          "pkey" -> new AttributeValue().withS(pkey.asString)
+          pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString)
         ).asJava
       )
     def future = Source
@@ -65,14 +72,17 @@ final class DynamoDBDurableStateStoreV1[A](
           val itemOpt = Option(result.getItem).map(_.asScala)
           itemOpt
             .map { item =>
-              val payloadAsArrayByte: Array[Byte] = item("payload").getB.array()
-              val serId: Int                      = item("serializerId").getN.toInt
-              val manifest: Option[String]        = item.get("serializerManifest").map(_.getS)
-              val payload = AkkaSerialization
-                .fromDurableStateRow(serialization)(payloadAsArrayByte, serId, manifest).toOption.asInstanceOf[Option[
+              val payloadAsArrayByte: Array[Byte] = item(pluginConfig.columnsDefConfig.payloadColumnName).getB.array()
+              val serializerId: Int = item(pluginConfig.columnsDefConfig.serializerIdColumnName).getN.toInt
+              val serializerManifest: Option[String] =
+                item.get(pluginConfig.columnsDefConfig.serializerManifestColumnName).map(_.getS)
+              val revision       = item(pluginConfig.columnsDefConfig.revisionColumnName).getN.toLong
+              val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
+              val payload = akkaSerialization
+                .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
                   A
                 ]]
-              Source.single(GetObjectResult(payload, item("revision").getN.toLong))
+              Source.single(GetObjectResult(payload, revision))
             }.getOrElse {
               Source.single(GetObjectResult(None.asInstanceOf[Option[A]], 0))
             }
@@ -102,20 +112,26 @@ final class DynamoDBDurableStateStoreV1[A](
 
     val tableName = tableNameResolver.resolve(pid)
     val pkey      = partitionKeyResolver.resolve(pid)
-    val request = AkkaSerialization.serialize(serialization, value).map { serialized =>
+    val request = akkaSerialization.serialize(value).map { serialized =>
       new PutItemRequest()
         .withTableName(tableName.asString)
         .withItem(
           (Map(
-            "pkey"          -> new AttributeValue().withS(pkey.asString),
-            "persistenceId" -> new AttributeValue().withS(persistenceId),
-            "revision"      -> new AttributeValue().withN(revision.toString),
-            "payload"       -> new AttributeValue().withB(ByteBuffer.wrap(serialized.payload)),
-            "tag"           -> new AttributeValue().withSS(tag.split(pluginConfig.tagSeparator).toList.asJava),
-            "serializerId"  -> new AttributeValue().withN(serialized.serializerId.toString),
-            "timestamp"     -> new AttributeValue().withN(System.currentTimeMillis().toString)
+            pluginConfig.columnsDefConfig.partitionKeyColumnName  -> new AttributeValue().withS(pkey.asString),
+            pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue().withS(persistenceId),
+            pluginConfig.columnsDefConfig.revisionColumnName      -> new AttributeValue().withN(revision.toString),
+            pluginConfig.columnsDefConfig.payloadColumnName -> new AttributeValue()
+              .withB(ByteBuffer.wrap(serialized.payload)),
+            pluginConfig.columnsDefConfig.tagsColumnName -> new AttributeValue()
+              .withSS(tag.split(pluginConfig.tagSeparator).toList.asJava),
+            pluginConfig.columnsDefConfig.serializerIdColumnName -> new AttributeValue()
+              .withN(serialized.serializerId.toString),
+            pluginConfig.columnsDefConfig.orderingColumnName -> new AttributeValue()
+              .withN(System.currentTimeMillis().toString)
           ) ++ serialized.serializerManifest
-            .map(v => Map("serializerManifest" -> new AttributeValue().withS(v))).getOrElse(Map.empty)).asJava
+            .map(v =>
+              Map(pluginConfig.columnsDefConfig.serializerManifestColumnName -> new AttributeValue().withS(v))
+            ).getOrElse(Map.empty)).asJava
         )
     }
 
@@ -151,7 +167,7 @@ final class DynamoDBDurableStateStoreV1[A](
     val request = new DeleteItemRequest()
       .withTableName(tableName.asString).withKey(
         Map(
-          "pkey" -> new AttributeValue().withS(pkey.asString)
+          pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString)
         ).asJava
       )
     def future = Source

@@ -4,24 +4,22 @@ import akka.serialization.{ Serialization, Serializers }
 
 import scala.util.Try
 
-object AkkaSerialization {
+final case class AkkaSerialized(serializerId: Int, serializerManifest: Option[String], payload: Array[Byte])
 
-  case class AkkaSerialized(serializerId: Int, serializerManifest: Option[String], payload: Array[Byte])
+final class AkkaSerialization(serialization: Serialization) {
 
-  def serialize(serialization: Serialization, payload: Any): Try[AkkaSerialized] = {
+  def serialize(payload: Any): Try[AkkaSerialized] = {
     val p2          = payload.asInstanceOf[AnyRef]
     val serializer  = serialization.findSerializerFor(p2)
     val serManifest = Serializers.manifestFor(serializer, p2)
     val serialized  = serialization.serialize(p2)
-    serialized.map(payload =>
+    serialized.map { payload =>
       AkkaSerialized(serializer.identifier, if (serManifest.isEmpty) None else Some(serManifest), payload)
-    )
+    }
   }
 
-  def fromDurableStateRow(
-      serialization: Serialization
-  )(payload: Array[Byte], serId: Int, manifest: Option[String]): Try[AnyRef] = {
-    serialization.deserialize(payload, serId, manifest.getOrElse(""))
+  def deserialize(serialized: AkkaSerialized): Try[AnyRef] = {
+    serialization.deserialize(serialized.payload, serialized.serializerId, serialized.serializerManifest.getOrElse(""))
   }
 
 }

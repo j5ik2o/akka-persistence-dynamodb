@@ -20,6 +20,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.state.{
   TableNameResolver
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -38,7 +39,8 @@ final class DynamoDBDurableStateStoreV1[A](
     val metricsReporter: Option[MetricsReporter],
     val traceReporter: Option[TraceReporter],
     val pluginConfig: StatePluginConfig
-) extends ScalaDurableStateUpdateStore[A] {
+) extends ScalaDurableStateUpdateStore[A]
+    with LoggingSupport {
   implicit val mat: ActorSystem     = system
   implicit val ec: ExecutionContext = pluginExecutor
 
@@ -71,27 +73,41 @@ final class DynamoDBDurableStateStoreV1[A](
       Source
         .single(request).via(streamReadClient.getFlow).flatMapConcat { result =>
           if (result.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val itemOpt = Option(result.getItem).map(_.asScala)
-            itemOpt
+            Option(result.getItem)
+              .map(_.asScala)
               .map { item =>
-                val pkey: String                    = item(pluginConfig.columnsDefConfig.partitionKeyColumnName).getS
-                val persistenceId: String           = item(pluginConfig.columnsDefConfig.persistenceIdColumnName).getS
-                val payloadAsArrayByte: Array[Byte] = item(pluginConfig.columnsDefConfig.payloadColumnName).getB.array()
-                val serializerId: Int = item(pluginConfig.columnsDefConfig.serializerIdColumnName).getN.toInt
-                val serializerManifest: Option[String] =
-                  item.get(pluginConfig.columnsDefConfig.serializerManifestColumnName).map(_.getS)
-                val revision       = item(pluginConfig.columnsDefConfig.revisionColumnName).getN.toLong
-                val tag            = item.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
-                val ordering       = item(pluginConfig.columnsDefConfig.orderingColumnName).getN.toLong
-                val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
-                val payload = akkaSerialization
-                  .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
-                    A
-                  ]]
-                Source.single(
-                  GetRawObjectResult
-                    .Just(pkey, persistenceId, payload, revision, serializerId, serializerManifest, tag, ordering)
-                )
+                if (item.nonEmpty) {
+                  logger.debug(s"item = $item")
+                  val persistenceId: String = item(pluginConfig.columnsDefConfig.persistenceIdColumnName).getS
+                  val payloadAsArrayByte: Array[Byte] =
+                    item(pluginConfig.columnsDefConfig.payloadColumnName).getB.array()
+                  val serializerId: Int = item(pluginConfig.columnsDefConfig.serializerIdColumnName).getN.toInt
+                  val serializerManifest: Option[String] =
+                    item.get(pluginConfig.columnsDefConfig.serializerManifestColumnName).map(_.getS)
+                  val revision       = item(pluginConfig.columnsDefConfig.revisionColumnName).getN.toLong
+                  val tag            = item.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
+                  val ordering       = item(pluginConfig.columnsDefConfig.orderingColumnName).getN.toLong
+                  val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
+                  val payload = akkaSerialization
+                    .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
+                      A
+                    ]]
+                  Source.single(
+                    GetRawObjectResult
+                      .Just(
+                        pkey.asString,
+                        persistenceId,
+                        payload,
+                        revision,
+                        serializerId,
+                        serializerManifest,
+                        tag,
+                        ordering
+                      )
+                  )
+                } else {
+                  Source.single(GetRawObjectResult.Empty)
+                }
               }.getOrElse {
                 Source.single(GetRawObjectResult.Empty)
               }
@@ -125,6 +141,7 @@ final class DynamoDBDurableStateStoreV1[A](
   }
 
   override def upsertObject(persistenceId: String, revision: Long, value: A, tag: String): Future[Done] = {
+    require(revision > 0)
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeStateStoreUpsertObject(context))

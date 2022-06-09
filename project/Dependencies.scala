@@ -53,14 +53,15 @@ object Dependencies {
   }
 
   object akka {
-    def slf4j(version: String)            = "com.typesafe.akka" %% "akka-slf4j"             % version
-    def stream(version: String)           = "com.typesafe.akka" %% "akka-stream"            % version
-    def testkit(version: String)          = "com.typesafe.akka" %% "akka-testkit"           % version
-    def streamTestkit(version: String)    = "com.typesafe.akka" %% "akka-stream-testkit"    % version
-    def persistence(version: String)      = "com.typesafe.akka" %% "akka-persistence"       % version
-    def persistenceQuery(version: String) = "com.typesafe.akka" %% "akka-persistence-query" % version
-    def persistenceTyped(version: String) = "com.typesafe.akka" %% "akka-persistence-typed" % version
-    def persistenceTck(version: String)   = "com.typesafe.akka" %% "akka-persistence-tck"   % version
+    def slf4j(version: String)                = "com.typesafe.akka" %% "akka-slf4j"                 % version
+    def stream(version: String)               = "com.typesafe.akka" %% "akka-stream"                % version
+    def testkit(version: String)              = "com.typesafe.akka" %% "akka-testkit"               % version
+    def streamTestkit(version: String)        = "com.typesafe.akka" %% "akka-stream-testkit"        % version
+    def persistence(version: String)          = "com.typesafe.akka" %% "akka-persistence"           % version
+    def persistenceQuery(version: String)     = "com.typesafe.akka" %% "akka-persistence-query"     % version
+    def persistenceTyped(version: String)     = "com.typesafe.akka" %% "akka-persistence-typed"     % version
+    def persistenceTck(version: String)       = "com.typesafe.akka" %% "akka-persistence-tck"       % version
+    def serializationJackson(version: String) = "com.typesafe.akka" %% "akka-serialization-jackson" % version
   }
 
   object scalatest {

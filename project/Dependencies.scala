@@ -35,9 +35,15 @@ object Dependencies {
     val julToSlf4J = "org.slf4j" % "jul-to-slf4j" % slf4jVersion
   }
 
-  object iheart {
-    val ficus = "com.iheart" %% "ficus" % ficusVersion
+  object fasterxml {
+
+    val jacksonModuleScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.2"
+
   }
+
+//  object iheart {
+//    val ficus = "com.iheart" %% "ficus" % ficusVersion
+//  }
 
   object softwareamazon {
     val dynamodb = "software.amazon.awssdk" % "dynamodb" % awsSdkV2Version

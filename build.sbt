@@ -109,7 +109,6 @@ lazy val base = (project in file("base"))
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
       slf4j.api,
-      iheart.ficus,
       amazonaws.dynamodb,
       amazonaws.dax,
       softwareamazon.dynamodb,
@@ -342,7 +341,7 @@ lazy val example = (project in file("example"))
       slf4j.api,
       slf4j.julToSlf4J,
       dimafeng.testcontainerScala,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.3"
+      fasterxml.jacksonModuleScala
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -361,7 +360,6 @@ lazy val example = (project in file("example"))
       }
     }
   )
-  .enablePlugins(JmhPlugin)
   .dependsOn(test, journal, snapshot, state)
 
 lazy val root = (project in file("."))

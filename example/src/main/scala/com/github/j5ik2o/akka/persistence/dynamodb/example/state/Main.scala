@@ -4,6 +4,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ ActorSystem, Behavior }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.example.CounterProtocol
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBContainerHelper
 import com.typesafe.config.ConfigFactory
 
 import java.util.UUID
@@ -12,7 +13,7 @@ import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.Try
 import com.typesafe.config.Config
 
-object Main extends App {
+object Main extends App with DynamoDBContainerHelper {
   trait Message
 
   case class AdaptedResponse(id: UUID, n: Try[Int]) extends Message
@@ -54,9 +55,15 @@ object Main extends App {
 
   }
 
+//  dynamoDbLocalContainer.start()
+//  Thread.sleep(1000)
+//  createTable()
+
   val config: Config               = ConfigFactory.load()
   val system: ActorSystem[Message] = ActorSystem(apply(), "main", config)
 
   Await.result(system.whenTerminated, Duration.Inf)
+
+//  dynamoDbLocalContainer.stop()
 
 }

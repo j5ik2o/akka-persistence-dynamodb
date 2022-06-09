@@ -4,7 +4,8 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.annotation.ApiMayChange
 import akka.persistence.state.javadsl.GetObjectResult
-import akka.persistence.state.{ javadsl, scaladsl }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.GetRawObjectResult
+import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStore
 
 import java.util.Optional
 import java.util.concurrent.CompletionStage
@@ -12,9 +13,17 @@ import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 
 @ApiMayChange
-final class JavaDynamoDBDurableStateStore[A](system: ActorSystem, underlying: scaladsl.DurableStateUpdateStore[A])
-    extends javadsl.DurableStateUpdateStore[A] {
-  implicit val ec: ExecutionContext = system.dispatcher
+final class JavaDynamoDBDurableStateStore[A](
+    system: ActorSystem,
+    pluginExecutor: ExecutionContext,
+    underlying: ScalaDurableStateUpdateStore[A]
+) extends JavaDurableStateUpdateStore[A] {
+  implicit val ec: ExecutionContext = pluginExecutor
+
+  override def getRawObject(persistenceId: String): CompletionStage[GetRawObjectResult[A]] =
+    toJava(
+      underlying.getRawObject(persistenceId)
+    )
 
   override def getObject(persistenceId: String): CompletionStage[GetObjectResult[A]] =
     toJava(

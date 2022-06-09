@@ -42,23 +42,28 @@ class DynamoDBStateV1AsyncSpec
         .durableStateStoreFor[DynamoDBDurableStateStoreV1[String]](DynamoDBDurableStateStoreProvider.Identifier)
 
       {
-        val id = UUID.randomUUID().toString
+        val id       = UUID.randomUUID().toString
         val revision = 1
-        val data = "abc"
-        val tag = ""
+        val data     = "abc"
+        val tag      = ""
         store.upsertObject(id, revision, data, tag).futureValue()
         val result = store.getObject(id).futureValue()
         result.value shouldBe Some(data)
       }
       {
-        val id = UUID.randomUUID().toString
+        val id       = UUID.randomUUID().toString
         val revision = 1
-        val data = "def"
-        val tag = UUID.randomUUID().toString
+        val data     = "def"
+        val tag      = UUID.randomUUID().toString
         store.upsertObject(id, revision, data, tag).futureValue()
         val result = store.getRawObject(id).futureValue()
-        result.value shouldBe Some(data)
-        result.tag shouldBe Some(tag)
+        result match {
+          case just: GetRawObjectResult.Just[String] =>
+            just.value shouldBe Some(data)
+            just.tag shouldBe Some(tag)
+          case _ =>
+            fail()
+        }
       }
 
       store shouldBe a[DynamoDBDurableStateStoreV1[_]]

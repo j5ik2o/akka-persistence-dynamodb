@@ -3,7 +3,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state
 import akka.serialization.{ AsyncSerializer, Serialization, Serializer, Serializers }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.reflect.ClassTag
 import scala.util.{ Failure, Success }
 
 final case class AkkaSerialized(serializerId: Int, serializerManifest: Option[String], payload: Array[Byte])

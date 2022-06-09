@@ -1,26 +1,32 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.Done
-import akka.actor.{CoordinatedShutdown, ExtendedActorSystem}
+import akka.actor.{ CoordinatedShutdown, ExtendedActorSystem }
 import akka.annotation.ApiMayChange
 import akka.event.LoggingAdapter
 import akka.persistence.state.DurableStateStoreProvider
-import akka.persistence.state.javadsl.{DurableStateUpdateStore => JavaDurableStateUpdateStore}
-import akka.persistence.state.scaladsl.{DurableStateUpdateStore => ScalaDurableStateUpdateStore}
-import akka.stream.{Materializer, SystemMaterializer}
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ClientType, ClientVersion}
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{MetricsReporter, MetricsReporterProvider}
+import akka.persistence.state.javadsl.{ DurableStateUpdateStore => JavaDurableStateUpdateStore }
+import akka.persistence.state.scaladsl.{ DurableStateUpdateStore => ScalaDurableStateUpdateStore }
+import akka.stream.{ Materializer, SystemMaterializer }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
-import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{DynamoDBDurableStateStoreV1, DynamoDBDurableStateStoreV2}
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.{TraceReporter, TraceReporterProvider}
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ClientUtils, DispatcherUtils}
+import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{
+  DynamoDBDurableStateStoreV1,
+  DynamoDBDurableStateStoreV2
+}
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClientUtils, DispatcherUtils }
 import com.typesafe.config.Config
-import software.amazon.awssdk.services.dynamodb.{DynamoDbAsyncClient => JavaDynamoDbAsyncClient, DynamoDbClient => JavaDynamoDbSyncClient}
+import software.amazon.awssdk.services.dynamodb.{
+  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
+  DynamoDbClient => JavaDynamoDbSyncClient
+}
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object DynamoDBDurableStateStoreProvider {
 
@@ -92,55 +98,58 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
     provider.create
   }
 
-  def createStore[A]: ScalaDurableStateUpdateStore[A] = statePluginConfig.clientConfig.clientVersion match {
-    case ClientVersion.V2 =>
-      val (maybeV2SyncClient, maybeV2AsyncClient) = statePluginConfig.clientConfig.clientType match {
-        case ClientType.Sync =>
-          val client =
-            ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)(
-              javaSyncClientV2 = _
-            )
-          (Some(client), None)
-        case ClientType.Async =>
-          val client = ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)(javaAsyncClientV2 = _)
-          (None, Some(client))
-      }
-      new DynamoDBDurableStateStoreV2(
-        system,
-        pluginExecutor,
-        maybeV2AsyncClient,
-        maybeV2SyncClient,
-        partitionKeyResolver,
-        tableNameResolver,
-        metricsReporter,
-        traceReporter,
-        statePluginConfig
-      )
-    case ClientVersion.V1 =>
-      val (maybeV1SyncClient, maybeV1AsyncClient) = statePluginConfig.clientConfig.clientType match {
-        case ClientType.Sync =>
-          val client = ClientUtils
-            .createV1SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)
-          (Some(client), None)
-        case ClientType.Async =>
-          val client = ClientUtils.createV1AsyncClient(dynamicAccess, statePluginConfig)
-          (None, Some(client))
-      }
-      new DynamoDBDurableStateStoreV1(
-        system,
-        pluginExecutor,
-        maybeV1AsyncClient,
-        maybeV1SyncClient,
-        partitionKeyResolver,
-        tableNameResolver,
-        metricsReporter,
-        traceReporter,
-        statePluginConfig
-      )
-  }
+  def createStore[A]: com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStore[A] =
+    statePluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V2 =>
+        val (maybeV2SyncClient, maybeV2AsyncClient) = statePluginConfig.clientConfig.clientType match {
+          case ClientType.Sync =>
+            val client =
+              ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)(
+                javaSyncClientV2 = _
+              )
+            (Some(client), None)
+          case ClientType.Async =>
+            val client = ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)(javaAsyncClientV2 = _)
+            (None, Some(client))
+        }
+        new DynamoDBDurableStateStoreV2(
+          system,
+          pluginExecutor,
+          maybeV2AsyncClient,
+          maybeV2SyncClient,
+          partitionKeyResolver,
+          tableNameResolver,
+          metricsReporter,
+          traceReporter,
+          statePluginConfig
+        )
+      case ClientVersion.V1 =>
+        val (maybeV1SyncClient, maybeV1AsyncClient) = statePluginConfig.clientConfig.clientType match {
+          case ClientType.Sync =>
+            val client = ClientUtils
+              .createV1SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)
+            (Some(client), None)
+          case ClientType.Async =>
+            val client = ClientUtils.createV1AsyncClient(dynamicAccess, statePluginConfig)
+            (None, Some(client))
+        }
+        new DynamoDBDurableStateStoreV1(
+          system,
+          pluginExecutor,
+          maybeV1AsyncClient,
+          maybeV1SyncClient,
+          partitionKeyResolver,
+          tableNameResolver,
+          metricsReporter,
+          traceReporter,
+          statePluginConfig
+        )
+    }
 
   override def scaladslDurableStateStore(): ScalaDurableStateUpdateStore[Any] = createStore[Any]
 
-  override def javadslDurableStateStore(): JavaDurableStateUpdateStore[AnyRef] =
-    new JavaDynamoDBDurableStateStore[AnyRef](system, createStore[AnyRef])
+  override def javadslDurableStateStore(): JavaDurableStateUpdateStore[AnyRef] = {
+    val store = createStore[AnyRef]
+    new JavaDynamoDBDurableStateStore[AnyRef](system, pluginExecutor, store)
+  }
 }

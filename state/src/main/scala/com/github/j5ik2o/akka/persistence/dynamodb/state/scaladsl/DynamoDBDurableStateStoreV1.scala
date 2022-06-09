@@ -2,30 +2,25 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import akka.Done
 import akka.actor.ActorSystem
-import akka.persistence.state.scaladsl.{ DurableStateUpdateStore, GetObjectResult }
-import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.scaladsl.{ Sink, Source }
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, DeleteItemRequest, GetItemRequest, PutItemRequest }
-import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
+import akka.persistence.state.scaladsl.{DurableStateUpdateStore, GetObjectResult}
+import akka.serialization.{Serialization, SerializationExtension}
+import akka.stream.scaladsl.{Sink, Source}
+import com.amazonaws.services.dynamodbv2.model.{AttributeValue, DeleteItemRequest, GetItemRequest, PutItemRequest}
+import com.amazonaws.services.dynamodbv2.{AmazonDynamoDB, AmazonDynamoDBAsync}
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{Context, PersistenceId}
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{
-  AkkaSerialization,
-  AkkaSerialized,
-  PartitionKeyResolver,
-  TableNameResolver
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{AkkaSerialization, AkkaSerialized, DynamoDBDurableStateStore, GetRawObjectResult, PartitionKeyResolver, TableNameResolver}
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.UUID
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 final class DynamoDBDurableStateStoreV1[A](
     val system: ActorSystem,
@@ -37,7 +32,7 @@ final class DynamoDBDurableStateStoreV1[A](
     val metricsReporter: Option[MetricsReporter],
     val traceReporter: Option[TraceReporter],
     val pluginConfig: StatePluginConfig
-) extends DurableStateUpdateStore[A] {
+) extends DynamoDBDurableStateStore[A] {
   implicit val mat: ActorSystem     = system
   implicit val ec: ExecutionContext = pluginExecutor
 
@@ -52,7 +47,7 @@ final class DynamoDBDurableStateStoreV1[A](
   protected val serialization: Serialization = SerializationExtension(system)
   private val akkaSerialization              = new AkkaSerialization(serialization)
 
-  override def getObject(persistenceId: String): Future[GetObjectResult[A]] = {
+  override def getRawObject(persistenceId: String): Future[GetRawObjectResult[A]] = {
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeStateStoreGetObject(context))
@@ -69,30 +64,31 @@ final class DynamoDBDurableStateStoreV1[A](
         )
       Source
         .single(request).via(streamReadClient.getFlow).flatMapConcat { result =>
-          if (result.getSdkHttpMetadata.getHttpStatusCode == 200) {
-            val itemOpt = Option(result.getItem).map(_.asScala)
-            itemOpt
-              .map { item =>
-                val payloadAsArrayByte: Array[Byte] = item(pluginConfig.columnsDefConfig.payloadColumnName).getB.array()
-                val serializerId: Int = item(pluginConfig.columnsDefConfig.serializerIdColumnName).getN.toInt
-                val serializerManifest: Option[String] =
-                  item.get(pluginConfig.columnsDefConfig.serializerManifestColumnName).map(_.getS)
-                val revision       = item(pluginConfig.columnsDefConfig.revisionColumnName).getN.toLong
-                val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
-                val payload = akkaSerialization
-                  .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
-                    A
-                  ]]
-                Source.single(GetObjectResult(payload, revision))
-              }.getOrElse {
-                Source.single(GetObjectResult(None.asInstanceOf[Option[A]], 0))
-              }
-          } else {
-            val statusCode = result.getSdkHttpMetadata.getHttpStatusCode
-            Source.failed(new IOException(s"statusCode: $statusCode"))
+        if (result.getSdkHttpMetadata.getHttpStatusCode == 200) {
+          val itemOpt = Option(result.getItem).map(_.asScala)
+          itemOpt
+            .map { item =>
+              val payloadAsArrayByte: Array[Byte] = item(pluginConfig.columnsDefConfig.payloadColumnName).getB.array()
+              val serializerId: Int = item(pluginConfig.columnsDefConfig.serializerIdColumnName).getN.toInt
+              val serializerManifest: Option[String] =
+                item.get(pluginConfig.columnsDefConfig.serializerManifestColumnName).map(_.getS)
+              val revision = item(pluginConfig.columnsDefConfig.revisionColumnName).getN.toLong
+              val tag = item.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
+              val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
+              val payload = akkaSerialization
+                .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
+                A
+              ]]
+              Source.single(GetRawObjectResult(payload, revision, tag))
+            }.getOrElse {
+            Source.single(GetRawObjectResult(None.asInstanceOf[Option[A]], 0, None))
           }
+        } else {
+          val statusCode = result.getSdkHttpMetadata.getHttpStatusCode
+          Source.failed(new IOException(s"statusCode: $statusCode"))
         }
-        .runWith(Sink.head)
+      }
+          .runWith(Sink.head)
     }
 
     val traced = traceReporter.fold(future)(_.traceStateStoreGetObject(context)(future))
@@ -105,6 +101,12 @@ final class DynamoDBDurableStateStoreV1[A](
     }
 
     traced
+  }
+
+  override def getObject(persistenceId: String): Future[GetObjectResult[A]] = {
+    getRawObject(persistenceId).map { result =>
+      GetObjectResult(result.value, result.revision)
+    }
   }
 
   override def upsertObject(persistenceId: String, revision: Long, value: A, tag: String): Future[Done] = {

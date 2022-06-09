@@ -9,22 +9,22 @@ import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration.DurationInt
 
-object DynamoDBStateV1AsyncSpec {
+object DynamoDBStateV1SyncSpec {
   val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
-class DynamoDBStateV1AsyncSpec
+class DynamoDBStateV1SyncSpec
     extends StateSpecBase(
       ConfigHelper
         .config(
           Some("state-reference"),
           legacyConfigFormat = false,
           legacyJournalMode = false,
-          dynamoDBHost = DynamoDBStateV1AsyncSpec.dynamoDBHost,
-          dynamoDBPort = DynamoDBStateV1AsyncSpec.dynamoDBPort,
+          dynamoDBHost = DynamoDBStateV1SyncSpec.dynamoDBHost,
+          dynamoDBPort = DynamoDBStateV1SyncSpec.dynamoDBPort,
           clientVersion = ClientVersion.V1.toString,
-          clientType = ClientType.Async.toString
+          clientType = ClientType.Sync.toString
         )
     )
     with ScalaFutures
@@ -32,7 +32,7 @@ class DynamoDBStateV1AsyncSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBStateV1AsyncSpec.dynamoDBPort
+  override protected lazy val dynamoDBPort: Int = DynamoDBStateV1SyncSpec.dynamoDBPort
 
   "A durable state store plugin" - {
     "instantiate a JdbcDurableDataStore successfully" in {

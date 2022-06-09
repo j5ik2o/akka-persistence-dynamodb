@@ -133,13 +133,16 @@ final class DynamoDBDurableStateStoreV2[A](
               pluginConfig.columnsDefConfig.revisionColumnName -> AttributeValue.builder().n(revision.toString).build(),
               pluginConfig.columnsDefConfig.payloadColumnName -> AttributeValue
                 .builder().b(SdkBytes.fromByteArray(serialized.payload)).build(),
-              pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue
-                .builder().ss(tag.split(pluginConfig.tagSeparator).toList.asJava).build(),
               pluginConfig.columnsDefConfig.serializerIdColumnName -> AttributeValue
                 .builder().n(serialized.serializerId.toString).build(),
               pluginConfig.columnsDefConfig.orderingColumnName -> AttributeValue
                 .builder().n(System.currentTimeMillis().toString).build()
-            ) ++ serialized.serializerManifest
+            ) ++ (if (tag.isEmpty) Map.empty
+            else
+              Map(
+                pluginConfig.columnsDefConfig.tagsColumnName -> AttributeValue.builder().s(tag).build()
+              ))
+              ++ serialized.serializerManifest
               .map(v =>
                 Map(pluginConfig.columnsDefConfig.serializerManifestColumnName -> AttributeValue.builder().s(v).build())
               ).getOrElse(Map.empty)).asJava

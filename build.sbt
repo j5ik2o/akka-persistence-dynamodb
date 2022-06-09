@@ -342,7 +342,7 @@ lazy val example = (project in file("example"))
       slf4j.api,
       slf4j.julToSlf4J,
       dimafeng.testcontainerScala,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.2"
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.3"
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {

@@ -1,4 +1,4 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.example.state
+package com.github.j5ik2o.akka.persistence.dynamodb.example.durablestate
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ ActorSystem, Behavior }

@@ -48,12 +48,12 @@ This plugin supports a simple sharding to avoid the throttle of write on DynamoD
 
 - Primary Index(for Events writing, default is pattern-1)
   - pattern-1 is `sequenceNumber` based write sharding (com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased)
-    - Partition Key = ${persistenceId}-${sequenceNumber % shardCount}
-    - Sort Key = ${sequenceNumber}
+    - Partition Key = `${persistenceId}-${sequenceNumber % shardCount}`
+    - Sort Key = `${sequenceNumber}`
   - pattern-2 is `persistenceId` based write sharding (com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased)
-    - Partition Key = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
+    - Partition Key = `${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
       - `persistenceId.prefix` is the first part of the `persistenceId` is delimiter-separated.
-    - Sort Key = ${persistenceId.body}-${sequenceNumber}
+    - Sort Key = `${persistenceId.body}-${sequenceNumber}`
       - `persistenceId.body` is the last part of the `persistenceId` is delimiter-separated.
     
 If you want to load events chronologically in DynamoDB Streams, choose pattern-2.

@@ -3,31 +3,26 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 import akka.Done
 import akka.actor.ActorSystem
 import akka.persistence.state.scaladsl.GetObjectResult
-import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.scaladsl.{ Sink, Source }
-import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, DeleteItemRequest, GetItemRequest, PutItemRequest }
-import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
+import akka.serialization.{Serialization, SerializationExtension}
+import akka.stream.scaladsl.{Sink, Source}
+import com.amazonaws.services.dynamodbv2.model.{AttributeValue, DeleteItemRequest, GetItemRequest, PutItemRequest}
+import com.amazonaws.services.dynamodbv2.{AmazonDynamoDB, AmazonDynamoDBAsync}
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{Context, PersistenceId}
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{
-  AkkaSerialization,
-  AkkaSerialized,
-  GetRawObjectResult,
-  PartitionKeyResolver,
-  TableNameResolver
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{AkkaSerialization, AkkaSerialized, GetRawObjectResult, PartitionKeyResolver, TableNameResolver}
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.UUID
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
-import scala.util.{ Failure, Success }
+import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 final class DynamoDBDurableStateStoreV1[A](
     val system: ActorSystem,
@@ -88,22 +83,22 @@ final class DynamoDBDurableStateStoreV1[A](
                   val tag            = item.get(pluginConfig.columnsDefConfig.tagsColumnName).map(_.getS)
                   val ordering       = item(pluginConfig.columnsDefConfig.orderingColumnName).getN.toLong
                   val akkaSerialized = AkkaSerialized(serializerId, serializerManifest, payloadAsArrayByte)
-                  val payload = akkaSerialization
-                    .deserialize(akkaSerialized).toOption.asInstanceOf[Option[
-                      A
-                    ]]
-                  Source.single(
-                    GetRawObjectResult
-                      .Just(
-                        pkey.asString,
-                        persistenceId,
-                        payload,
-                        revision,
-                        serializerId,
-                        serializerManifest,
-                        tag,
-                        ordering
-                      )
+                  val payloadFuture: Future[GetRawObjectResult[A]] = akkaSerialization
+                    .deserialize(akkaSerialized).map { payload =>
+                      GetRawObjectResult
+                        .Just(
+                          pkey.asString,
+                          persistenceId,
+                          payload.asInstanceOf[A],
+                          revision,
+                          serializerId,
+                          serializerManifest,
+                          tag,
+                          ordering
+                        )
+                    }
+                  Source.future(
+                    payloadFuture
                   )
                 } else {
                   Source.single(GetRawObjectResult.Empty)
@@ -136,7 +131,7 @@ final class DynamoDBDurableStateStoreV1[A](
       case GetRawObjectResult.Empty =>
         GetObjectResult(None, 0)
       case GetRawObjectResult.Just(_, _, value, revision, _, _, _, _) =>
-        GetObjectResult(value, revision)
+        GetObjectResult(Some(value), revision)
     }
   }
 
@@ -176,7 +171,7 @@ final class DynamoDBDurableStateStoreV1[A](
           )
       }
       Source
-        .future(Future.fromTry(request)).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
+        .future(request).via(streamWriteClient.putItemFlow).flatMapConcat { response =>
           if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
             Source.single(Done)
           } else {

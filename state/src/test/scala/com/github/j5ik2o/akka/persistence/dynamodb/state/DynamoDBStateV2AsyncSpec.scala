@@ -36,7 +36,7 @@ class DynamoDBStateV2AsyncSpec
   override protected lazy val dynamoDBPort: Int = DynamoDBStateV2AsyncSpec.dynamoDBPort
 
   "A durable state store plugin" - {
-    "instantiate a JdbcDurableDataStore successfully" in {
+    "instantiate a DynamoDBDurableDataStore successfully" in {
       val store = DurableStateStoreRegistry
         .get(system)
         .durableStateStoreFor[DynamoDBDurableStateStoreV2[String]](DynamoDBDurableStateStoreProvider.Identifier)
@@ -59,7 +59,7 @@ class DynamoDBStateV2AsyncSpec
         val result = store.getRawObject(id).futureValue()
         result match {
           case just: GetRawObjectResult.Just[String] =>
-            just.value shouldBe Some(data)
+            just.value shouldBe data
             just.tag shouldBe Some(tag)
           case _ =>
             fail()

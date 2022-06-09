@@ -1,28 +1,68 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.serialization.{ AsyncSerializer, Serialization, Serializer, Serializers }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
+import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 final case class AkkaSerialized(serializerId: Int, serializerManifest: Option[String], payload: Array[Byte])
 
-final class AkkaSerialization(serialization: Serialization) {
+final class AkkaSerialization(
+    serialization: Serialization,
+    metricsReporter: Option[MetricsReporter],
+    traceReporter: Option[TraceReporter]
+) {
 
-  def serialize(payload: Any)(implicit ec: ExecutionContext): Future[AkkaSerialized] = {
-    val p2 = payload.asInstanceOf[AnyRef]
-    for {
-      serializer <- serializerAsync(p2)
-      serManifest <- Future.successful(Serializers.manifestFor(serializer, p2))
-      payload <- toBinaryAsync(serializer, p2)
-    } yield AkkaSerialized(serializer.identifier, if (serManifest.isEmpty) None else Some(serManifest), payload)
+  def serialize(persistenceId: String, payload: Any)(implicit ec: ExecutionContext): Future[AkkaSerialized] = {
+    val pid        = PersistenceId(persistenceId)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeStateStoreSerializeState(context))
+
+    def future: Future[AkkaSerialized] = {
+      val p2 = payload.asInstanceOf[AnyRef]
+      for {
+        serializer <- serializerAsync(p2)
+        serManifest <- Future.successful(Serializers.manifestFor(serializer, p2))
+        payload <- toBinaryAsync(serializer, p2)
+      } yield AkkaSerialized(serializer.identifier, if (serManifest.isEmpty) None else Some(serManifest), payload)
+    }
+
+    val traced = traceReporter.fold(future)(_.traceStateStoreSerializeState(context)(future))
+
+    traced.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterStateStoreSerializeState(newContext))
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorStateStoreSerializeState(newContext, ex))
+    }
+
+    traced
   }
 
-  def deserialize(serialized: AkkaSerialized)(implicit ec: ExecutionContext): Future[AnyRef] = {
-    for {
+  def deserialize(persistenceId: String, serialized: AkkaSerialized)(implicit ec: ExecutionContext): Future[AnyRef] = {
+    val pid        = PersistenceId(persistenceId)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeStateStoreDeserializeState(context))
+
+    def future: Future[AnyRef] = for {
       serializer <- serializerAsync(serialized.payload)
       result <- fromBinaryAsync(serializer, serialized)
     } yield result
+
+    val traced = traceReporter.fold(future)(_.traceStateStoreDeserializeState(context)(future))
+
+    traced.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterStateStoreDeserializeState(newContext))
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorStateStoreDeserializeState(newContext, ex))
+    }
+
+    traced
   }
 
   private def serializerAsync(payload: AnyRef): Future[Serializer] = {
@@ -33,9 +73,7 @@ final class AkkaSerialization(serialization: Serialization) {
     }
   }
 
-  private def toBinaryAsync(serializer: Serializer, payload: AnyRef)(implicit
-      ec: ExecutionContext
-  ): Future[Array[Byte]] = {
+  private def toBinaryAsync(serializer: Serializer, payload: AnyRef): Future[Array[Byte]] = {
     serializer match {
       case async: AsyncSerializer => async.toBinaryAsync(payload)
       case _ =>
@@ -46,9 +84,7 @@ final class AkkaSerialization(serialization: Serialization) {
     }
   }
 
-  private def fromBinaryAsync(serializer: Serializer, serialized: AkkaSerialized)(implicit
-      ec: ExecutionContext
-  ): Future[AnyRef] = {
+  private def fromBinaryAsync(serializer: Serializer, serialized: AkkaSerialized): Future[AnyRef] = {
     val future = serializer match {
       case async: AsyncSerializer =>
         async.fromBinaryAsync(serialized.payload, serialized.serializerManifest.getOrElse(""))

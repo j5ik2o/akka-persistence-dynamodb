@@ -332,13 +332,45 @@ lazy val benchmark = (project in file("benchmark"))
   .enablePlugins(JmhPlugin)
   .dependsOn(test, journal, snapshot)
 
+lazy val example = (project in file("example"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-example",
+    publish / skip := true,
+    libraryDependencies ++= Seq(
+      logback.classic,
+      slf4j.api,
+      slf4j.julToSlf4J,
+      dimafeng.testcontainerScala,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.13.2"
+    ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.slf4j(akka26Version),
+            akka.persistenceTyped(akka26Version),
+            akka.serializationJackson(akka26Version)
+          )
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            akka.slf4j(akka26Version),
+            akka.persistenceTyped(akka26Version),
+            akka.serializationJackson(akka26Version)
+          )
+      }
+    }
+  )
+  .enablePlugins(JmhPlugin)
+  .dependsOn(test, journal, snapshot, state)
+
 lazy val root = (project in file("."))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-root",
     publish / skip := true
   )
-  .aggregate(test, base, journal, snapshot, state, query, benchmark)
+  .aggregate(test, base, journal, snapshot, state, query, benchmark, example)
 
 // --- Custom commands
 addCommandAlias("lint", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck;scalafixAll --check")

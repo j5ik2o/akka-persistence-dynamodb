@@ -1,0 +1,32 @@
+version: '3.6'
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    hostname: dynamodb-local
+    environment:
+      JAVA_OPTS: -Xms2g -Xmx2g
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -port 8000 -inMemory -sharedDb"
+  dynamodb-setup:
+    image: mesosphere/aws-cli
+    environment:
+      AWS_ACCESS_KEY_ID: x
+      AWS_SECRET_ACCESS_KEY: x
+      AWS_DEFAULT_REGION: ap-northeast-1
+      DYNAMODB_ENDPOINT: dynamodb-local:8000
+    volumes:
+      - ./tools/dynamodb-setup:/setup
+    entrypoint: [""]
+    command: ["/setup/create-table.sh", "-e", "dev"]
+    depends_on:
+      - dynamodb-local
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "8003:8001"
+    environment:
+      DYNAMO_ENDPOINT: dynamodb-local:8000
+      AWS_DEFAULT_REGION: us-east-1
+    depends_on:
+      - dynamodb-local

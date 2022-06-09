@@ -1,31 +1,26 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.Done
-import akka.actor.{ CoordinatedShutdown, ExtendedActorSystem }
+import akka.actor.{CoordinatedShutdown, ExtendedActorSystem}
 import akka.annotation.ApiMayChange
 import akka.event.LoggingAdapter
 import akka.persistence.state.DurableStateStoreProvider
-import akka.persistence.state.javadsl.{ DurableStateUpdateStore => JavaDurableStateUpdateStore }
-import akka.persistence.state.scaladsl.{ DurableStateUpdateStore => ScalaDurableStateUpdateStore }
-import akka.stream.{ Materializer, SystemMaterializer }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import akka.persistence.state.javadsl.{DurableStateUpdateStore => JavaDurableStateUpdateStore}
+import akka.persistence.state.scaladsl.{DurableStateUpdateStore => ScalaDurableStateUpdateStore}
+import akka.stream.{Materializer, SystemMaterializer}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ClientType, ClientVersion}
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{MetricsReporter, MetricsReporterProvider}
+import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
-import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{
-  DynamoDBDurableStateStoreV1,
-  DynamoDBDurableStateStoreV2
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClientUtils, DispatcherUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{DynamoDBDurableStateStoreV1, DynamoDBDurableStateStoreV2}
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{TraceReporter, TraceReporterProvider}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ClientUtils, DispatcherUtils}
 import com.typesafe.config.Config
-import software.amazon.awssdk.services.dynamodb.{
-  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
-  DynamoDbClient => JavaDynamoDbSyncClient
-}
+import software.amazon.awssdk.services.dynamodb.{DynamoDbAsyncClient => JavaDynamoDbAsyncClient, DynamoDbClient => JavaDynamoDbSyncClient}
 
 import java.util.UUID
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 object DynamoDBDurableStateStoreProvider {
 
@@ -71,12 +66,18 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
   private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
 
   CoordinatedShutdown(system).addTask(
-    CoordinatedShutdown.PhaseActorSystemTerminate,
-    "akka-persistence-dynamodb-state"
+    CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
+    s"$Identifier-$id"
   ) { () =>
     Future {
-      if (javaAsyncClientV2 != null) javaAsyncClientV2.close()
-      if (javaSyncClientV2 != null) javaSyncClientV2.close()
+      if (javaAsyncClientV2 != null) {
+        javaAsyncClientV2.close()
+        javaAsyncClientV2 = null
+      }
+      if (javaSyncClientV2 != null) {
+        javaSyncClientV2.close()
+        javaSyncClientV2 = null
+      }
       Done
     }
   }

@@ -1,9 +1,9 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.persistence.state.DurableStateStoreRegistry
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ClientType, ClientVersion}
-import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{DynamoDBDurableStateStoreV2, StateSpecBase}
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ConfigHelper, DynamoDBSpecSupport, RandomPortUtil}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{ DynamoDBDurableStateStoreV2, StateSpecBase }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.testcontainers.DockerClientFactory
@@ -42,9 +42,9 @@ class DynamoDBStateV2AsyncSpec
         .durableStateStoreFor[DynamoDBDurableStateStoreV2[String]](DynamoDBDurableStateStoreProvider.Identifier)
 
       {
-        val id = UUID.randomUUID()
+        val id   = UUID.randomUUID()
         val data = "ABC"
-        val tag = ""
+        val tag  = ""
         store.upsertObject(id.toString, 1, data, tag).futureValue()
         val result = store.getObject(id.toString).futureValue()
         result.value shouldBe Some(data)

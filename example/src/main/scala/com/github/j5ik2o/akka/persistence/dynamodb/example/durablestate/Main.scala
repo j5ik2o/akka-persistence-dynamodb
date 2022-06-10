@@ -55,15 +55,17 @@ object Main extends App with DynamoDBContainerHelper {
 
   }
 
-//  dynamoDbLocalContainer.start()
-//  Thread.sleep(1000)
-//  createTable()
+  dynamoDbLocalContainer.start()
+  Thread.sleep(1000)
+  createTable()
+
+  override protected lazy val dynamoDBPort = 8000
 
   val config: Config               = ConfigFactory.load()
   val system: ActorSystem[Message] = ActorSystem(apply(), "main", config)
 
   Await.result(system.whenTerminated, Duration.Inf)
 
-//  dynamoDbLocalContainer.stop()
+  dynamoDbLocalContainer.stop()
 
 }

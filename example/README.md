@@ -1,13 +1,5 @@
 # example
 
-## run dynamodb local
-
-```shell
-$ ./docker-compose-up.sh
-```
-
-## 
-
 ```shell
 $ sbt example/run
 

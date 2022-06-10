@@ -144,6 +144,27 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
           traceReporter,
           statePluginConfig
         )
+      case ClientVersion.V1Dax =>
+        val (maybeV1SyncClient, maybeV1AsyncClient) = statePluginConfig.clientConfig.clientType match {
+          case ClientType.Sync =>
+            val client = ClientUtils
+              .createV1DaxSyncClient(statePluginConfig.configRootPath, statePluginConfig.clientConfig)
+            (Some(client), None)
+          case ClientType.Async =>
+            val client = ClientUtils.createV1DaxAsyncClient(statePluginConfig.clientConfig)
+            (None, Some(client))
+        }
+        new DynamoDBDurableStateStoreV1(
+          system,
+          pluginExecutor,
+          maybeV1AsyncClient,
+          maybeV1SyncClient,
+          partitionKeyResolver,
+          tableNameResolver,
+          metricsReporter,
+          traceReporter,
+          statePluginConfig
+        )
     }
 
   override def scaladslDurableStateStore(): ScalaDurableStateUpdateStore[Any] = createStore[Any]

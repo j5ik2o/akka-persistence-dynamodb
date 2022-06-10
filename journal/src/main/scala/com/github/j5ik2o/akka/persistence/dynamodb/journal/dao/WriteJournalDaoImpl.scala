@@ -20,11 +20,11 @@ import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.{ Done, NotUsed }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }

@@ -20,7 +20,7 @@ import akka.actor.{ Actor, ActorLogging, Props, Status, Timers }
 import akka.pattern._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalSequenceRetrievalConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.JournalSequenceRetrievalConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.ReadJournalDao
 
 import scala.concurrent.duration.FiniteDuration

@@ -6,11 +6,12 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalColumnsDefConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import software.amazon.awssdk.services.dynamodb.model.{ ScanRequest, Select, _ }
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
+import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient

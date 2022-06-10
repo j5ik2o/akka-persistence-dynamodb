@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Source
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }

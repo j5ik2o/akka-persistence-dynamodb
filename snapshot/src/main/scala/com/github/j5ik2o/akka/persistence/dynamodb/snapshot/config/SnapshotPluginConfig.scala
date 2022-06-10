@@ -13,83 +13,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.j5ik2o.akka.persistence.dynamodb.config
+package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
-import scala.concurrent.duration._
-
-object QueryPluginConfig extends LoggingSupport {
+object SnapshotPluginConfig extends LoggingSupport {
 
   val legacyConfigFormatKey               = "legacy-config-format"
   val tableNameKey                        = "table-name"
   val columnsDefKey                       = "columns-def"
-  val tagsIndexNameKey                    = "tags-index-name"
-  val getJournalRowsIndexNameKey          = "get-journal-rows-index-name"
-  val tagSeparatorKey                     = "tag-separator"
-  val shardCountKey                       = "shard-count"
-  val refreshIntervalKey                  = "refresh-interval"
-  val maxBufferSizeKey                    = "max-buffer-size"
-  val queryBatchSizeKey                   = "query-batch-size"
-  val scanBatchSizeKey                    = "scan-batch-size"
-  val readBackoffKey                      = "read-backoff"
   val consistentReadKey                   = "consistent-read"
-  val journalSequenceRetrievalKey         = "journal-sequence-retrieval"
   val metricsReporterClassNameKey         = "metrics-reporter-class-name"
   val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
   val traceReporterClassNameKey           = "trace-reporter-class-name"
   val traceReporterProviderClassNameKey   = "trace-reporter-provider-class-name"
   val dynamoDbClientKey                   = "dynamo-db-client"
+  val writeBackoffKey                     = "write-backoff"
+  val readBackoffKey                      = "read-backoff"
 
   val DefaultLegacyConfigFormat: Boolean              = false
-  val DefaultTableName: String                        = JournalPluginConfig.DefaultTableName
-  val DefaultTagsIndexName: String                    = "TagsIndex"
-  val DefaultGetJournalRowsIndexName: String          = JournalPluginConfig.DefaultGetJournalRowsIndexName
-  val DefaultTagSeparator: String                     = JournalPluginConfig.DefaultTagSeparator
-  val DefaultShardCount: Int                          = JournalPluginConfig.DefaultShardCount
-  val DefaultRefreshInterval: FiniteDuration          = 1.seconds
-  val DefaultMaxBufferSize: Int                       = 500
-  val DefaultQueryBatchSize: Int                      = 1024
-  val DefaultScanBatchSize: Int                       = 1024
+  val DefaultLegacyConfigLayoutKey: Boolean           = false
+  val DefaultTableName: String                        = "Snapshot"
   val DefaultConsistentRead: Boolean                  = false
   val DefaultMetricsReporterClassName: String         = classOf[MetricsReporter.None].getName
   val DefaultMetricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
   val DefaultTraceReporterClassName: String           = classOf[TraceReporter.None].getName
   val DefaultTraceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
 
-  def fromConfig(config: Config): QueryPluginConfig = {
+  def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
     val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
-    val result = QueryPluginConfig(
+    val result = SnapshotPluginConfig(
       sourceConfig = config,
       legacyConfigFormat,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
-      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
-      getJournalRowsIndexName = config.valueAs(getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
-      tagsIndexName = config.valueAs(tagsIndexNameKey, DefaultTagsIndexName),
-      tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
-      shardCount = config.valueAs(shardCountKey, DefaultShardCount),
-      refreshInterval = config.valueAs(refreshIntervalKey, DefaultRefreshInterval),
-      maxBufferSize = config.valueAs(maxBufferSizeKey, DefaultMaxBufferSize),
-      queryBatchSize = config.valueAs(queryBatchSizeKey, DefaultQueryBatchSize),
-      scanBatchSize = config.valueAs(scanBatchSizeKey, DefaultScanBatchSize),
-      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
+      columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       consistentRead = config.valueAs(consistentReadKey, DefaultConsistentRead),
-      journalSequenceRetrievalConfig = JournalSequenceRetrievalConfig.fromConfig(
-        config.configAs(journalSequenceRetrievalKey, ConfigFactory.empty())
-      ),
       metricsReporterProviderClassName = {
-        val className = config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+        val className =
+          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       metricsReporterClassName = {
-        val className = config.valueOptAs(metricsReporterClassNameKey) // DefaultMetricsReporterClassName)
+        val className = config.valueOptAs[String](metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       traceReporterProviderClassName = {
@@ -101,6 +74,8 @@ object QueryPluginConfig extends LoggingSupport {
         val className = config.valueOptAs[String](traceReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporter], className)
       },
+      writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
+      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
       clientConfig = DynamoDBClientConfig
         .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     )
@@ -110,28 +85,19 @@ object QueryPluginConfig extends LoggingSupport {
 
 }
 
-case class QueryPluginConfig(
+final case class SnapshotPluginConfig(
     sourceConfig: Config,
     legacyConfigFormat: Boolean,
     tableName: String,
-    columnsDefConfig: JournalColumnsDefConfig,
-    tagsIndexName: String,
-    getJournalRowsIndexName: String,
-    tagSeparator: String,
-    refreshInterval: FiniteDuration,
-    shardCount: Int,
-    maxBufferSize: Int,
-    queryBatchSize: Int,
-    scanBatchSize: Int,
-    override val readBackoffConfig: BackoffConfig,
+    columnsDefConfig: SnapshotColumnsDefConfig,
     consistentRead: Boolean,
-    journalSequenceRetrievalConfig: JournalSequenceRetrievalConfig,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
+    writeBackoffConfig: BackoffConfig,
     traceReporterProviderClassName: String,
     traceReporterClassName: Option[String],
+    readBackoffConfig: BackoffConfig,
     clientConfig: DynamoDBClientConfig
-) extends JournalPluginBaseConfig {
-  require(shardCount > 1)
-  override val configRootPath: String = "j5ik2o.dynamo-db-read-journal"
+) extends PluginConfig {
+  override val configRootPath: String = "j5ik2o.dynamo-db-snapshot"
 }

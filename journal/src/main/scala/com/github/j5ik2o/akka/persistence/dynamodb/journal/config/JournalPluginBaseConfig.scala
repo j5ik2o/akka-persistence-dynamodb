@@ -1,4 +1,6 @@
-package com.github.j5ik2o.akka.persistence.dynamodb.config
+package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
+
+import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 
 trait JournalPluginBaseConfig extends PluginConfig {
   val columnsDefConfig: JournalColumnsDefConfig

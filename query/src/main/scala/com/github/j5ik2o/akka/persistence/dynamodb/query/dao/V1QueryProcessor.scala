@@ -8,10 +8,11 @@ import akka.stream.scaladsl.Source
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, ScanRequest, Select }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalColumnsDefConfig, QueryPluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalColumnsDefConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext

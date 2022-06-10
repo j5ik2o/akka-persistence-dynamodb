@@ -1,5 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ PartitionKey, PartitionKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }

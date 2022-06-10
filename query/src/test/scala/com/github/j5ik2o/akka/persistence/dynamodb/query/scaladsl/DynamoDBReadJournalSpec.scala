@@ -26,17 +26,18 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.{ Materializer, SystemMaterializer }
 import akka.testkit.TestKit
 import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.WriteJournalDaoImpl
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalRow, PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.query.PersistenceTestActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{ ReadJournalDaoImpl, V2QueryProcessor }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfter

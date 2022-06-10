@@ -26,7 +26,6 @@ import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ Materializer, SystemMaterializer }
 import akka.util.Timeout
-import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
@@ -41,10 +40,11 @@ import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{
   V1QueryProcessor,
   V2QueryProcessor
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config

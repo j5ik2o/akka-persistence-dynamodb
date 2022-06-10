@@ -24,10 +24,10 @@ import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ Materializer, SystemMaterializer }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils

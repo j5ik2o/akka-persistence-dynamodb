@@ -13,7 +13,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.DaoSupport.{
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future }

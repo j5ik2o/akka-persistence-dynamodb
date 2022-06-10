@@ -21,12 +21,12 @@ import akka.actor.ActorSystem
 import akka.persistence.PersistentRepr
 import akka.stream.scaladsl.{ Flow, Source }
 import akka.stream.{ Materializer, SystemMaterializer }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ DaoSupport, JournalRowReadDriver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try

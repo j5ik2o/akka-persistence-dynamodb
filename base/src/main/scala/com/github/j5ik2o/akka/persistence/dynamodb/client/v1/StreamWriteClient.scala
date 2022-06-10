@@ -6,9 +6,10 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import akka.stream.scaladsl.{ Concat, Flow, Source }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.StreamSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
@@ -22,7 +23,7 @@ class StreamWriteClient(
     val syncClient: Option[AmazonDynamoDB],
     val pluginConfig: PluginConfig,
     val writeBackoffConfig: BackoffConfig
-) {
+) extends StreamSupport {
 
   def putItemFlow: Flow[PutItemRequest, PutItemResult, NotUsed] = {
     val flow =
@@ -42,15 +43,7 @@ class StreamWriteClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("putItemFlow")
-    if (writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(writeBackoffConfig, flow)
   }
 
   def updateItemFlow: Flow[UpdateItemRequest, UpdateItemResult, NotUsed] = {
@@ -71,15 +64,7 @@ class StreamWriteClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("updateItemFlow")
-    if (writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(writeBackoffConfig, flow)
   }
 
   def batchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] = {
@@ -100,15 +85,7 @@ class StreamWriteClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("batchWriteItemFlow")
-    if (writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(writeBackoffConfig, flow)
   }
 
   def recursiveBatchWriteItemFlow: Flow[BatchWriteItemRequest, BatchWriteItemResult, NotUsed] = {
@@ -136,6 +113,7 @@ class StreamWriteClient(
           }
         }
       }
+
     loop(Source.empty)
   }
 
@@ -157,14 +135,6 @@ class StreamWriteClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("deleteItemFlow")
-    if (writeBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = writeBackoffConfig.minBackoff,
-          maxBackoff = writeBackoffConfig.maxBackoff,
-          randomFactor = writeBackoffConfig.randomFactor,
-          maxRestarts = writeBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(writeBackoffConfig, flow)
   }
 }

@@ -6,7 +6,8 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
-import akka.stream.scaladsl.{ Concat, Flow, RestartFlow, Source }
+import akka.stream.scaladsl.{ Concat, Flow, Source }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.StreamSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model.{
@@ -29,7 +30,7 @@ class StreamReadClient(
     val syncClient: Option[DynamoDbClient],
     val pluginConfig: PluginConfig,
     val readBackoffConfig: BackoffConfig
-) {
+) extends StreamSupport {
 
   private val log = system.log
 
@@ -49,16 +50,7 @@ class StreamReadClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("getFlow")
-    if (readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
-
+    flowWithBackoffSettings(readBackoffConfig, flow)
   }
 
   def queryFlow: Flow[QueryRequest, QueryResponse, NotUsed] = {
@@ -77,15 +69,7 @@ class StreamReadClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("queryFlow")
-    if (readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(readBackoffConfig, flow)
   }
 
   def recursiveQuerySource(
@@ -152,15 +136,7 @@ class StreamReadClient(
         case _ =>
           throw new IllegalStateException("invalid state")
       }).log("scanFlow")
-    if (readBackoffConfig.enabled)
-      RestartFlow
-        .withBackoff(
-          minBackoff = readBackoffConfig.minBackoff,
-          maxBackoff = readBackoffConfig.maxBackoff,
-          randomFactor = readBackoffConfig.randomFactor,
-          maxRestarts = readBackoffConfig.maxRestarts
-        ) { () => flow }
-    else flow
+    flowWithBackoffSettings(readBackoffConfig, flow)
   }
 
   def recursiveScanSource(

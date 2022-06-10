@@ -16,16 +16,15 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query
 
-import java.util.UUID
 import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Props }
 import akka.event.{ Logging, LoggingAdapter }
 import akka.persistence.journal.Tagged
 import akka.persistence.query.scaladsl._
 import akka.persistence.query.{ EventEnvelope, Offset, PersistenceQuery }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
+import akka.stream.{ Materializer, SystemMaterializer }
 import akka.testkit.{ TestKit, TestProbe }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl.DynamoDBReadJournal
@@ -35,6 +34,7 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
@@ -52,7 +52,7 @@ abstract class QueryJournalSpec(config: Config)
   implicit val pc: PatienceConfig   = PatienceConfig(timeout = 2.seconds)
   implicit val timeout: Timeout     = 30.seconds
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val mat: Materializer = SystemMaterializer(system).materializer
 
   val identifier: String = DynamoDBReadJournal.Identifier
 

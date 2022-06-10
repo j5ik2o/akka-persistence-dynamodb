@@ -21,8 +21,8 @@ import akka.event.LoggingAdapter
 import akka.persistence.snapshot.SnapshotStore
 import akka.persistence.{ SelectedSnapshot, SnapshotMetadata, SnapshotSelectionCriteria }
 import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.{ Materializer, SystemMaterializer }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
@@ -54,10 +54,10 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   implicit val ec: ExecutionContext        = context.dispatcher
   implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
-  implicit val mat: ActorMaterializer      = ActorMaterializer()
+  implicit val mat: Materializer           = SystemMaterializer(system).materializer
   implicit val _log: LoggingAdapter        = log
 
-  private val dynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
+  private val dynamicAccess = system.dynamicAccess
 
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)

@@ -18,12 +18,13 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
 import akka.NotUsed
 import akka.actor.{ ExtendedActorSystem, Scheduler }
+import akka.event.LoggingAdapter
 import akka.persistence.query.scaladsl._
-import akka.persistence.query.{ EventEnvelope, Offset, Sequence, _ }
+import akka.persistence.query._
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
+import akka.stream.{ Materializer, SystemMaterializer }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
@@ -44,6 +45,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
@@ -55,8 +57,6 @@ import software.amazon.awssdk.services.dynamodb.{
 import scala.collection.immutable._
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
-import akka.event.LoggingAdapter
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 
 object DynamoDBReadJournal {
   final val Identifier = "j5ik2o.dynamo-db-read-journal"
@@ -95,10 +95,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
     with CurrentEventsByTagQuery
     with EventsByTagQuery {
   LoggerFactory.getLogger(getClass)
-  private implicit val ec: ExecutionContext   = system.dispatcher
-  private val dynamicAccess                   = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
-  private implicit val mat: ActorMaterializer = ActorMaterializer()
-  private implicit val _log: LoggingAdapter   = system.log
+  private implicit val ec: ExecutionContext = system.dispatcher
+  private val dynamicAccess                 = system.dynamicAccess
+  implicit val mat: Materializer            = SystemMaterializer(system).materializer
+  private implicit val _log: LoggingAdapter = system.log
   import DynamoDBReadJournal._
 
   private val queryPluginConfig: QueryPluginConfig = QueryPluginConfig.fromConfig(config)

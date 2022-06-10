@@ -76,13 +76,15 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
     s"$Identifier-$id"
   ) { () =>
     Future {
-      if (javaAsyncClientV2 != null) {
-        javaAsyncClientV2.close()
-        javaAsyncClientV2 = null
-      }
-      if (javaSyncClientV2 != null) {
-        javaSyncClientV2.close()
-        javaSyncClientV2 = null
+      id.synchronized {
+        if (javaAsyncClientV2 != null) {
+          javaAsyncClientV2.close()
+          javaAsyncClientV2 = null
+        }
+        if (javaSyncClientV2 != null) {
+          javaSyncClientV2.close()
+          javaSyncClientV2 = null
+        }
       }
       Done
     }
@@ -98,7 +100,8 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
     provider.create
   }
 
-  def createStore[A]: com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStore[A] =
+  private def createStore[A]
+      : com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStore[A] =
     statePluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         val (maybeV2SyncClient, maybeV2AsyncClient) = statePluginConfig.clientConfig.clientType match {

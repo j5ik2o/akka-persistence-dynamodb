@@ -31,7 +31,7 @@ lazy val baseSettings = Seq(
       url = url("https://blog.j5ik2o.me")
     )
   ),
-  scalaVersion := Versions.scala213Version,
+  scalaVersion := Versions.scala212Version,
   crossScalaVersions := Seq(
     Versions.scala212Version,
     Versions.scala213Version

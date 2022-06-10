@@ -15,16 +15,15 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 
-import java.net.URI
 import akka.actor.{ ActorSystem, Props }
 import akka.pattern.ask
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.query.scaladsl._
 import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.stream.testkit.TestSubscriber
 import akka.stream.testkit.scaladsl.TestSink
+import akka.stream.{ Materializer, SystemMaterializer }
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ JournalPluginConfig, QueryPluginConfig }
@@ -49,9 +48,9 @@ import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCred
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient => JavaDynamoDbAsyncClient }
 
-import scala.concurrent.Future
+import java.net.URI
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 object DynamoDBReadJournalSpec {
   val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
@@ -87,7 +86,7 @@ class DynamoDBReadJournalSpec
     with BeforeAndAfter
     with DynamoDBSpecSupport {
 
-  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val mat: Materializer = SystemMaterializer(system).materializer
 
   implicit val pc: PatienceConfig = PatienceConfig(30 seconds, 1 seconds)
 

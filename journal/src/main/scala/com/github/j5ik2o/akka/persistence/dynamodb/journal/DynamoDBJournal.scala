@@ -23,8 +23,8 @@ import akka.pattern.pipe
 import akka.persistence.journal.AsyncWriteJournal
 import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
+import akka.stream.{ Materializer, SystemMaterializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
@@ -152,7 +152,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val defaultExecutionContext: ExecutionContext = context.dispatcher
   implicit val system: ActorSystem                      = context.system
-  implicit val mat: ActorMaterializer                   = ActorMaterializer()
+  implicit val mat: Materializer                        = SystemMaterializer(system).materializer
   implicit val _log: LoggingAdapter                     = log
 
   log.debug("dynamodb journal plugin: id = {}", id)

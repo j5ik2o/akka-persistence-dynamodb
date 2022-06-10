@@ -40,7 +40,7 @@ class WriteJournalDaoImpl(
 ) extends JournalDaoWithUpdates
     with DaoSupport {
 
-  implicit val mat: Materializer = ActorMaterializer()
+  implicit val mat: Materializer = SystemMaterializer(system).materializer
 
   LoggerFactory.getLogger(getClass)
 

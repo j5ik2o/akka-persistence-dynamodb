@@ -34,7 +34,7 @@ final class ByteArraySnapshotSerializer(
     traceReporter: Option[TraceReporter]
 ) extends SnapshotSerializer[SnapshotRow] {
 
-  private def serializerAsync: Future[Serializer] = {
+  private val serializerAsync: Future[Serializer] = {
     try Future.successful(serialization.serializerFor(classOf[Snapshot]))
     catch {
       case ex: Throwable =>

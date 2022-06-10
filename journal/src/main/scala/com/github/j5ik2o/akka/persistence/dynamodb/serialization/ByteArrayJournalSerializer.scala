@@ -34,7 +34,7 @@ class ByteArrayJournalSerializer(
     traceReporter: Option[TraceReporter]
 ) extends FlowPersistentReprSerializer[JournalRow] {
 
-  private def serializerAsync: Future[Serializer] = {
+  private val serializerAsync: Future[Serializer] = {
     try Future.successful(serialization.serializerFor(classOf[PersistentRepr]))
     catch {
       case ex: Throwable =>

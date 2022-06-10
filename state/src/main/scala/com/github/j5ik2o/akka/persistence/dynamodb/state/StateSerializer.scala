@@ -9,9 +9,7 @@ import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-final case class AkkaSerialized(serializerId: Int, serializerManifest: Option[String], payload: Array[Byte])
-
-final class AkkaSerialization(
+final class StateSerializer(
     serialization: Serialization,
     metricsReporter: Option[MetricsReporter],
     traceReporter: Option[TraceReporter]
@@ -26,9 +24,13 @@ final class AkkaSerialization(
       val p2 = payload.asInstanceOf[AnyRef]
       for {
         serializer <- serializerAsync(p2)
-        serManifest <- Future.successful(Serializers.manifestFor(serializer, p2))
+        serializerManifest <- Future.successful(Serializers.manifestFor(serializer, p2))
         payload <- toBinaryAsync(serializer, p2)
-      } yield AkkaSerialized(serializer.identifier, if (serManifest.isEmpty) None else Some(serManifest), payload)
+      } yield AkkaSerialized(
+        serializer.identifier,
+        if (serializerManifest.isEmpty) None else Some(serializerManifest),
+        payload
+      )
     }
 
     val traced = traceReporter.fold(future)(_.traceStateStoreSerializeState(context)(future))
@@ -75,7 +77,7 @@ final class AkkaSerialization(
 
   private def toBinaryAsync(serializer: Serializer, payload: AnyRef): Future[Array[Byte]] = {
     serializer match {
-      case async: AsyncSerializer => async.toBinaryAsync(payload)
+      case asyncSerializer: AsyncSerializer => asyncSerializer.toBinaryAsync(payload)
       case _ =>
         serialization.serialize(payload) match {
           case Success(value) => Future.successful(value)
@@ -86,8 +88,8 @@ final class AkkaSerialization(
 
   private def fromBinaryAsync(serializer: Serializer, serialized: AkkaSerialized): Future[AnyRef] = {
     val future = serializer match {
-      case async: AsyncSerializer =>
-        async.fromBinaryAsync(serialized.payload, serialized.serializerManifest.getOrElse(""))
+      case asyncSerializer: AsyncSerializer =>
+        asyncSerializer.fromBinaryAsync(serialized.payload, serialized.serializerManifest.getOrElse(""))
       case _ =>
         serialization.deserialize(
           serialized.payload,

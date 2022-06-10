@@ -55,7 +55,7 @@ final class DynamoDBDurableStateStoreV2[A](
     new v2.StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
 
   private val serialization: Serialization = SerializationExtension(system)
-  private val akkaSerialization            = new AkkaSerialization(serialization, metricsReporter, traceReporter)
+  private val akkaSerialization            = new StateSerializer(serialization, metricsReporter, traceReporter)
 
   override def getRawObject(persistenceId: String): Future[GetRawObjectResult[A]] = {
     val pid        = PersistenceId(persistenceId)

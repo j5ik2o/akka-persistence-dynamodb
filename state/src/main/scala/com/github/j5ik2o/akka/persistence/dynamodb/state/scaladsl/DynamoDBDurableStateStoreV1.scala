@@ -13,10 +13,10 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.{
-  AkkaSerialization,
   AkkaSerialized,
   GetRawObjectResult,
   PartitionKeyResolver,
+  StateSerializer,
   TableNameResolver
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
@@ -53,7 +53,7 @@ final class DynamoDBDurableStateStoreV1[A](
     new v1.StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
 
   protected val serialization: Serialization = SerializationExtension(system)
-  private val akkaSerialization              = new AkkaSerialization(serialization, metricsReporter, traceReporter)
+  private val akkaSerialization              = new StateSerializer(serialization, metricsReporter, traceReporter)
 
   override def getRawObject(persistenceId: String): Future[GetRawObjectResult[A]] = {
     val pid        = PersistenceId(persistenceId)

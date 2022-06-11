@@ -386,7 +386,7 @@ final class V1SnapshotDaoImpl(
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.shutdown()
       case (_, Some(s)) => s.shutdown()
-      case _ =>
+      case _            =>
     }
   }
 

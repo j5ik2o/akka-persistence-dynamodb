@@ -53,15 +53,19 @@ object DynamoDBClientV1Config extends LoggingSupport {
   val CsmConfigurationProviderClassName = "com.amazonaws.monitoring.CsmConfigurationProvider"
   val AWSCredentialsProviderClassName   = "com.amazonaws.auth.AWSCredentialsProvider"
 
-  val RequestMetricCollectorProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RequestMetricCollectorProvider"
+  val RequestMetricCollectorProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RequestMetricCollectorProvider"
 
-  val MonitoringListenerProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.MonitoringListenerProvider"
+  val MonitoringListenerProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.MonitoringListenerProvider"
 
   val RequestHandlersProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RequestHandlersProvider"
 
-  val CsmConfigurationProviderProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.CsmConfigurationProviderProvider"
+  val CsmConfigurationProviderProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.CsmConfigurationProviderProvider"
 
-  val AWSCredentialsProviderProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider"
+  val AWSCredentialsProviderProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider"
 
   def fromConfig(config: Config, classNameValidation: Boolean): DynamoDBClientV1Config = {
     logger.debug("config = {}", config)

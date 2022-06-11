@@ -49,7 +49,7 @@ lazy val baseSettings = Seq(
       "-Yrangepos",
       "-Ywarn-unused"
     ) ++ crossScalacOptions(scalaVersion.value)
-    ),
+  ),
   resolvers ++= Seq(
     Resolver.sonatypeRepo("snapshots"),
     Resolver.sonatypeRepo("releases"),
@@ -109,8 +109,8 @@ lazy val `base` = (project in file("base"))
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
       slf4j.api,
-      logback.classic % Test,
-      slf4j.julToSlf4J % Test,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
       dimafeng.testcontainerScalaScalaTest % Test
     ),
     libraryDependencies ++= {
@@ -119,16 +119,16 @@ lazy val `base` = (project in file("base"))
           Seq(
             akka.slf4j(akka26Version),
             akka.stream(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 13 =>
           Seq(
             akka.slf4j(akka26Version),
             akka.stream(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor == 12 =>
@@ -136,17 +136,17 @@ lazy val `base` = (project in file("base"))
             "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
             akka.slf4j(akka26Version),
             akka.stream(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(test % "test->compile")
@@ -159,8 +159,8 @@ lazy val `base-v1` = (project in file("base-v1"))
       slf4j.api,
       amazonaws.dynamodb,
       amazonaws.dax,
-      logback.classic % Test,
-      slf4j.julToSlf4J % Test,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
       dimafeng.testcontainerScalaScalaTest % Test
     )
   ).dependsOn(base, test % "test->compile")
@@ -172,8 +172,8 @@ lazy val `base-v2` = (project in file("base-v2"))
     libraryDependencies ++= Seq(
       slf4j.api,
       softwareamazon.dynamodb,
-      logback.classic % Test,
-      slf4j.julToSlf4J % Test,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
       dimafeng.testcontainerScalaScalaTest % Test
     )
   ).dependsOn(base, test % "test->compile")
@@ -184,33 +184,33 @@ lazy val `journal-base` = (project in file("journal-base"))
     name := "akka-persistence-dynamodb-journal-base",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(base)
@@ -221,24 +221,24 @@ lazy val `journal-v1` = (project in file("journal-v1"))
     name := "akka-persistence-dynamodb-journal-v1",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
@@ -251,30 +251,29 @@ lazy val `journal-v2` = (project in file("journal-v2"))
     name := "akka-persistence-dynamodb-journal-v2",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     }
   ).dependsOn(`journal-base`, base % "test->test", `base-v2`, `snapshot-base` % "test->compile")
-
 
 lazy val `snapshot-base` = (project in file("snapshot-base"))
   .settings(baseSettings)
@@ -293,10 +292,10 @@ lazy val `snapshot-base` = (project in file("snapshot-base"))
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(base)
@@ -306,7 +305,7 @@ lazy val `snapshot-v1` = (project in file("snapshot-v1"))
   .settings(
     name := "akka-persistence-dynamodb-snapshot-v1",
     libraryDependencies ++= Seq(
-      logback.classic % Test,
+      logback.classic  % Test,
       slf4j.julToSlf4J % Test
     ),
     libraryDependencies ++= {
@@ -314,26 +313,26 @@ lazy val `snapshot-v1` = (project in file("snapshot-v1"))
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(`snapshot-base`, base % "test->test", `base-v1`)
@@ -343,7 +342,7 @@ lazy val `snapshot-v2` = (project in file("snapshot-v2"))
   .settings(
     name := "akka-persistence-dynamodb-snapshot-v2",
     libraryDependencies ++= Seq(
-      logback.classic % Test,
+      logback.classic  % Test,
       slf4j.julToSlf4J % Test
     ),
     libraryDependencies ++= {
@@ -351,26 +350,26 @@ lazy val `snapshot-v2` = (project in file("snapshot-v2"))
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(`snapshot-base`, base % "test->test", `base-v2`)
@@ -381,33 +380,33 @@ lazy val `state-base` = (project in file("state-base"))
     name := "akka-persistence-dynamodb-state-base",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test
+      "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(base)
@@ -417,8 +416,8 @@ lazy val `state-v1` = (project in file("state-v1"))
   .settings(
     name := "akka-persistence-dynamodb-state-v1",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test,
+      "ch.qos.logback"                     % "logback-classic" % logbackVersion % Test,
+      "org.slf4j"                          % "jul-to-slf4j"    % slf4jVersion   % Test,
       dimafeng.testcontainerScalaScalaTest % Test
     ),
     libraryDependencies ++= {
@@ -426,42 +425,42 @@ lazy val `state-v1` = (project in file("state-v1"))
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(
-  base % "test->test",
-  `state-base` % "test->test;compile->compile",
-  `base-v1`,
-  `snapshot-base` % "test->compile"
-)
+    base         % "test->test",
+    `state-base` % "test->test;compile->compile",
+    `base-v1`,
+    `snapshot-base` % "test->compile"
+  )
 
 lazy val `state-v2` = (project in file("state-v2"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-state-v2",
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "org.slf4j" % "jul-to-slf4j" % slf4jVersion % Test,
+      "ch.qos.logback"                     % "logback-classic" % logbackVersion % Test,
+      "org.slf4j"                          % "jul-to-slf4j"    % slf4jVersion   % Test,
       dimafeng.testcontainerScalaScalaTest % Test
     ),
     libraryDependencies ++= {
@@ -469,34 +468,34 @@ lazy val `state-v2` = (project in file("state-v2"))
         case Some((3L, _)) =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
         case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
           Seq(
             akka.persistence(akka26Version),
-            akka.testkit(akka26Version) % Test,
-            akka.streamTestkit(akka26Version) % Test,
-            akka.persistenceTck(akka26Version) % Test,
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
     },
     dependencyOverrides ++= Seq(
-      "io.netty" % "netty-codec-http" % nettyVersion,
-      "io.netty" % "netty-transport" % nettyVersion,
-      "io.netty" % "netty-handler" % nettyVersion,
-      "org.reactivestreams" % "reactive-streams" % reactiveStreamsVersion,
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
   ).dependsOn(
-  base % "test->test",
-  `state-base` % "test->test;compile->compile",
-  `base-v2`,
-  `snapshot-base` % "test->compile"
-)
+    base         % "test->test",
+    `state-base` % "test->test;compile->compile",
+    `base-v2`,
+    `snapshot-base` % "test->compile"
+  )
 
 lazy val benchmark = (project in file("benchmark"))
   .settings(baseSettings)

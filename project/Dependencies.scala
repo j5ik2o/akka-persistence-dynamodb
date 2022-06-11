@@ -21,9 +21,9 @@ object Dependencies {
 
     val scalaTest32Version      = "3.2.4"
     val scalaTest30Version      = "3.0.8"
-    val scalaJava8CompatVersion = "0.9.1"
+    val scalaJava8CompatVersion = "1.0.2"
 
-    val reactiveStreamsVersion = "1.0.2"
+    val reactiveStreamsVersion = "1.0.3"
     val nettyVersion           = "4.1.33.Final"
 
   }

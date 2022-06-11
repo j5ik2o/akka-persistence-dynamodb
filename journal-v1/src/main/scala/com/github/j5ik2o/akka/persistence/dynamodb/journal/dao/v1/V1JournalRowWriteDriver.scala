@@ -49,6 +49,7 @@ final class V1JournalRowWriteDriver(
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.shutdown()
       case (_, Some(s)) => s.shutdown()
+      case _            =>
     }
   }
 

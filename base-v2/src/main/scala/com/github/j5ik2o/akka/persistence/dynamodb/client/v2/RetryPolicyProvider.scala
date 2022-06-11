@@ -4,6 +4,7 @@ import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.retry.RetryPolicy
 
+import scala.annotation.unused
 import scala.collection.immutable.Seq
 
 trait RetryPolicyProvider {
@@ -23,7 +24,8 @@ object RetryPolicyProvider {
     }
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends RetryPolicyProvider {
+  final class Default(@unused dynamicAccess: DynamicAccess, @unused pluginConfig: PluginConfig)
+      extends RetryPolicyProvider {
 
     override def create: RetryPolicy = {
       RetryPolicy.defaultRetryPolicy()

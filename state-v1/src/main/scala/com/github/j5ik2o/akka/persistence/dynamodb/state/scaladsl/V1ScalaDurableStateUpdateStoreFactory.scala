@@ -2,8 +2,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.V1ClientUtils
 

@@ -15,8 +15,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 

@@ -29,12 +29,12 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
   ByteArrayJournalSerializer,
   FlowPersistentReprSerializer
 }
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils._
 import com.typesafe.config.Config

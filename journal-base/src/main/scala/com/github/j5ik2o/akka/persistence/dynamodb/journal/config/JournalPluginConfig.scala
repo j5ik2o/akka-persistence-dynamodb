@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
 
 import akka.stream.OverflowStrategy
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
@@ -28,6 +27,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -121,7 +121,20 @@ object JournalPluginConfig extends LoggingSupport {
       // ---
       queueEnable = config.valueAs(queueEnableKey, DefaultQueueEnable),
       queueBufferSize = config.valueAs(queueBufferSizeKey, DefaultQueueBufferSize),
-      queueOverflowStrategy = config.valueAs(queueOverflowStrategyKey, DefaultQueueOverflowStrategy),
+      queueOverflowStrategy = {
+        config.valueAs(queueOverflowStrategyKey, DefaultQueueOverflowStrategy).toLowerCase match {
+          case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropHead
+          case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropTail
+          case s if s == OverflowStrategy.dropBuffer.getClass.getSimpleName.toLowerCase() => OverflowStrategy.dropBuffer
+          case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase() =>
+            logger.warn("DropNew is not recommended. It may be discontinued in the next version.")
+            OverflowStrategy.dropNew
+          case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase() => OverflowStrategy.fail
+          case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() =>
+            OverflowStrategy.backpressure
+          case _ => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
+        }
+      },
       queueParallelism = config.valueAs(queueParallelismKey, DefaultQueueParallelism),
       // ---
       writeParallelism = config.valueAs(writeParallelismKey, DefaultWriteParallelism),
@@ -178,7 +191,7 @@ final case class JournalPluginConfig(
     shardCount: Int,
     queueEnable: Boolean,
     queueBufferSize: Int,
-    queueOverflowStrategy: String,
+    queueOverflowStrategy: OverflowStrategy,
     queueParallelism: Int,
     writeParallelism: Int,
     writeBackoffConfig: BackoffConfig,

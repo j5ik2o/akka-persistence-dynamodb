@@ -15,11 +15,11 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 

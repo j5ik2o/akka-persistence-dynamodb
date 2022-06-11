@@ -90,4 +90,12 @@ object Dependencies {
     val testcontainerScalaLocalstack = "com.dimafeng" %% "testcontainers-scala-localstack" % testcontainersScalaVersion
   }
 
+  object javaDevJnv {
+    val jna = "net.java.dev.jna" % "jna" % "5.11.0"
+  }
+
+  object scalaLangModules {
+    val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
+  }
+
 }

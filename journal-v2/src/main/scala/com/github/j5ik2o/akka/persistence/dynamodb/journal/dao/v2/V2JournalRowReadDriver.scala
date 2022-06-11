@@ -40,6 +40,7 @@ final class V2JournalRowReadDriver(
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.close()
       case (_, Some(s)) => s.close()
+      case _            =>
     }
   }
 

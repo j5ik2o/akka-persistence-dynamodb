@@ -5,13 +5,12 @@ import akka.actor.typed.{ ActorSystem, Behavior }
 import akka.util.Timeout
 import com.github.j5ik2o.akka.persistence.dynamodb.example.CounterProtocol
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamoDBContainerHelper
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ Config, ConfigFactory }
 
 import java.util.UUID
 import scala.concurrent.Await
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.Try
-import com.typesafe.config.Config
 
 object Main extends App with DynamoDBContainerHelper {
 

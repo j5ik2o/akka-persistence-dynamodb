@@ -178,10 +178,10 @@ lazy val baseV2 = (project in file("base-v2"))
     )
   ).dependsOn(base, test % "test->compile")
 
-lazy val journal = (project in file("journal"))
+lazy val `journal-base` = (project in file("journal-base"))
   .settings(baseSettings)
   .settings(
-    name := "akka-persistence-dynamodb-journal",
+    name := "akka-persistence-dynamodb-journal-base",
     libraryDependencies ++= Seq(
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
       "org.slf4j"      % "jul-to-slf4j"    % slf4jVersion   % Test
@@ -246,7 +246,7 @@ lazy val journalV1 = (project in file("journal-v1"))
           )
       }
     }
-  ).dependsOn(test % "test->compile", journal, base % "test->test", baseV1, snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", `journal-base`, base % "test->test", baseV1, `snapshot-base` % "test->compile")
 
 lazy val journalV2 = (project in file("journal-v2"))
   .settings(baseSettings)
@@ -276,7 +276,7 @@ lazy val journalV2 = (project in file("journal-v2"))
           )
       }
     }
-  ).dependsOn(test % "test->compile", journal, base % "test->test", baseV2, snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", `journal-base`, base % "test->test", baseV2, `snapshot-base` % "test->compile")
 
 lazy val state = (project in file("state"))
   .settings(baseSettings)
@@ -313,12 +313,43 @@ lazy val state = (project in file("state"))
       "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
-  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", baseV1, baseV2, snapshot % "test->compile")
+  ).dependsOn(
+    test % "test->compile",
+    base % "test->test;compile->compile",
+    baseV1,
+    baseV2,
+    `snapshot-base` % "test->compile"
+  )
 
-lazy val snapshot = (project in file("snapshot"))
+lazy val `snapshot-base` = (project in file("snapshot-base"))
   .settings(baseSettings)
   .settings(
-    name := "akka-persistence-dynamodb-snapshot",
+    name := "akka-persistence-dynamodb-snapshot-base",
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.persistence(akka26Version)
+          )
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            akka.persistence(akka26Version)
+          )
+      }
+    },
+    dependencyOverrides ++= Seq(
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
+  ).dependsOn(base)
+
+lazy val snapshotV1 = (project in file("snapshot-v1"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-snapshot-v1",
     libraryDependencies ++= Seq(
       logback.classic  % Test,
       slf4j.julToSlf4J % Test
@@ -350,7 +381,44 @@ lazy val snapshot = (project in file("snapshot"))
       "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
-  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", baseV1, baseV2)
+  ).dependsOn(test % "test->compile", `snapshot-base`, base % "test->test", baseV1)
+
+lazy val snapshotV2 = (project in file("snapshot-v2"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-snapshot-v2",
+    libraryDependencies ++= Seq(
+      logback.classic  % Test,
+      slf4j.julToSlf4J % Test
+    ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((3L, _)) =>
+          Seq(
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
+          )
+        case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
+          Seq(
+            akka.persistence(akka26Version),
+            akka.testkit(akka26Version)             % Test,
+            akka.streamTestkit(akka26Version)       % Test,
+            akka.persistenceTck(akka26Version)      % Test,
+            scalatest.scalatest(scalaTest32Version) % Test
+          )
+      }
+    },
+    dependencyOverrides ++= Seq(
+      "io.netty"                % "netty-codec-http"   % nettyVersion,
+      "io.netty"                % "netty-transport"    % nettyVersion,
+      "io.netty"                % "netty-handler"      % nettyVersion,
+      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+    )
+  ).dependsOn(test % "test->compile", `snapshot-base`, base % "test->test", baseV2)
 
 //lazy val query = (project in file("query"))
 //  .settings(baseSettings)
@@ -416,7 +484,7 @@ lazy val benchmark = (project in file("benchmark"))
     }
   )
   .enablePlugins(JmhPlugin)
-  .dependsOn(test, journal, snapshot)
+  .dependsOn(test, `journal-base`, `snapshot-base`)
 
 lazy val example = (project in file("example"))
   .settings(baseSettings)
@@ -447,7 +515,7 @@ lazy val example = (project in file("example"))
       }
     }
   )
-  .dependsOn(test, journal, snapshot, state)
+  .dependsOn(test, `journal-base`, `snapshot-base`, state)
 
 lazy val root = (project in file("."))
   .settings(baseSettings)
@@ -455,7 +523,21 @@ lazy val root = (project in file("."))
     name := "akka-persistence-dynamodb-root",
     publish / skip := true
   )
-  .aggregate(test, base, baseV1, baseV2, journal, journalV1, journalV2, snapshot, state, benchmark, example)
+  .aggregate(
+    test,
+    base,
+    baseV1,
+    baseV2,
+    `journal-base`,
+    journalV1,
+    journalV2,
+    `snapshot-base`,
+    snapshotV1,
+    snapshotV2,
+    state,
+    benchmark,
+    example
+  )
 
 // --- Custom commands
 addCommandAlias("lint", ";scalafmtCheck;test:scalafmtCheck;scalafmtSbtCheck;scalafixAll --check")

@@ -18,10 +18,9 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config.client
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.DynamoDBClientV1Config
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax.DynamoDBClientV1DaxConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2.DynamoDBClientV2Config
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.{ Config, ConfigFactory }
-
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 
 object DynamoDBClientConfig extends LoggingSupport {
 

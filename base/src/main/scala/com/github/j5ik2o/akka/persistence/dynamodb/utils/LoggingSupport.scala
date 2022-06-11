@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import org.slf4j.LoggerFactory
-import org.slf4j.Logger
+import org.slf4j.{ Logger, LoggerFactory }
 
 trait LoggingSupport {
 

@@ -2,7 +2,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.util.Collections
 import java.util.concurrent.{ AbstractExecutorService, TimeUnit }
-
 import scala.concurrent.{ ExecutionContext, ExecutionContextExecutorService }
 
 object ExecutorServiceUtils {

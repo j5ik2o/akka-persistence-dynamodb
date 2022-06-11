@@ -1,11 +1,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped
 
-import java.util.UUID
-
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBContainerHelper }
-import org.openjdk.jmh.annotations.{ Setup, TearDown }
 import com.typesafe.config.Config
+import org.openjdk.jmh.annotations.{ Setup, TearDown }
+
+import java.util.UUID
 
 trait BenchmarkHelper extends DynamoDBContainerHelper {
 

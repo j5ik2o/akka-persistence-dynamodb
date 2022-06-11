@@ -1,10 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest

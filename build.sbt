@@ -22,7 +22,7 @@ def crossScalacOptions(scalaVersion: String): Seq[String] =
 lazy val baseSettings = Seq(
   organization := "com.github.j5ik2o",
   homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
-  licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+  licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")),
   developers := List(
     Developer(
       id = "j5ik2o",
@@ -82,7 +82,7 @@ lazy val test = (project in file("test"))
       amazonaws.dynamodb,
       testcontainers.testcontainers,
       dimafeng.testcontainerScala,
-      "net.java.dev.jna" % "jna" % "5.11.0"
+      javaDevJnv.jna
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -96,7 +96,7 @@ lazy val test = (project in file("test"))
           )
         case Some((2L, scalaMajor)) if scalaMajor == 12 =>
           Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
+            scalaLangModules.scalaCollectionCompat,
             akka.stream(akka26Version)
           )
       }
@@ -133,7 +133,7 @@ lazy val `base` = (project in file("base"))
           )
         case Some((2L, scalaMajor)) if scalaMajor == 12 =>
           Seq(
-            "org.scala-lang.modules" %% "scala-collection-compat" % scalaCollectionCompatVersion,
+            scalaLangModules.scalaCollectionCompat,
             akka.slf4j(akka26Version),
             akka.stream(akka26Version),
             akka.testkit(akka26Version)             % Test,
@@ -141,14 +141,14 @@ lazy val `base` = (project in file("base"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(test % "test->compile")
 
 lazy val `base-v1` = (project in file("base-v1"))
@@ -205,14 +205,14 @@ lazy val `journal-base` = (project in file("journal-base"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(base)
 
 lazy val `journal-v1` = (project in file("journal-v1"))
@@ -290,14 +290,14 @@ lazy val `snapshot-base` = (project in file("snapshot-base"))
             akka.persistence(akka26Version)
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(base)
 
 lazy val `snapshot-v1` = (project in file("snapshot-v1"))
@@ -364,14 +364,14 @@ lazy val `snapshot-v2` = (project in file("snapshot-v2"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(`snapshot-base`, base % "test->test", `base-v2`)
 
 lazy val `state-base` = (project in file("state-base"))
@@ -401,14 +401,14 @@ lazy val `state-base` = (project in file("state-base"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(base)
 
 lazy val `state-v1` = (project in file("state-v1"))
@@ -439,14 +439,14 @@ lazy val `state-v1` = (project in file("state-v1"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(
     base         % "test->test",
     `state-base` % "test->test;compile->compile",
@@ -482,14 +482,14 @@ lazy val `state-v2` = (project in file("state-v2"))
             scalatest.scalatest(scalaTest32Version) % Test
           )
       }
-    },
-    dependencyOverrides ++= Seq(
-      "io.netty"                % "netty-codec-http"   % nettyVersion,
-      "io.netty"                % "netty-transport"    % nettyVersion,
-      "io.netty"                % "netty-handler"      % nettyVersion,
-      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
-      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
-    )
+    }
+//    dependencyOverrides ++= Seq(
+//      "io.netty"                % "netty-codec-http"   % nettyVersion,
+//      "io.netty"                % "netty-transport"    % nettyVersion,
+//      "io.netty"                % "netty-handler"      % nettyVersion,
+//      "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
+//      "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
+//    )
   ).dependsOn(
     base         % "test->test",
     `state-base` % "test->test;compile->compile",

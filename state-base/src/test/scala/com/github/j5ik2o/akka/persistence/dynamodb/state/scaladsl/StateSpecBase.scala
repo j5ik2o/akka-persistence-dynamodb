@@ -1,16 +1,15 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import akka.actor.{ ActorSystem, ExtendedActorSystem }
-import akka.serialization.SerializationExtension
+import akka.serialization.{ Serialization, SerializationExtension }
 import akka.testkit.{ TestKit, TestKitBase }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{ MyPayload, MyPayloadSerializer }
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time._
 import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach }
-import akka.serialization.Serialization
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{ MyPayload, MyPayloadSerializer }
 
 import scala.concurrent.ExecutionContextExecutor
 

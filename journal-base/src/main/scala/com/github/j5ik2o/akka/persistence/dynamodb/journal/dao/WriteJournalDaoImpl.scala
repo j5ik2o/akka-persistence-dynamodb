@@ -22,9 +22,9 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete 
 import akka.{ Done, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -54,15 +54,7 @@ class WriteJournalDaoImpl(
     onFinish = Attributes.LogLevels.Debug
   )
 
-  private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy.toLowerCase() match {
-    case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase()     => OverflowStrategy.dropHead
-    case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase()     => OverflowStrategy.dropTail
-    case s if s == OverflowStrategy.dropBuffer.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropBuffer
-    case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase()      => OverflowStrategy.dropNew
-    case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase()         => OverflowStrategy.fail
-    case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() => OverflowStrategy.backpressure
-    case _ => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
-  }
+  private val queueOverflowStrategy = pluginConfig.queueOverflowStrategy
 
   private def internalPutStream(promise: Promise[Long], rows: Seq[JournalRow]): Future[Done] = {
     val s =

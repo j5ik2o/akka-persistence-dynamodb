@@ -1,6 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.net.URI
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
@@ -15,6 +14,8 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient,
   DynamoDbClientBuilder
 }
+
+import java.net.URI
 
 object V2DynamoDbClientBuilderUtils {
 

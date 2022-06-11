@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
@@ -15,6 +13,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils.
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters._
 
 class StreamReadClient(

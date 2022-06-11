@@ -34,6 +34,7 @@ final class V1JournalRowReadDriver(
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.shutdown()
       case (_, Some(s)) => s.shutdown()
+      case _            =>
     }
   }
 

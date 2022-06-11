@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.japi.function
@@ -10,19 +8,13 @@ import akka.stream.scaladsl.{ Concat, Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.StreamSupport
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
-import software.amazon.awssdk.services.dynamodb.model.{
-  AttributeValue,
-  GetItemRequest,
-  GetItemResponse,
-  QueryRequest,
-  QueryResponse,
-  ScanRequest,
-  ScanResponse
-}
+import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
 
-import scala.jdk.CollectionConverters._
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import scala.compat.java8.OptionConverters._
+import scala.jdk.CollectionConverters._
 
 class StreamReadClient(
     val system: ActorSystem,

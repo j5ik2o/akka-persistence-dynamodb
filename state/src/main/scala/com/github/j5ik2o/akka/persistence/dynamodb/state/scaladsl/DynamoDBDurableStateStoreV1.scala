@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import akka.Done
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, CoordinatedShutdown }
 import akka.persistence.state.scaladsl.GetObjectResult
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
@@ -11,6 +11,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{ StreamReadClient,
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
+import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.{
   AkkaSerialized,
@@ -41,8 +42,21 @@ final class DynamoDBDurableStateStoreV1[A](
     val pluginConfig: StatePluginConfig
 ) extends ScalaDurableStateUpdateStore[A]
     with LoggingSupport {
+
   implicit val mat: ActorSystem     = system
   implicit val ec: ExecutionContext = pluginExecutor
+
+  private val id: UUID = UUID.randomUUID()
+
+  CoordinatedShutdown(system).addTask(
+    CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
+    s"$Identifier-$id"
+  ) { () =>
+    Future {
+      dispose()
+      Done
+    }
+  }
 
   private val writeBackoffConfig: BackoffConfig = pluginConfig.writeBackoffConfig
   private val readBackoffConfig: BackoffConfig  = pluginConfig.readBackoffConfig
@@ -235,4 +249,11 @@ final class DynamoDBDurableStateStoreV1[A](
     traced
   }
 
+  private def dispose(): Unit = {
+    (asyncClient, syncClient) match {
+      case (Some(a), _) => a.shutdown()
+      case (_, Some(s)) => s.shutdown()
+      case _            =>
+    }
+  }
 }

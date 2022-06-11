@@ -420,7 +420,7 @@ final class V2SnapshotDaoImpl(
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.close()
       case (_, Some(s)) => s.close()
-      case _ =>
+      case _            =>
     }
   }
 }

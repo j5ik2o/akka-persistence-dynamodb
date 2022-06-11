@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
-import akka.Done
-import akka.actor.{ CoordinatedShutdown, ExtendedActorSystem }
+import akka.actor.ExtendedActorSystem
 import akka.annotation.ApiMayChange
 import akka.event.LoggingAdapter
 import akka.persistence.state.DurableStateStoreProvider
@@ -10,7 +9,6 @@ import akka.persistence.state.scaladsl.{ DurableStateUpdateStore => ScalaDurable
 import akka.stream.{ Materializer, SystemMaterializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
 import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{
@@ -20,13 +18,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, V1ClientUtils, V2ClientUtils }
 import com.typesafe.config.Config
-import software.amazon.awssdk.services.dynamodb.{
-  DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
-  DynamoDbClient => JavaDynamoDbSyncClient
-}
 
 import java.util.UUID
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext
 
 object DynamoDBDurableStateStoreProvider {
 
@@ -66,28 +60,6 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
   protected val traceReporter: Option[TraceReporter] = {
     val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, statePluginConfig)
     traceReporterProvider.create
-  }
-
-  private var javaAsyncClientV2: JavaDynamoDbAsyncClient = _
-  private var javaSyncClientV2: JavaDynamoDbSyncClient   = _
-
-  CoordinatedShutdown(system).addTask(
-    CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
-    s"$Identifier-$id"
-  ) { () =>
-    Future {
-      id.synchronized {
-        if (javaAsyncClientV2 != null) {
-          javaAsyncClientV2.close()
-          javaAsyncClientV2 = null
-        }
-        if (javaSyncClientV2 != null) {
-          javaSyncClientV2.close()
-          javaSyncClientV2 = null
-        }
-      }
-      Done
-    }
   }
 
   private val partitionKeyResolver: PartitionKeyResolver = {

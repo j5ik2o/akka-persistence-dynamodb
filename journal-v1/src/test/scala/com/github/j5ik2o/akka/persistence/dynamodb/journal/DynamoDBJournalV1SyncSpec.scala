@@ -9,23 +9,25 @@ import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
-object DynamoDBJournalV2SyncSpec {
+object DynamoDBJournalV1SyncSpec {
   val dynamoDBHost: String       = DockerClientFactory.instance().dockerHostIpAddress()
   val dynamoDBPort: Int          = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode: Boolean = false
+
 }
 
-class DynamoDBJournalV2SyncSpec
+class DynamoDBJournalV1SyncSpec
     extends JournalSpec(
-      ConfigHelper.config(
-        Some("journal-reference"),
-        legacyConfigFormat = false,
-        legacyJournalMode = DynamoDBJournalV2AsyncSpec.legacyJournalMode,
-        dynamoDBHost = DynamoDBJournalV2SyncSpec.dynamoDBHost,
-        dynamoDBPort = DynamoDBJournalV2AsyncSpec.dynamoDBPort,
-        clientVersion = ClientVersion.V2.toString,
-        clientType = ClientType.Sync.toString
-      )
+      ConfigHelper
+        .config(
+          Some("journal-reference"),
+          legacyConfigFormat = false,
+          legacyJournalMode = DynamoDBJournalV1SyncSpec.legacyJournalMode,
+          dynamoDBHost = DynamoDBJournalV1SyncSpec.dynamoDBHost,
+          dynamoDBPort = DynamoDBJournalV1SyncSpec.dynamoDBPort,
+          clientVersion = ClientVersion.V1.toString,
+          clientType = ClientType.Sync.toString
+        )
     )
     with ScalaFutures
     with DynamoDBSpecSupport {
@@ -34,9 +36,9 @@ class DynamoDBJournalV2SyncSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBJournalV2AsyncSpec.dynamoDBPort
+  override protected lazy val dynamoDBPort: Int = DynamoDBJournalV1SyncSpec.dynamoDBPort
 
-  override val legacyJournalTable: Boolean = DynamoDBJournalV2AsyncSpec.legacyJournalMode
+  override val legacyJournalTable: Boolean = DynamoDBJournalV1SyncSpec.legacyJournalMode
 
   override def beforeAll(): Unit = {
     super.beforeAll()

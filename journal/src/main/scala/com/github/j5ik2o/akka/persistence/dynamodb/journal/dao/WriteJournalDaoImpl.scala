@@ -158,6 +158,7 @@ class WriteJournalDaoImpl(
   override def dispose(): Unit = {
     putQueues.foreach { case (_, sw) => sw.shutdown() }
     deleteQueues.foreach { case (_, sw) => sw.shutdown() }
+    journalRowDriver.dispose()
   }
 
   private def selectDeleteQueue(

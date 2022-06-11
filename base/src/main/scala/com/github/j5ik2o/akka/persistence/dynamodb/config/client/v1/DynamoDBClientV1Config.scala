@@ -53,49 +53,52 @@ object DynamoDBClientV1Config extends LoggingSupport {
   val CsmConfigurationProviderClassName = "com.amazonaws.monitoring.CsmConfigurationProvider"
   val AWSCredentialsProviderClassName   = "com.amazonaws.auth.AWSCredentialsProvider"
 
-  def fromConfig(config: Config): DynamoDBClientV1Config = {
+  def fromConfig(config: Config, classNameValidation: Boolean): DynamoDBClientV1Config = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1Config(
       sourceConfig = config,
       dispatcherName = config.valueOptAs[String](dispatcherNameKey),
-      clientConfiguration =
-        ClientConfiguration.fromConfig(config.configAs(clientConfigurationKey, ConfigFactory.empty())),
+      clientConfiguration = ClientConfiguration
+        .fromConfig(config.configAs(clientConfigurationKey, ConfigFactory.empty()), classNameValidation),
       requestMetricCollectorProviderClassName = {
         val className =
           config.valueAs(requestMetricCollectorProviderClassNameKey, DefaultRequestMetricCollectorProviderClassName)
         ClassCheckUtils.requireClassByName(
           "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RequestMetricCollectorProvider",
-          className
+          className,
+          classNameValidation
         )
       },
       requestMetricCollectorClassName = {
         val className = config.valueOptAs[String](requestMetricCollectorClassNameKey)
-        ClassCheckUtils.requireClassByName(RequestMetricCollectorClassName, className)
+        ClassCheckUtils.requireClassByName(RequestMetricCollectorClassName, className, classNameValidation)
       },
       monitoringListenerProviderClassName = {
         val className = config
           .valueAs(monitoringListenerProviderClassNameKey, DefaultMonitoringListenerProviderClassName)
         ClassCheckUtils.requireClassByName(
           "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.MonitoringListenerProvider",
-          className
+          className,
+          classNameValidation
         )
       },
       monitoringListenerClassName = {
         val className = config.valueOptAs[String](monitoringListenerClassNameKey)
-        ClassCheckUtils.requireClassByName(MonitoringListenerClassName, className)
+        ClassCheckUtils.requireClassByName(MonitoringListenerClassName, className, classNameValidation)
       },
       requestHandlersProviderClassName = {
         val className = config
           .valueAs[String](requestHandlersProviderClassNameKey, DefaultRequestHandlersProviderClassName)
         ClassCheckUtils.requireClassByName(
           "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RequestHandlersProvider",
-          className
+          className,
+          classNameValidation
         )
       },
       requestHandlerClassNames = {
         val classNames = config.valuesAs[String](requestHandlerClassNamesKey, Vector.empty)
         classNames.map { className =>
-          ClassCheckUtils.requireClassByName(RequestHandlerClassName, className)
+          ClassCheckUtils.requireClassByName(RequestHandlerClassName, className, classNameValidation)
         }.toIndexedSeq
       },
       csmConfigurationProviderProviderClassName = {
@@ -106,12 +109,13 @@ object DynamoDBClientV1Config extends LoggingSupport {
           )
         ClassCheckUtils.requireClassByName(
           "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.CsmConfigurationProviderProvider",
-          className
+          className,
+          classNameValidation
         )
       },
       csmConfigurationProviderClassName = {
         val className = config.valueOptAs[String](csmConfigurationProviderClassNameKey)
-        ClassCheckUtils.requireClassByName(CsmConfigurationProviderClassName, className)
+        ClassCheckUtils.requireClassByName(CsmConfigurationProviderClassName, className, classNameValidation)
       },
       awsCredentialsProviderProviderClassName = {
         val className = config
@@ -121,12 +125,13 @@ object DynamoDBClientV1Config extends LoggingSupport {
           )
         ClassCheckUtils.requireClassByName(
           "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider",
-          className
+          className,
+          classNameValidation
         )
       },
       awsCredentialsProviderClassName = {
         val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
-        ClassCheckUtils.requireClassByName("com.amazonaws.auth.AWSCredentialsProvider", className)
+        ClassCheckUtils.requireClassByName("com.amazonaws.auth.AWSCredentialsProvider", className, classNameValidation)
       }
     )
     logger.debug("result = {}", result)

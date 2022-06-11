@@ -17,6 +17,8 @@ trait JournalRowDriver {
     onFinish = Attributes.LogLevels.Debug
   )
 
+  def dispose(): Unit = {}
+
 }
 
 trait JournalRowReadDriver extends JournalRowDriver {

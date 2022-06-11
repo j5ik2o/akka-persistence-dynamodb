@@ -1,6 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
-import java.io.IOException
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
 
+import java.io.IOException
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
@@ -35,6 +35,13 @@ final class V2JournalRowReadDriver(
 
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
+
+  override def dispose(): Unit = {
+    (asyncClient, syncClient) match {
+      case (Some(a), _) => a.close()
+      case (_, Some(s)) => s.close()
+    }
+  }
 
   override def getJournalRows(
       persistenceId: PersistenceId,

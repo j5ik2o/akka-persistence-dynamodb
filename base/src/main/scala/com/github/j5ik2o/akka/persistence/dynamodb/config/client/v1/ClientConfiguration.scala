@@ -93,7 +93,7 @@ object ClientConfiguration {
   val DnsResolverProviderClassName: String =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider$Default" // classOf[DnsResolverProvider.Default].getName
 
-  def fromConfig(config: Config): ClientConfiguration = {
+  def fromConfig(config: Config, classNameValidation: Boolean): ClientConfiguration = {
     ClientConfiguration(
       connectionTimeout = config
         .valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
@@ -104,7 +104,11 @@ object ClientConfiguration {
         val className = config
           .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(Some(DefaultV1RetryPolicyProviderClassName))
         ClassCheckUtils
-          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RetryPolicyProvider", className)
+          .requireClassByName(
+            "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RetryPolicyProvider",
+            className,
+            classNameValidation
+          )
       },
       throttleRetries = config.valueAs[Boolean](throttleRetriesKey, DefaultThrottleRetries),
       localAddress = config.valueOptAs[String](localAddressKey),
@@ -131,17 +135,25 @@ object ClientConfiguration {
         val className =
           config.valueAs[String](dnsResolverProviderClassNameKey, DnsResolverProviderClassName)
         ClassCheckUtils
-          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider", className)
+          .requireClassByName(
+            "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider",
+            className,
+            classNameValidation
+          )
       },
       dnsResolverClassName = {
         val className = config.valueOptAs[String](dnsResolverClassNameKey)
-        ClassCheckUtils.requireClassByName("com.amazonaws.DnsResolver", className)
+        ClassCheckUtils.requireClassByName("com.amazonaws.DnsResolver", className, classNameValidation)
       },
       secureRandomProviderClassName = {
         val className =
           config.valueAs[String](secureRandomProviderClassNameKey, DefaultSecureRandomProviderClassName)
         ClassCheckUtils
-          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider", className)
+          .requireClassByName(
+            "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider",
+            className,
+            classNameValidation
+          )
       },
       useSecureRandom = config.valueAs(useSecureRandomKey, DefaultUseSecureRandom),
       useExpectContinue = config.valueAs[Boolean](useExpectContinueKey, DefaultUseExpectContinue),

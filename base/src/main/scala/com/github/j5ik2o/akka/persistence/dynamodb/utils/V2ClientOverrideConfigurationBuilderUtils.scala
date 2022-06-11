@@ -8,6 +8,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.core.retry.RetryMode
 
 import java.time.{ Duration => JavaDuration }
 import scala.concurrent.duration.Duration
@@ -25,7 +26,17 @@ object V2ClientOverrideConfigurationBuilderUtils {
     headers.foreach { case (k, v) =>
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
     }
-    retryMode.foreach { v => clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(v) }
+    retryMode.foreach { v =>
+      val r = v match {
+        case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.LEGACY =>
+          RetryMode.LEGACY
+        case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.STANDARD =>
+          RetryMode.STANDARD
+        case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.ADAPTIVE =>
+          RetryMode.ADAPTIVE
+      }
+      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(r)
+    }
     RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { rp =>
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(rp.create)
     }

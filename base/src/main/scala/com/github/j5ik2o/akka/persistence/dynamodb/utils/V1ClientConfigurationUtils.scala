@@ -1,6 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import akka.actor.DynamicAccess
+import com.amazonaws.retry.RetryMode
 import com.amazonaws.{ ClientConfiguration, Protocol, ProxyAuthenticationMethod }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
   DnsResolverProvider,
@@ -18,7 +19,12 @@ object V1ClientConfigurationUtils {
   def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientConfiguration = {
     val result = new ClientConfiguration()
     import pluginConfig.clientConfig.v1ClientConfig.clientConfiguration._
-    protocol.foreach { v => result.setProtocol(v) }
+    protocol.foreach {
+      case com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.Protocol.HTTP =>
+        result.setProtocol(Protocol.HTTP)
+      case com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.Protocol.HTTPS =>
+        result.setProtocol(Protocol.HTTPS)
+    }
     result.setMaxConnections(maxConnections)
     userAgentPrefix.foreach { v => result.setUserAgentPrefix(v) }
     userAgentSuffix.foreach { v => result.setUserAgentSuffix(v) }
@@ -38,7 +44,14 @@ object V1ClientConfigurationUtils {
     }
     RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { p => result.setRetryPolicy(p.create) }
     maxErrorRetry.foreach { v => result.setMaxErrorRetry(v) }
-    retryMode.foreach { v => result.setRetryMode(v) }
+    retryMode.foreach {
+      case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.LEGACY =>
+        result.setRetryMode(RetryMode.LEGACY)
+      case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.STANDARD =>
+        result.setRetryMode(RetryMode.STANDARD)
+      case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.ADAPTIVE =>
+        result.setRetryMode(RetryMode.ADAPTIVE)
+    }
     if (socketTimeout != Duration.Zero)
       result.setSocketTimeout(socketTimeout.toMillis.toInt)
     if (connectionTimeout != Duration.Zero)

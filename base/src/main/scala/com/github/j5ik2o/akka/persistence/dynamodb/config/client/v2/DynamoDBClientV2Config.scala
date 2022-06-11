@@ -15,20 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
-  AwsCredentialsProviderProvider,
-  ExecutionInterceptorsProvider,
-  MetricPublishersProvider,
-  RetryPolicyProvider
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
-import com.typesafe.config.{ Config, ConfigFactory }
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
-import software.amazon.awssdk.core.retry.RetryMode
-import software.amazon.awssdk.metrics.MetricPublisher
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{AwsCredentialsProviderProvider, ExecutionInterceptorsProvider, MetricPublishersProvider, RetryPolicyProvider}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ClassCheckUtils, LoggingSupport}
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.immutable._
 import scala.concurrent.duration.FiniteDuration
@@ -49,6 +41,9 @@ object DynamoDBClientV2Config extends LoggingSupport {
   val metricPublisherClassNameKey                = "metric-publisher-class-names"
   val awsCredentialsProviderProviderClassNameKey = "aws-credentials-provider-provider-class-name"
   val awsCredentialsProviderClassNameKey         = "aws-credentials-provider-class-name"
+
+  val AwsCredentialsProviderClassName = "software.amazon.awssdk.auth.credentials.AwsCredentialsProvider"
+  val MetricPublisherClassName = "software.amazon.awssdk.metrics.MetricPublisher"
 
   val keyNames: Seq[String] =
     Seq(dispatcherNameKey, asyncKey, syncKey, retryModeKey, apiCallTimeoutKey, apiCallAttemptTimeoutKey)
@@ -83,7 +78,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
           )
         ClassCheckUtils.requireClass(classOf[RetryPolicyProvider], className)
       },
-      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
+      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
       executionInterceptorsProviderClassName = {
         val className = config.valueAs[String](
           executionInterceptorProviderClassNameKey,
@@ -93,7 +88,10 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       executionInterceptorClassNames = {
         val classNames = config.valuesAs[String](executionInterceptorClassNamesKey, Seq.empty)
-        classNames.map(s => ClassCheckUtils.requireClass(classOf[ExecutionInterceptor], s)).toIndexedSeq
+        classNames
+          .map(s =>
+            ClassCheckUtils.requireClassByName(MetricPublisherClassName, s)
+          ).toIndexedSeq
       },
       apiCallTimeout = config.valueOptAs[FiniteDuration](apiCallTimeoutKey),
       apiCallAttemptTimeout = config.valueOptAs[FiniteDuration](apiCallAttemptTimeoutKey),
@@ -106,7 +104,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       metricPublisherClassNames = {
         val classNames = config.valuesAs[String](metricPublisherClassNameKey, Seq.empty)
-        classNames.map(s => ClassCheckUtils.requireClass(classOf[MetricPublisher], s))
+        classNames.map(s => ClassCheckUtils.requireClassByName("software.amazon.awssdk.metrics.MetricPublisher", s))
       },
       awsCredentialsProviderProviderClassName = {
         val className = config.valueAs[String](
@@ -117,7 +115,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       awsCredentialsProviderClassName = {
         val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
-        ClassCheckUtils.requireClass(classOf[AwsCredentialsProvider], className)
+        ClassCheckUtils.requireClassByName(AwsCredentialsProviderClassName, className)
       }
     )
     logger.debug("result = {}", result)
@@ -125,14 +123,14 @@ object DynamoDBClientV2Config extends LoggingSupport {
   }
 }
 
-case class DynamoDBClientV2Config(
+final case class DynamoDBClientV2Config(
     sourceConfig: Config,
     dispatcherName: Option[String],
     asyncClientConfig: AsyncClientConfig,
     syncClientConfig: SyncClientConfig,
     headers: scala.collection.Map[String, scala.collection.Seq[String]],
     retryPolicyProviderClassName: Option[String],
-    retryMode: Option[RetryMode],
+    retryMode: Option[RetryMode.Value],
     executionInterceptorsProviderClassName: String,
     executionInterceptorClassNames: Seq[String],
     apiCallTimeout: Option[FiniteDuration],

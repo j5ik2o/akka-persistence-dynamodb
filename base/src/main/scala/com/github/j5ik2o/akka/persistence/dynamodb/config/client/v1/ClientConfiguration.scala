@@ -15,10 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
-import com.amazonaws.retry.RetryMode
-import com.amazonaws.{ ClientConfiguration => AWSClientConfiguration, DnsResolver, Protocol }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClassCheckUtils
 import com.typesafe.config.Config
 
@@ -69,31 +68,28 @@ object ClientConfiguration {
   val nonProxyHostsKey                         = "non-proxy-hosts"
   val proxyAuthenticationMethodsKey            = "proxy-authentication-methods"
 
-  val DefaultConnectionTimeout: FiniteDuration      = AWSClientConfiguration.DEFAULT_CONNECTION_TIMEOUT.milliseconds
-  val DefaultMaxConnections: Int                    = AWSClientConfiguration.DEFAULT_MAX_CONNECTIONS
+  val DefaultConnectionTimeout: FiniteDuration      = 10000.milliseconds
+  val DefaultMaxConnections: Int                    = 50
   val DefaultV1RetryPolicyProviderClassName: String = classOf[RetryPolicyProvider.Default].getName
-  val DefaultThrottleRetries: Boolean               = AWSClientConfiguration.DEFAULT_THROTTLE_RETRIES
-  val DefaultSocketTimeout: FiniteDuration          = AWSClientConfiguration.DEFAULT_SOCKET_TIMEOUT.milliseconds
-  val DefaultRequestTimeout: FiniteDuration         = AWSClientConfiguration.DEFAULT_REQUEST_TIMEOUT.milliseconds
+  val DefaultThrottleRetries: Boolean               = true
+  val DefaultSocketTimeout: FiniteDuration          = 50000.milliseconds
+  val DefaultRequestTimeout: FiniteDuration         = 0.milliseconds
 
-  val DefaultClientExecutionTimeout: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_CLIENT_EXECUTION_TIMEOUT.milliseconds
-  val DefaultUseReaper: Boolean                    = AWSClientConfiguration.DEFAULT_USE_REAPER
-  val DefaultUseGZIP: Boolean                      = AWSClientConfiguration.DEFAULT_USE_GZIP
-  val DefaultResponseMetadataCacheSize: Int        = AWSClientConfiguration.DEFAULT_RESPONSE_METADATA_CACHE_SIZE
-  val DefaultSecureRandomProviderClassName: String = classOf[SecureRandomProvider.Default].getName
-  val DefaultUseSecureRandom: Boolean              = false
-  val DefaultUseExpectContinue: Boolean            = AWSClientConfiguration.DEFAULT_USE_EXPECT_CONTINUE
-  val DefaultCacheResponseMetadata: Boolean        = AWSClientConfiguration.DEFAULT_CACHE_RESPONSE_METADATA
-  val DefaultConnectionMaxIdle: FiniteDuration = AWSClientConfiguration.DEFAULT_CONNECTION_MAX_IDLE_MILLIS.milliseconds
+  val DefaultClientExecutionTimeout: FiniteDuration = 0.milliseconds
+  val DefaultUseReaper: Boolean                     = true
+  val DefaultUseGZIP: Boolean                       = false
+  val DefaultResponseMetadataCacheSize: Int         = 50
+  val DefaultSecureRandomProviderClassName: String  = classOf[SecureRandomProvider.Default].getName
+  val DefaultUseSecureRandom: Boolean               = false
+  val DefaultUseExpectContinue: Boolean             = true
+  val DefaultCacheResponseMetadata: Boolean         = true
+  val DefaultConnectionMaxIdle: FiniteDuration      = 60000.milliseconds
 
-  val DefaultValidateAfterInactivity: FiniteDuration =
-    AWSClientConfiguration.DEFAULT_VALIDATE_AFTER_INACTIVITY_MILLIS.milliseconds
-  val DefaultTcpKeepAlive: Boolean = AWSClientConfiguration.DEFAULT_TCP_KEEP_ALIVE
+  val DefaultValidateAfterInactivity: FiniteDuration = 5000.milliseconds
+  val DefaultTcpKeepAlive: Boolean                   = false
 
-  val DefaultMaxConsecutiveRetiesBeforeThrottling: Int =
-    AWSClientConfiguration.DEFAULT_MAX_CONSECUTIVE_RETRIES_BEFORE_THROTTLING
-  val DnsResolverProviderClassName: String = classOf[DnsResolverProvider.Default].getName
+  val DefaultMaxConsecutiveRetiesBeforeThrottling: Int = 100
+  val DnsResolverProviderClassName: String             = classOf[DnsResolverProvider.Default].getName
 
   def fromConfig(config: Config): ClientConfiguration = {
     ClientConfiguration(
@@ -101,7 +97,7 @@ object ClientConfiguration {
         .valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
       maxConnections = config.valueAs[Int](maxConnectionsKey, DefaultMaxConnections),
       maxErrorRetry = config.valueOptAs[Int](maxErrorRetryKey),
-      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.valueOf(s)),
+      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
       retryPolicyProviderClassName = {
         val className = config
           .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(Some(DefaultV1RetryPolicyProviderClassName))
@@ -109,7 +105,7 @@ object ClientConfiguration {
       },
       throttleRetries = config.valueAs[Boolean](throttleRetriesKey, DefaultThrottleRetries),
       localAddress = config.valueOptAs[String](localAddressKey),
-      protocol = config.valueOptAs[String](protocolKey).map(s => Protocol.valueOf(s)),
+      protocol = config.valueOptAs[String](protocolKey).map(s => Protocol.withName(s.toUpperCase)),
       socketTimeout = config.valueAs[FiniteDuration](socketTimeoutKey, DefaultSocketTimeout),
       requestTimeout = config.valueAs[FiniteDuration](requestTimeoutKey, DefaultRequestTimeout),
       clientExecutionTimeout = config.valueAs[FiniteDuration](clientExecutionTimeoutKey, DefaultClientExecutionTimeout),
@@ -135,7 +131,7 @@ object ClientConfiguration {
       },
       dnsResolverClassName = {
         val className = config.valueOptAs[String](dnsResolverClassNameKey)
-        ClassCheckUtils.requireClass(classOf[DnsResolver], className)
+        ClassCheckUtils.requireClassByName("com.amazonaws.DnsResolver", className)
       },
       secureRandomProviderClassName = {
         val className =
@@ -169,15 +165,15 @@ object ClientConfiguration {
   }
 }
 
-case class ClientConfiguration(
+final case class ClientConfiguration(
     connectionTimeout: FiniteDuration,
     maxConnections: Int,
     maxErrorRetry: Option[Int],
-    retryMode: Option[RetryMode],
+    retryMode: Option[RetryMode.Value],
     retryPolicyProviderClassName: Option[String],
     throttleRetries: Boolean,
     localAddress: Option[String],
-    protocol: Option[Protocol],
+    protocol: Option[Protocol.Value],
     socketTimeout: FiniteDuration,
     requestTimeout: FiniteDuration,
     clientExecutionTimeout: FiniteDuration,

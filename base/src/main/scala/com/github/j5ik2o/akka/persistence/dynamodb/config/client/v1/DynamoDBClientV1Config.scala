@@ -15,10 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
-import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.handlers.RequestHandler2
-import com.amazonaws.metrics.RequestMetricCollector
-import com.amazonaws.monitoring.{ CsmConfigurationProvider, MonitoringListener }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{ AWSCredentialsProviderProvider, _ }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -44,6 +40,12 @@ object DynamoDBClientV1Config extends LoggingSupport {
   val DefaultRequestMetricCollectorProviderClassName: String = classOf[RequestMetricCollectorProvider.Default].getName
   val DefaultMonitoringListenerProviderClassName: String     = classOf[MonitoringListenerProvider.Default].getName
 
+  val RequestMetricCollectorClassName   = "com.amazonaws.metrics.RequestMetricCollector"
+  val MonitoringListenerClassName       = "com.amazonaws.monitoring.MonitoringListener"
+  val RequestHandlerClassName           = "com.amazonaws.handlers.RequestHandler2"
+  val CsmConfigurationProviderClassName = "com.amazonaws.monitoring.CsmConfigurationProvider"
+  val AWSCredentialsProviderClassName   = "com.amazonaws.auth.AWSCredentialsProvider"
+
   def fromConfig(config: Config): DynamoDBClientV1Config = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1Config(
@@ -58,7 +60,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       requestMetricCollectorClassName = {
         val className = config.valueOptAs[String](requestMetricCollectorClassNameKey)
-        ClassCheckUtils.requireClass(classOf[RequestMetricCollector], className)
+        ClassCheckUtils.requireClassByName(RequestMetricCollectorClassName, className)
       },
       monitoringListenerProviderClassName = {
         val className = config
@@ -67,7 +69,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       monitoringListenerClassName = {
         val className = config.valueOptAs[String](monitoringListenerClassNameKey)
-        ClassCheckUtils.requireClass(classOf[MonitoringListener], className)
+        ClassCheckUtils.requireClassByName(MonitoringListenerClassName, className)
       },
       requestHandlersProviderClassName = {
         val className = config
@@ -76,7 +78,9 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       requestHandlerClassNames = {
         val classNames = config.valuesAs[String](requestHandlerClassNamesKey, Vector.empty)
-        classNames.map { className => ClassCheckUtils.requireClass(classOf[RequestHandler2], className) }.toIndexedSeq
+        classNames.map { className =>
+          ClassCheckUtils.requireClassByName(RequestHandlerClassName, className)
+        }.toIndexedSeq
       },
       csmConfigurationProviderProviderClassName = {
         val className = config
@@ -88,7 +92,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       csmConfigurationProviderClassName = {
         val className = config.valueOptAs[String](csmConfigurationProviderClassNameKey)
-        ClassCheckUtils.requireClass(classOf[CsmConfigurationProvider], className)
+        ClassCheckUtils.requireClassByName(CsmConfigurationProviderClassName, className)
       },
       awsCredentialsProviderProviderClassName = {
         val className = config
@@ -100,7 +104,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       awsCredentialsProviderClassName = {
         val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
-        ClassCheckUtils.requireClass(classOf[AWSCredentialsProvider], className)
+        ClassCheckUtils.requireClassByName("com.amazonaws.auth.AWSCredentialsProvider", className)
       }
     )
     logger.debug("result = {}", result)

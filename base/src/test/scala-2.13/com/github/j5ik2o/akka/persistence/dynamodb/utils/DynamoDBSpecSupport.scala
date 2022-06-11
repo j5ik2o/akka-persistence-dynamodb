@@ -1,9 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import org.scalatest.concurrent.{ Eventually, ScalaFutures }
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.{ BeforeAndAfter, Suite }
-import org.slf4j.bridge.SLF4JBridgeHandler
 import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.concurrent.duration._

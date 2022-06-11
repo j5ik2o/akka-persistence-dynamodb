@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.util.concurrent.{ ExecutionException, Future => JavaFuture }
-
 import scala.concurrent.{ ExecutionContext, Future => ScalaFuture }
 
 object JavaFutureConverter {

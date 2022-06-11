@@ -1,7 +1,5 @@
 package akka.stream.scaladsl
 
-import akka.stream.scaladsl.Source
-
 import scala.concurrent.Future
 
 object SourceUtils {

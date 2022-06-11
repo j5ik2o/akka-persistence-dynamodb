@@ -15,9 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 
 import scala.collection.immutable._
 

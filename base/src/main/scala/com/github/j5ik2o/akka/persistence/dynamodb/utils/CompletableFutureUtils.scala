@@ -2,7 +2,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import java.util.concurrent.{ CompletableFuture, ExecutionException, Executor, Future }
 import java.util.function.Supplier
-
 import scala.concurrent._
 
 object CompletableFutureUtils {

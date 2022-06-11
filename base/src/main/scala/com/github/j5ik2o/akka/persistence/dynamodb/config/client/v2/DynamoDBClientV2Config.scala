@@ -61,9 +61,12 @@ object DynamoDBClientV2Config extends LoggingSupport {
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider$Default"
 
   val RetryPolicyProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider"
-  val ExecutionInterceptorsProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider"
-  val MetricPublishersProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.MetricPublishersProvider"
-  val AwsCredentialsProviderProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider"
+  val ExecutionInterceptorsProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider"
+  val MetricPublishersProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.MetricPublishersProvider"
+  val AwsCredentialsProviderProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider"
 
   def fromConfig(config: Config, classNameValidation: Boolean, legacyConfigFormat: Boolean): DynamoDBClientV2Config = {
     logger.debug("config = {}", config)
@@ -128,9 +131,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       metricPublisherClassNames = {
         val classNames = config.valuesAs[String](metricPublisherClassNameKey, Seq.empty)
-        classNames.map(s =>
-          ClassCheckUtils.requireClassByName(MetricPublisherClassName, s, classNameValidation)
-        )
+        classNames.map(s => ClassCheckUtils.requireClassByName(MetricPublisherClassName, s, classNameValidation))
       },
       awsCredentialsProviderProviderClassName = {
         val className = config.valueAs[String](

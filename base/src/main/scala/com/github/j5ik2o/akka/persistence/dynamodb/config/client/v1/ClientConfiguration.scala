@@ -81,12 +81,12 @@ object ClientConfiguration {
   val DefaultResponseMetadataCacheSize: Int         = 50
   val DefaultSecureRandomProviderClassName: String =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider$Default"
-  val DefaultUseSecureRandom: Boolean          = false
-  val DefaultUseExpectContinue: Boolean        = true
-  val DefaultCacheResponseMetadata: Boolean    = true
-  val DefaultConnectionMaxIdle: FiniteDuration = 60000.milliseconds
-  val DefaultValidateAfterInactivity: FiniteDuration = 5000.milliseconds
-  val DefaultTcpKeepAlive: Boolean                   = false
+  val DefaultUseSecureRandom: Boolean                  = false
+  val DefaultUseExpectContinue: Boolean                = true
+  val DefaultCacheResponseMetadata: Boolean            = true
+  val DefaultConnectionMaxIdle: FiniteDuration         = 60000.milliseconds
+  val DefaultValidateAfterInactivity: FiniteDuration   = 5000.milliseconds
+  val DefaultTcpKeepAlive: Boolean                     = false
   val DefaultMaxConsecutiveRetiesBeforeThrottling: Int = 100
   val DefaultDnsResolverProviderClassName: String =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider$Default"
@@ -94,7 +94,7 @@ object ClientConfiguration {
   val RetryPolicyProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RetryPolicyProvider"
   val DnsResolverProviderClassName: String =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider"
-  val DnsResolverClassName = "com.amazonaws.DnsResolver"
+  val DnsResolverClassName          = "com.amazonaws.DnsResolver"
   val SecureRandomProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider"
 
   def fromConfig(config: Config, classNameValidation: Boolean): ClientConfiguration = {

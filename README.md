@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/j5ik2o/akka-persistence-dynamodb/workflows/CI/badge.svg)](https://github.com/j5ik2o/akka-persistence-dynamodb/actions?query=workflow%3ACI)
 [![Scala Steward badge](https://img.shields.io/badge/Scala_Steward-helping-blue.svg?style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAMAAAARSr4IAAAAVFBMVEUAAACHjojlOy5NWlrKzcYRKjGFjIbp293YycuLa3pYY2LSqql4f3pCUFTgSjNodYRmcXUsPD/NTTbjRS+2jomhgnzNc223cGvZS0HaSD0XLjbaSjElhIr+AAAAAXRSTlMAQObYZgAAAHlJREFUCNdNyosOwyAIhWHAQS1Vt7a77/3fcxxdmv0xwmckutAR1nkm4ggbyEcg/wWmlGLDAA3oL50xi6fk5ffZ3E2E3QfZDCcCN2YtbEWZt+Drc6u6rlqv7Uk0LdKqqr5rk2UCRXOk0vmQKGfc94nOJyQjouF9H/wCc9gECEYfONoAAAAASUVORK5CYII=)](https://scala-steward.org)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal_2.13)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal-v2_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.j5ik2o/akka-persistence-dynamodb-journal-v2_2.13)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb?ref=badge_shield)
 
@@ -33,8 +33,9 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
 |State Plugin|✓|-|✓|
-|Query Plugin|✓|-|✓|
+|Query Plugin|-|-|✓|
 
+NOTE: Since version 1.7.x, the query plugin was discontinued. 
 
 ### DynamoDB Support
 
@@ -81,10 +82,11 @@ Add the following to your sbt build (2.12.x, 2.13.x):
 
 ```scala
 val version = "..."
+val awsClientVersion = "v2" // or "v1"
 
 libraryDependencies += Seq(
-  "com.github.j5ik2o" %% "akka-persistence-dynamodb-journal" % version,
-  "com.github.j5ik2o" %% "akka-persistence-dynamodb-snapshot" % version
+  "com.github.j5ik2o" %% s"akka-persistence-dynamodb-journal-$awsClientVersion" % version,
+  "com.github.j5ik2o" %% s"akka-persistence-dynamodb-snapshot-$awsClientVersion" % version
 )
 ```
 
@@ -475,146 +477,6 @@ j5ik2o.dynamo-db-state {
     batch-write-item-limit = 25
   }
 }
-```
-
-## akka-persistence query plugin
-
-Just this, if you like the default settings.
-
-```hocon
-j5ik2o.dynamo-db-read-journal {
-  class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
-  write-plugin = "j5ik2o.dynamo-db-journal"
-}
-```
-
-If overwrite the default values.
-
-```hocon
-j5ik2o.dynamo-db-read-journal {
-  class = "com.github.j5ik2o.akka.persistence.dynamodb.query.DynamoDBReadJournalProvider"
-  plugin-dispatcher = "akka.actor.default-dispatcher"
-  write-plugin = "j5ik2o.dynamo-db-journal"
-  table-name = "Journal"
-  tags-index-name = "TagsIndex"
-  get-journal-rows-index-name = "GetJournalRows"
-  tag-separator = ","
-  shard-count = 2
-  refresh-interval = 0.5 s
-  query-batch-size = 1024
-  consistent-read = false
-  
-  columns-def {
-    partition-key-column-name = "pkey"
-    sort-key-column-name = "skey"
-    persistence-id-column-name = "persistence-id"
-    sequence-nr-column-name = "sequence-nr"
-    deleted-column-name = "deleted"
-    message-column-name = "message"
-    ordering-column-name = "ordering"
-    tags-column-name = "tags"
-  }
-
-  dynamo-db-client {
-    # access-key-id = ???
-    # secret-access-key = ???
-    # endpoint = ???
-    # region = ???
-    client-version = "v2"
-    client-type = "async"
-    v2 {
-      # dispatcher-name = ""
-      async {
-        max-concurrency = 50
-        max-pending-connection-acquires = 10000
-        read-timeout = 30s
-        write-timeout = 30s
-        connection-timeout = 2s
-        connection-acquisition-timeout = 3s
-        connection-time-to-live = 0s
-        max-idle-connection-timeout = 60s
-        use-connection-reaper = true
-        threads-of-event-loop-group = 32
-        use-http2 = false
-        http2-max-streams = 4294967295
-        http2-initial-window-size = 1048576
-      }
-      sync {
-        socket-timeout = 50s
-        connection-timeout = 2s
-        connection-acquisition-timeout = 10s
-        max-connections = 50
-        connection-time-to-live = 0s
-        max-idle-connection-timeout = 60s
-        use-connection-reaper = true
-      }
-      # retry-mode = ???
-      # api-call-timeout = ???
-      # api-call-attempt-timeout = ???
-    }
-    v1 {
-      # dispatcher-name = ""
-      connection-timeout = 10000 ms
-      # max-error-retry = ???
-      # retry-policy-class-name = ???
-      max-connections = 50
-      throttle-retries = true
-      # local-address = ???
-      # protocol = ???
-      socket-timeout = 50000 ms
-      request-timeout = 0s
-      client-execution-timeout = 0s
-      # user-agent-prefix = ???
-      # user-agent-suffix = ???
-      use-reaper = true
-      use-gzip = false
-      # socket-send-buffer-size-hint = ???
-      # socket-receive-buffer-size-hint = ???
-      # signer-override = ???
-      response-metadata-cache-size = 50
-      # dns-resolver-class-name = ???
-      use-expect-contine = true
-      cache-response-metadata = true
-      # connection-ttl = ???
-      connection-max-idle = 60000 ms
-      validate-after-inactivity = 5000
-      tcp-keep-alive = false
-      max-consecutive-retries-before-throttling = 100
-      # disable-host-prefix-injection = ???
-      # retry-mode = ???
-    }
-    v1-dax {
-      # dispatcher-name = ""
-      connection-timeout = 1000 ms
-      request-timeout = 60000 ms
-      health-check-timeout = 1000 ms
-      health-check-interval = 5000 ms
-      idle-connection-timeout = 3000 ms
-      min-idle-connection-size = 1
-      write-retries = 2
-      max-pending-connections-per-host = 10
-      read-retries = 2
-      thread-keep-alive = 10000 ms
-      cluster-update-interval = 4000 ms
-      cluster-update-threshold = 125 ms
-      max-retry-delay = 7000 ms
-      unhealthy-consecutive-error-count = 5
-    } 
-    batch-get-item-limit = 100
-    batch-write-item-limit = 25
-  }
-
-}
-```
-
-```scala
-val readJournal : ReadJournal
-  with CurrentPersistenceIdsQuery
-  with PersistenceIdsQuery
-  with CurrentEventsByPersistenceIdQuery
-  with EventsByPersistenceIdQuery
-  with CurrentEventsByTagQuery
-  with EventsByTagQuery = PersistenceQuery(system).readJournalFor(DynamoDBReadJournal.Identifier)
 ```
 
 ## DynamoDB setup

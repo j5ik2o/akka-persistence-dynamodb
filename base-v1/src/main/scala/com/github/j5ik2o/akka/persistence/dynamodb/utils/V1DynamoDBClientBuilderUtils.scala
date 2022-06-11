@@ -1,10 +1,16 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import akka.actor.DynamicAccess
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.services.dynamodbv2.{AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder}
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{AWSCredentialsProviderProvider, CsmConfigurationProviderProvider, MonitoringListenerProvider, RequestHandlersProvider, RequestMetricCollectorProvider}
+import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder }
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
+  AWSCredentialsProviderProvider,
+  CsmConfigurationProviderProvider,
+  MonitoringListenerProvider,
+  RequestHandlersProvider,
+  RequestMetricCollectorProvider
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
 object V1DynamoDBClientBuilderUtils {
@@ -13,10 +19,10 @@ object V1DynamoDBClientBuilderUtils {
     val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
 
     val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
-    val monitoringListenerProvider = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
-    val requestHandlersProvider = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
-    val requestMetricCollectorProvider = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
-    val credentialsProviderProvider = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
+    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
 
     val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
 
@@ -49,10 +55,10 @@ object V1DynamoDBClientBuilderUtils {
     val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
 
     val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
-    val monitoringListenerProvider = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
-    val requestHandlersProvider = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
-    val requestMetricCollectorProvider = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
-    val credentialsProviderProvider = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
+    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
 
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
 

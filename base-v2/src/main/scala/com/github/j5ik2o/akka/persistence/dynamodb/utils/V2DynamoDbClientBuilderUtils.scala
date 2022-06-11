@@ -19,9 +19,9 @@ import software.amazon.awssdk.services.dynamodb.{
 object V2DynamoDbClientBuilderUtils {
 
   def setupSync(
-                 dynamicAccess: DynamicAccess,
-                 pluginConfig: PluginConfig
-               ): DynamoDbClientBuilder = {
+      dynamicAccess: DynamicAccess,
+      pluginConfig: PluginConfig
+  ): DynamoDbClientBuilder = {
     val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
@@ -44,9 +44,9 @@ object V2DynamoDbClientBuilderUtils {
   }
 
   def setupAsync(
-                  dynamicAccess: DynamicAccess,
-                  pluginConfig: PluginConfig
-                ): DynamoDbAsyncClientBuilder = {
+      dynamicAccess: DynamicAccess,
+      pluginConfig: PluginConfig
+  ): DynamoDbAsyncClientBuilder = {
     val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()

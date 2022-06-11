@@ -1,6 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
-import java.io.IOException
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Source }
@@ -18,6 +17,7 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
+import java.io.IOException
 import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
@@ -30,6 +30,7 @@ final class V2JournalRowWriteDriver(
     val sortKeyResolver: SortKeyResolver,
     val metricsReporter: Option[MetricsReporter]
 ) extends JournalRowWriteDriver {
+
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -48,6 +49,13 @@ final class V2JournalRowWriteDriver(
     pluginConfig,
     metricsReporter
   )
+
+  override def dispose(): Unit = {
+    (asyncClient, syncClient) match {
+      case (Some(a), _) => a.close()
+      case (_, Some(s)) => s.close()
+    }
+  }
 
   override def getJournalRows(
       persistenceId: PersistenceId,

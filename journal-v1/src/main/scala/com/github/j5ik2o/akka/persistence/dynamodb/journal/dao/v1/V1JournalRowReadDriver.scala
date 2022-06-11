@@ -30,6 +30,13 @@ final class V1JournalRowReadDriver(
     case _ =>
   }
 
+  override def dispose(): Unit = {
+    (asyncClient, syncClient) match {
+      case (Some(a), _) => a.shutdown()
+      case (_, Some(s)) => s.shutdown()
+    }
+  }
+
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
 

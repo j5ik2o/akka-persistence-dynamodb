@@ -107,12 +107,10 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
         val (maybeV2SyncClient, maybeV2AsyncClient) = statePluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
             val client =
-              V2ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)(
-                javaSyncClientV2 = _
-              )
+              V2ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)
             (Some(client), None)
           case ClientType.Async =>
-            val client = V2ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)(javaAsyncClientV2 = _)
+            val client = V2ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)
             (None, Some(client))
         }
         new DynamoDBDurableStateStoreV2(

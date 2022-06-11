@@ -92,7 +92,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             val client =
-              V2ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaAsyncClient = c)
+              V2ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)
             new V2SnapshotDaoImpl(
               system,
               Some(client),
@@ -104,9 +104,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
             )
           case ClientType.Sync =>
             val client =
-              V2ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)(c =>
-                v2JavaSyncClient = c
-              )
+              V2ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
             new V2SnapshotDaoImpl(
               system,
               None,

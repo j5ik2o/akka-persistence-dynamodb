@@ -44,17 +44,19 @@ object DynamoDBClientConfig extends LoggingSupport {
 
   def fromConfig(config: Config, legacyConfigFormat: Boolean): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
+    val clientVersion =
+      config.valueOptAs[String](clientVersionKey).map(s => ClientVersion.withName(s)).getOrElse(DefaultClientVersion)
     val result = DynamoDBClientConfig(
       sourceConfig = config,
       accessKeyId = config.valueOptAs(accessKeyIdKeyKey),
       secretAccessKey = config.valueOptAs(secretAccessKeyKey),
       endpoint = config.valueOptAs(endpointKey),
       region = config.valueOptAs(regionKey),
-      clientVersion =
-        config.valueOptAs[String](clientVersionKey).map(s => ClientVersion.withName(s)).getOrElse(DefaultClientVersion),
+      clientVersion,
       clientType =
         config.valueOptAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(DefaultClientType),
-      DynamoDBClientV1Config.fromConfig(config.configAs(v1Key, ConfigFactory.empty())),
+      DynamoDBClientV1Config
+        .fromConfig(config.configAs(v1Key, ConfigFactory.empty()), clientVersion == ClientVersion.V1),
       DynamoDBClientV1DaxConfig.fromConfig(config.configAs(v1DaxKey, ConfigFactory.empty())), {
         if (legacyConfigFormat) {
           logger.warn(
@@ -63,9 +65,13 @@ object DynamoDBClientConfig extends LoggingSupport {
             "\tPlease change current key name to the new key name: (j5ik2o.dynamo-db-journal.dynamo-db-client.v2). \n\t" +
             DynamoDBClientV2Config.existsKeyNames(config).filter(_._2).keys.mkString("child-keys = [ ", ", ", " ]")
           )
-          DynamoDBClientV2Config.fromConfig(config, legacyConfigFormat)
+          DynamoDBClientV2Config.fromConfig(config, clientVersion == ClientVersion.V2, legacyConfigFormat)
         } else
-          DynamoDBClientV2Config.fromConfig(config.configAs(v2Key, ConfigFactory.empty()), legacyConfigFormat)
+          DynamoDBClientV2Config.fromConfig(
+            config.configAs(v2Key, ConfigFactory.empty()),
+            clientVersion == ClientVersion.V2,
+            legacyConfigFormat
+          )
       },
       batchGetItemLimit = config.valueAs(batchGetItemLimitKey, DefaultBatchGetItemLimit),
       batchWriteItemLimit = config.valueAs(batchWriteItemLimitKey, DefaultBatchWriteItemLimit)

@@ -6,7 +6,6 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ Materializer, SystemMaterializer }
 import akka.testkit.TestKit
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.{ V2JournalRowReadDriver, V2JournalRowWriteDriver }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{ ReadJournalDaoImpl, V2QueryProcessor }

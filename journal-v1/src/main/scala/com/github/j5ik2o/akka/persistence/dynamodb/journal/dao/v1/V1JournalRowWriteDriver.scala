@@ -1,7 +1,5 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
-import java.io.IOException
-import java.nio.ByteBuffer
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Source }
@@ -15,6 +13,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.slf4j.LoggerFactory
 
+import java.io.IOException
+import java.nio.ByteBuffer
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowWriteDriver(
@@ -44,6 +44,13 @@ final class V1JournalRowWriteDriver(
     pluginConfig,
     metricsReporter
   )
+
+  override def dispose(): Unit = {
+    (asyncClient, syncClient) match {
+      case (Some(a), _) => a.shutdown()
+      case (_, Some(s)) => s.shutdown()
+    }
+  }
 
   override def getJournalRows(
       persistenceId: PersistenceId,

@@ -7,6 +7,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 final class StateSerializer(
@@ -70,7 +71,7 @@ final class StateSerializer(
   private def serializerAsync(payload: AnyRef): Future[Serializer] = {
     try Future.successful(serialization.findSerializerFor(payload))
     catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         Future.failed(ex)
     }
   }

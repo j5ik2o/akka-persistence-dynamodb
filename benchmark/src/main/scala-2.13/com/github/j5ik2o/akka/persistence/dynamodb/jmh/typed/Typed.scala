@@ -1,7 +1,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.jmh.typed
 
-import java.util.concurrent.TimeUnit
+import akka.actor.typed.ActorSystem
 
+import java.util.concurrent.TimeUnit
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.util.Timeout
@@ -10,6 +11,7 @@ import org.openjdk.jmh.annotations._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
@@ -20,13 +22,13 @@ class TypedV1Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
-    implicit val typedSystem = system.toTyped
-    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    implicit val to: Timeout                       = 10.seconds
+    implicit val typedSystem: ActorSystem[Nothing] = system.toTyped
+    val future                                     = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
       Await.result(future, Duration.Inf)
     } catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         ex.printStackTrace()
     }
   }
@@ -42,13 +44,13 @@ class TypedV1Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
-    implicit val typedSystem = system.toTyped
-    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    implicit val to: Timeout                       = 10.seconds
+    implicit val typedSystem: ActorSystem[Nothing] = system.toTyped
+    val future                                     = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
       Await.result(future, Duration.Inf)
     } catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         ex.printStackTrace()
     }
   }
@@ -64,13 +66,13 @@ class TypedV2Async extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
-    implicit val typedSystem = system.toTyped
-    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    implicit val to: Timeout                       = 10.seconds
+    implicit val typedSystem: ActorSystem[Nothing] = system.toTyped
+    val future                                     = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
       Await.result(future, Duration.Inf)
     } catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         ex.printStackTrace()
     }
   }
@@ -86,13 +88,13 @@ class TypedV2Sync extends BenchmarkHelper {
 
   @Benchmark
   def increment(): Unit = {
-    implicit val to          = Timeout(10 seconds)
-    implicit val typedSystem = system.toTyped
-    val future               = typedRef.ask[IncrementReply](ref => Increment(1, ref))
+    implicit val to: Timeout                       = 10.seconds
+    implicit val typedSystem: ActorSystem[Nothing] = system.toTyped
+    val future                                     = typedRef.ask[IncrementReply](ref => Increment(1, ref))
     try {
       Await.result(future, Duration.Inf)
     } catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         ex.printStackTrace()
     }
   }

@@ -26,6 +26,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 
 import java.util.UUID
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 final class ByteArraySnapshotSerializer(
@@ -37,7 +38,7 @@ final class ByteArraySnapshotSerializer(
   private val serializerAsync: Future[Serializer] = {
     try Future.successful(serialization.serializerFor(classOf[Snapshot]))
     catch {
-      case ex: Throwable =>
+      case NonFatal(ex) =>
         Future.failed(ex)
     }
   }
@@ -48,7 +49,7 @@ final class ByteArraySnapshotSerializer(
       case serializer =>
         try Future.successful(serializer.toBinary(snapshot))
         catch {
-          case ex: Throwable =>
+          case NonFatal(ex) =>
             Future.failed(ex)
         }
     }
@@ -62,7 +63,7 @@ final class ByteArraySnapshotSerializer(
       case serializer =>
         try Future.successful(serializer.fromBinary(data, classOf[Snapshot]))
         catch {
-          case ex: Throwable =>
+          case NonFatal(ex) =>
             Future.failed(ex)
         }
     }

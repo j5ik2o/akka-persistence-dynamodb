@@ -96,6 +96,8 @@ libraryDependencies += Seq(
 )
 ```
 
+NOTE: Since version 1.7, the plugin have been split by AWS SDK version. There are no changes to the configuration file specifications. Currently used configuration files can be used as they are.
+
 ## akka-persistence journal plugin
 
 Just this, if you like the default settings.

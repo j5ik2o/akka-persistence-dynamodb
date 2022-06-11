@@ -84,9 +84,15 @@ Add the following to your sbt build (2.12.x, 2.13.x):
 val version = "..."
 val awsClientVersion = "v2" // or "v1"
 
+// if you use event sourced
 libraryDependencies += Seq(
   "com.github.j5ik2o" %% s"akka-persistence-dynamodb-journal-$awsClientVersion" % version,
   "com.github.j5ik2o" %% s"akka-persistence-dynamodb-snapshot-$awsClientVersion" % version
+)
+
+// if you use durable state
+libraryDependencies += Seq(
+  "com.github.j5ik2o" %% s"akka-persistence-dynamodb-state-$awsClientVersion" % version
 )
 ```
 

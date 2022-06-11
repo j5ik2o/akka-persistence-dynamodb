@@ -29,6 +29,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceI
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoFactory }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -44,11 +45,10 @@ object DynamoDBSnapshotStore {
 
 }
 
-class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
+final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   import DynamoDBSnapshotStore._
 
-  implicit val ec: ExecutionContext        = context.dispatcher
   implicit val system: ExtendedActorSystem = context.system.asInstanceOf[ExtendedActorSystem]
   implicit val mat: Materializer           = SystemMaterializer(system).materializer
   implicit val _log: LoggingAdapter        = log
@@ -58,17 +58,27 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   private val serialization                        = SerializationExtension(system)
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
 
-  protected val metricsReporter: Option[MetricsReporter] = {
+  private val pluginExecutor: ExecutionContext =
+    pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V1 =>
+        DispatcherUtils.newV1Executor(pluginConfig, system)
+      case ClientVersion.V2 =>
+        DispatcherUtils.newV2Executor(pluginConfig, system)
+    }
+
+  private implicit val ec: ExecutionContext = pluginExecutor
+
+  private val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(dynamicAccess, pluginConfig)
     metricsReporterProvider.create
   }
 
-  protected val traceReporter: Option[TraceReporter] = {
+  private val traceReporter: Option[TraceReporter] = {
     val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, pluginConfig)
     traceReporterProvider.create
   }
 
-  protected val snapshotDao: SnapshotDao = {
+  private val snapshotDao: SnapshotDao = {
     val className = pluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V2SnapshotDaoFactory"
@@ -101,7 +111,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreLoadAsync(context))
 
-    def future = {
+    def future: Future[Option[SelectedSnapshot]] = {
       val result = criteria match {
         case SnapshotSelectionCriteria(Long.MaxValue, Long.MaxValue, _, _) =>
           snapshotDao.latestSnapshot(PersistenceId(persistenceId))
@@ -136,7 +146,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreSaveAsync(context))
 
-    def future = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
+    def future: Future[Unit] = snapshotDao.save(metadata, snapshot).runWith(Sink.ignore).map(_ => ())
 
     val traced = traceReporter.fold(future)(_.traceSnapshotStoreSaveAsync(context)(future))
     traced.onComplete {
@@ -153,7 +163,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeSnapshotStoreDeleteAsync(context))
 
-    def future = snapshotDao
+    def future: Future[Unit] = snapshotDao
       .delete(PersistenceId(metadata.persistenceId), SequenceNumber(metadata.sequenceNr)).map(_ => ()).runWith(
         Sink.ignore
       ).map(_ => ())

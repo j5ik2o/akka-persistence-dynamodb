@@ -15,14 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.ConfigSupport._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClassCheckUtils
 import com.typesafe.config.Config
 
 import scala.collection.immutable._
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration._
 
 object ClientConfiguration {
   val connectionTimeoutKey                     = "connection-timeout"
@@ -68,28 +67,31 @@ object ClientConfiguration {
   val nonProxyHostsKey                         = "non-proxy-hosts"
   val proxyAuthenticationMethodsKey            = "proxy-authentication-methods"
 
-  val DefaultConnectionTimeout: FiniteDuration      = 10000.milliseconds
-  val DefaultMaxConnections: Int                    = 50
-  val DefaultV1RetryPolicyProviderClassName: String = classOf[RetryPolicyProvider.Default].getName
-  val DefaultThrottleRetries: Boolean               = true
-  val DefaultSocketTimeout: FiniteDuration          = 50000.milliseconds
-  val DefaultRequestTimeout: FiniteDuration         = 0.milliseconds
+  val DefaultConnectionTimeout: FiniteDuration = 10000.milliseconds
+  val DefaultMaxConnections: Int               = 50
+  val DefaultV1RetryPolicyProviderClassName: String =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RetryPolicyProvider$Default" // classOf[RetryPolicyProvider.Default].getName
+  val DefaultThrottleRetries: Boolean       = true
+  val DefaultSocketTimeout: FiniteDuration  = 50000.milliseconds
+  val DefaultRequestTimeout: FiniteDuration = 0.milliseconds
 
   val DefaultClientExecutionTimeout: FiniteDuration = 0.milliseconds
   val DefaultUseReaper: Boolean                     = true
   val DefaultUseGZIP: Boolean                       = false
   val DefaultResponseMetadataCacheSize: Int         = 50
-  val DefaultSecureRandomProviderClassName: String  = classOf[SecureRandomProvider.Default].getName
-  val DefaultUseSecureRandom: Boolean               = false
-  val DefaultUseExpectContinue: Boolean             = true
-  val DefaultCacheResponseMetadata: Boolean         = true
-  val DefaultConnectionMaxIdle: FiniteDuration      = 60000.milliseconds
+  val DefaultSecureRandomProviderClassName: String =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider$Default" // classOf[SecureRandomProvider.Default].getName
+  val DefaultUseSecureRandom: Boolean          = false
+  val DefaultUseExpectContinue: Boolean        = true
+  val DefaultCacheResponseMetadata: Boolean    = true
+  val DefaultConnectionMaxIdle: FiniteDuration = 60000.milliseconds
 
   val DefaultValidateAfterInactivity: FiniteDuration = 5000.milliseconds
   val DefaultTcpKeepAlive: Boolean                   = false
 
   val DefaultMaxConsecutiveRetiesBeforeThrottling: Int = 100
-  val DnsResolverProviderClassName: String             = classOf[DnsResolverProvider.Default].getName
+  val DnsResolverProviderClassName: String =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider$Default" // classOf[DnsResolverProvider.Default].getName
 
   def fromConfig(config: Config): ClientConfiguration = {
     ClientConfiguration(
@@ -101,7 +103,8 @@ object ClientConfiguration {
       retryPolicyProviderClassName = {
         val className = config
           .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(Some(DefaultV1RetryPolicyProviderClassName))
-        ClassCheckUtils.requireClass(classOf[RetryPolicyProvider], className)
+        ClassCheckUtils
+          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.RetryPolicyProvider", className)
       },
       throttleRetries = config.valueAs[Boolean](throttleRetriesKey, DefaultThrottleRetries),
       localAddress = config.valueOptAs[String](localAddressKey),
@@ -127,7 +130,8 @@ object ClientConfiguration {
       dnsResolverProviderClassName = {
         val className =
           config.valueAs[String](dnsResolverProviderClassNameKey, DnsResolverProviderClassName)
-        ClassCheckUtils.requireClass(classOf[DnsResolverProvider], className)
+        ClassCheckUtils
+          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.DnsResolverProvider", className)
       },
       dnsResolverClassName = {
         val className = config.valueOptAs[String](dnsResolverClassNameKey)
@@ -136,7 +140,8 @@ object ClientConfiguration {
       secureRandomProviderClassName = {
         val className =
           config.valueAs[String](secureRandomProviderClassNameKey, DefaultSecureRandomProviderClassName)
-        ClassCheckUtils.requireClass(classOf[SecureRandomProvider], className)
+        ClassCheckUtils
+          .requireClassByName("com.github.j5ik2o.akka.persistence.dynamodb.client.v1.SecureRandomProvider", className)
       },
       useSecureRandom = config.valueAs(useSecureRandomKey, DefaultUseSecureRandom),
       useExpectContinue = config.valueAs[Boolean](useExpectContinueKey, DefaultUseExpectContinue),

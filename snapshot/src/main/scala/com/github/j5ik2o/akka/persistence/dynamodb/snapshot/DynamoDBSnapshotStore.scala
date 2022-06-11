@@ -30,7 +30,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceI
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, V1SnapshotDaoImpl, V2SnapshotDaoImpl }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1ClientUtils, V2ClientUtils }
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -92,7 +92,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
             val client =
-              ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaAsyncClient = c)
+              V2ClientUtils.createV2AsyncClient(system.dynamicAccess, pluginConfig)(c => v2JavaAsyncClient = c)
             new V2SnapshotDaoImpl(
               system,
               Some(client),
@@ -104,7 +104,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
             )
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)(c =>
+              V2ClientUtils.createV2SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)(c =>
                 v2JavaSyncClient = c
               )
             new V2SnapshotDaoImpl(
@@ -120,7 +120,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V1 =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
-            v1JavaAsyncClient = ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
+            v1JavaAsyncClient = V1ClientUtils.createV1AsyncClient(system.dynamicAccess, pluginConfig)
             new V1SnapshotDaoImpl(
               system,
               Some(v1JavaAsyncClient),
@@ -132,7 +132,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
             )
           case ClientType.Sync =>
             v1JavaSyncClient =
-              ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
+              V1ClientUtils.createV1SyncClient(system.dynamicAccess, pluginConfig.configRootPath, pluginConfig)
             new V1SnapshotDaoImpl(
               system,
               None,
@@ -146,7 +146,7 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V1Dax =>
         pluginConfig.clientConfig.clientType match {
           case ClientType.Async =>
-            v1JavaAsyncClient = ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
+            v1JavaAsyncClient = V1ClientUtils.createV1DaxAsyncClient(pluginConfig.clientConfig)
             new V1SnapshotDaoImpl(
               system,
               Some(v1JavaAsyncClient),
@@ -157,7 +157,8 @@ class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
               traceReporter
             )
           case ClientType.Sync =>
-            v1JavaSyncClient = ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
+            v1JavaSyncClient =
+              V1ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
             new V1SnapshotDaoImpl(
               system,
               None,

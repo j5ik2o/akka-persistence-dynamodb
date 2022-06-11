@@ -18,7 +18,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{
   DynamoDBDurableStateStoreV2
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClientUtils, DispatcherUtils }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DispatcherUtils, V1ClientUtils, V2ClientUtils }
 import com.typesafe.config.Config
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
@@ -107,12 +107,12 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
         val (maybeV2SyncClient, maybeV2AsyncClient) = statePluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)(
+              V2ClientUtils.createV2SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)(
                 javaSyncClientV2 = _
               )
             (Some(client), None)
           case ClientType.Async =>
-            val client = ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)(javaAsyncClientV2 = _)
+            val client = V2ClientUtils.createV2AsyncClient(dynamicAccess, statePluginConfig)(javaAsyncClientV2 = _)
             (None, Some(client))
         }
         new DynamoDBDurableStateStoreV2(
@@ -129,11 +129,11 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
       case ClientVersion.V1 =>
         val (maybeV1SyncClient, maybeV1AsyncClient) = statePluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            val client = ClientUtils
+            val client = V1ClientUtils
               .createV1SyncClient(dynamicAccess, statePluginConfig.configRootPath, statePluginConfig)
             (Some(client), None)
           case ClientType.Async =>
-            val client = ClientUtils.createV1AsyncClient(dynamicAccess, statePluginConfig)
+            val client = V1ClientUtils.createV1AsyncClient(dynamicAccess, statePluginConfig)
             (None, Some(client))
         }
         new DynamoDBDurableStateStoreV1(
@@ -150,11 +150,11 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
       case ClientVersion.V1Dax =>
         val (maybeV1SyncClient, maybeV1AsyncClient) = statePluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            val client = ClientUtils
+            val client = V1ClientUtils
               .createV1DaxSyncClient(statePluginConfig.configRootPath, statePluginConfig.clientConfig)
             (Some(client), None)
           case ClientType.Async =>
-            val client = ClientUtils.createV1DaxAsyncClient(statePluginConfig.clientConfig)
+            val client = V1ClientUtils.createV1DaxAsyncClient(statePluginConfig.clientConfig)
             (None, Some(client))
         }
         new DynamoDBDurableStateStoreV1(

@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.query.dao
 
 import java.util.concurrent.atomic.AtomicLong
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source

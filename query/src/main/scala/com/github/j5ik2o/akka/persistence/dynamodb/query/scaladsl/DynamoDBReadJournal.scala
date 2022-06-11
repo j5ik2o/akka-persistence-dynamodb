@@ -19,8 +19,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.query.scaladsl
 import akka.NotUsed
 import akka.actor.{ ExtendedActorSystem, Scheduler }
 import akka.event.LoggingAdapter
-import akka.persistence.query.scaladsl._
 import akka.persistence.query._
+import akka.persistence.query.scaladsl._
 import akka.persistence.{ Persistence, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
@@ -31,22 +31,22 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowReadDriver
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
+  ByteArrayJournalSerializer,
+  FlowPersistentReprSerializer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor
 import com.github.j5ik2o.akka.persistence.dynamodb.query.JournalSequenceActor.{ GetMaxOrderingId, MaxOrderingId }
+import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.query.dao.{
   QueryProcessor,
   ReadJournalDaoImpl,
   V1QueryProcessor,
   V2QueryProcessor
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
-  ByteArrayJournalSerializer,
-  FlowPersistentReprSerializer
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.query.config.QueryPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ClientUtils
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1ClientUtils, V2ClientUtils }
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.{
@@ -141,13 +141,13 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         val (maybeSyncClient, maybeAsyncClient) = queryPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV2SyncClient(dynamicAccess, queryPluginConfig.configRootPath, queryPluginConfig)(v =>
+              V2ClientUtils.createV2SyncClient(dynamicAccess, queryPluginConfig.configRootPath, queryPluginConfig)(v =>
                 javaSyncClientV2 = v
               )
             (Some(client), None)
           case ClientType.Async =>
             val client =
-              ClientUtils.createV2AsyncClient(dynamicAccess, queryPluginConfig)(v => javaAsyncClientV2 = v)
+              V2ClientUtils.createV2AsyncClient(dynamicAccess, queryPluginConfig)(v => javaAsyncClientV2 = v)
             (None, Some(client))
         }
         (
@@ -163,14 +163,14 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
       case ClientVersion.V1 =>
         val (maybeSyncClient, maybeAsyncClient) = queryPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
-            val client = ClientUtils.createV1SyncClient(
+            val client = V1ClientUtils.createV1SyncClient(
               dynamicAccess,
               queryPluginConfig.configRootPath,
               queryPluginConfig
             )
             (Some(client), None)
           case ClientType.Async =>
-            val client = ClientUtils.createV1AsyncClient(dynamicAccess, queryPluginConfig)
+            val client = V1ClientUtils.createV1AsyncClient(dynamicAccess, queryPluginConfig)
             (None, Some(client))
         }
         (
@@ -187,10 +187,10 @@ class DynamoDBReadJournal(config: Config, configPath: String)(implicit system: E
         val (maybeSyncClient, maybeAsyncClient) = queryPluginConfig.clientConfig.clientType match {
           case ClientType.Sync =>
             val client =
-              ClientUtils.createV1DaxSyncClient(queryPluginConfig.configRootPath, queryPluginConfig.clientConfig)
+              V1ClientUtils.createV1DaxSyncClient(queryPluginConfig.configRootPath, queryPluginConfig.clientConfig)
             (Some(client), None)
           case ClientType.Async =>
-            val client = ClientUtils.createV1DaxAsyncClient(queryPluginConfig.clientConfig)
+            val client = V1ClientUtils.createV1DaxAsyncClient(queryPluginConfig.clientConfig)
             (None, Some(client))
         }
         (

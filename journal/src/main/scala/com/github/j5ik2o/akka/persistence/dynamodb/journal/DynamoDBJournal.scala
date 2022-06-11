@@ -67,11 +67,11 @@ object DynamoDBJournal {
   )(implicit log: LoggingAdapter): V1JournalRowWriteDriver = {
     val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val client = ClientUtils
+        val client = V1ClientUtils
           .createV1SyncClient(dynamicAccess, journalPluginConfig.configRootPath, journalPluginConfig)
         (Some(client), None)
       case ClientType.Async =>
-        val client = ClientUtils.createV1AsyncClient(dynamicAccess, journalPluginConfig)
+        val client = V1ClientUtils.createV1AsyncClient(dynamicAccess, journalPluginConfig)
         (None, Some(client))
     }
     new V1JournalRowWriteDriver(
@@ -99,10 +99,10 @@ object DynamoDBJournal {
     val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
         val client =
-          ClientUtils.createV2SyncClient(dynamicAccess, journalPluginConfig.configRootPath, journalPluginConfig)(f1)
+          V2ClientUtils.createV2SyncClient(dynamicAccess, journalPluginConfig.configRootPath, journalPluginConfig)(f1)
         (Some(client), None)
       case ClientType.Async =>
-        val client = ClientUtils.createV2AsyncClient(dynamicAccess, journalPluginConfig)(f2)
+        val client = V2ClientUtils.createV2AsyncClient(dynamicAccess, journalPluginConfig)(f2)
         (None, Some(client))
     }
     new V2JournalRowWriteDriver(
@@ -126,10 +126,10 @@ object DynamoDBJournal {
     val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
         val client =
-          ClientUtils.createV1DaxSyncClient(journalPluginConfig.configRootPath, journalPluginConfig.clientConfig)
+          V1ClientUtils.createV1DaxSyncClient(journalPluginConfig.configRootPath, journalPluginConfig.clientConfig)
         (Some(client), None)
       case ClientType.Async =>
-        val client = ClientUtils.createV1DaxAsyncClient(journalPluginConfig.clientConfig)
+        val client = V1ClientUtils.createV1DaxAsyncClient(journalPluginConfig.clientConfig)
         (None, Some(client))
     }
     new V1JournalRowWriteDriver(

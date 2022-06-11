@@ -1,25 +1,21 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
-  ExecutionInterceptorsProvider,
-  MetricPublishersProvider,
-  RetryPolicyProvider
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ExecutionInterceptorsProvider, MetricPublishersProvider, RetryPolicyProvider}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.retry.RetryMode
 
-import java.time.{ Duration => JavaDuration }
+import java.time.{Duration => JavaDuration}
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 object V2ClientOverrideConfigurationBuilderUtils {
 
   def setup(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
-  ): ClientOverrideConfiguration.Builder = {
+             dynamicAccess: DynamicAccess,
+             pluginConfig: PluginConfig
+           ): ClientOverrideConfiguration.Builder = {
     import pluginConfig.clientConfig.v2ClientConfig._
     var clientOverrideConfigurationBuilder = ClientOverrideConfiguration
       .builder()
@@ -58,7 +54,7 @@ object V2ClientOverrideConfigurationBuilderUtils {
     // defaultProfileFile
     // defaultProfileName
     val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
-    val metricPublishers         = metricPublishersProvider.create
+    val metricPublishers = metricPublishersProvider.create
     clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(metricPublishers.asJava)
     clientOverrideConfigurationBuilder
   }

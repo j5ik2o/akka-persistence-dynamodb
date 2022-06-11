@@ -1,10 +1,9 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import java.util.concurrent.TimeUnit
-
 import com.amazon.dax.client.dynamodbv2.ClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 object V1DaxClientConfigUtils {

@@ -6,7 +6,7 @@ import akka.annotation.ApiMayChange
 import akka.persistence.state.scaladsl.GetObjectResult
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
-import com.github.j5ik2o.akka.persistence.dynamodb.client.v2
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ StreamReadClient, StreamWriteClient }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
@@ -49,10 +49,10 @@ final class DynamoDBDurableStateStoreV2[A](
   private val writeBackoffConfig: BackoffConfig = pluginConfig.writeBackoffConfig
   private val readBackoffConfig: BackoffConfig  = pluginConfig.readBackoffConfig
 
-  private val streamWriteClient: v2.StreamWriteClient =
-    new v2.StreamWriteClient(system, asyncClient, syncClient, pluginConfig, writeBackoffConfig)
-  private val streamReadClient: v2.StreamReadClient =
-    new v2.StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
+  private val streamWriteClient: StreamWriteClient =
+    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, writeBackoffConfig)
+  private val streamReadClient: StreamReadClient =
+    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
 
   private val serialization: Serialization = SerializationExtension(system)
   private val akkaSerialization            = new StateSerializer(serialization, metricsReporter, traceReporter)

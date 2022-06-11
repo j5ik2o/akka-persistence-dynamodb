@@ -154,6 +154,45 @@ lazy val base = (project in file("base"))
     )
   ).dependsOn(test % "test->compile")
 
+lazy val baseV1 = (project in file("base-v1"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-base-v1",
+    libraryDependencies ++= Seq(
+      slf4j.api,
+      amazonaws.dynamodb,
+      amazonaws.dax,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
+      dimafeng.testcontainerScalaScalaTest % Test
+    )
+  ).dependsOn(base, test % "test->compile")
+
+lazy val baseV2 = (project in file("base-v2"))
+  .settings(baseSettings)
+  .settings(
+    name := "akka-persistence-dynamodb-base-v2",
+    libraryDependencies ++= Seq(
+      slf4j.api,
+      softwareamazon.dynamodb,
+      logback.classic                      % Test,
+      slf4j.julToSlf4J                     % Test,
+      dimafeng.testcontainerScalaScalaTest % Test
+    )
+  ).dependsOn(base, test % "test->compile")
+
+//lazy val baseV1Dax = (project in file("base-v1-dax"))
+//  .settings(baseSettings)
+//  .settings(
+//    name := "akka-persistence-dynamodb-base-v1-dax",
+//    libraryDependencies ++= Seq(
+//      amazonaws.dax,
+//      logback.classic                      % Test,
+//      slf4j.julToSlf4J                     % Test,
+//      dimafeng.testcontainerScalaScalaTest % Test
+//    )
+//  ).dependsOn(baseV1, test % "test->compile")
+
 lazy val journal = (project in file("journal"))
   .settings(baseSettings)
   .settings(
@@ -189,7 +228,7 @@ lazy val journal = (project in file("journal"))
       "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
-  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", baseV1, baseV2, snapshot % "test->compile")
 
 lazy val state = (project in file("state"))
   .settings(baseSettings)
@@ -226,7 +265,7 @@ lazy val state = (project in file("state"))
       "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
-  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", snapshot % "test->compile")
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", baseV1, baseV2, snapshot % "test->compile")
 
 lazy val snapshot = (project in file("snapshot"))
   .settings(baseSettings)
@@ -263,7 +302,7 @@ lazy val snapshot = (project in file("snapshot"))
       "org.reactivestreams"     % "reactive-streams"   % reactiveStreamsVersion,
       "org.scala-lang.modules" %% "scala-java8-compat" % scalaJava8CompatVersion
     )
-  ).dependsOn(test % "test->compile", base % "test->test;compile->compile")
+  ).dependsOn(test % "test->compile", base % "test->test;compile->compile", baseV1, baseV2)
 
 lazy val query = (project in file("query"))
   .settings(baseSettings)

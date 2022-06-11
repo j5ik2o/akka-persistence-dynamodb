@@ -2,7 +2,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
 import java.io.IOException
 import java.nio.ByteBuffer
-
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Source }

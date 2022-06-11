@@ -524,7 +524,7 @@ lazy val benchmark = (project in file("benchmark"))
     }
   )
   .enablePlugins(JmhPlugin)
-  .dependsOn(test, `journal-base`, `snapshot-base`)
+  .dependsOn(test, `journal-v1`, `journal-v2`, `snapshot-v1`, `snapshot-v2`)
 
 lazy val example = (project in file("example"))
   .settings(baseSettings)
@@ -555,7 +555,7 @@ lazy val example = (project in file("example"))
       }
     }
   )
-  .dependsOn(test, `journal-base`, `snapshot-base`, `state-base`)
+  .dependsOn(test, `journal-v1`, `journal-v2`, `snapshot-v1`, `snapshot-v2`, `state-v1`, `state-v2`)
 
 lazy val root = (project in file("."))
   .settings(baseSettings)

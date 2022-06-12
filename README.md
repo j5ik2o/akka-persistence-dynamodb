@@ -35,7 +35,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |State Plugin|✓|-|✓|
 |Query Plugin|-|-|✓|
 
-NOTE: Since version 1.7.x, the query plugin was discontinued. 
+NOTE: Since version 1.7.x, the query plugin was discontinued. You can't get throughput by simply doing a Scan like the query plugin. A better way is to use [DynamoDB Streams](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html) or [KDS for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/kds.html).
 
 ### DynamoDB Support
 

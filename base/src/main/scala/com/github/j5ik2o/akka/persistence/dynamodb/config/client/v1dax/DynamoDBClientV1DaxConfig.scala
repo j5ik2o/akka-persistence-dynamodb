@@ -15,8 +15,15 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.DynamoDBClientV1Config.{
+  awsCredentialsProviderClassNameKey,
+  awsCredentialsProviderProviderClassNameKey,
+  AWSCredentialsProviderClassName,
+  AWSCredentialsProviderProviderClassName,
+  DefaultAWSCredentialsProviderProviderClassName
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.Config
 
 import scala.concurrent.duration._
@@ -54,7 +61,7 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
   val DefaultMaxRetryDelay: FiniteDuration          = 7000.milliseconds
   val DefaultUnhealthyConsecutiveErrorCount         = 5
 
-  def fromConfig(config: Config): DynamoDBClientV1DaxConfig = {
+  def fromConfig(config: Config, classNameValidation: Boolean): DynamoDBClientV1DaxConfig = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1DaxConfig(
       sourceConfig = config,
@@ -74,7 +81,23 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
       clusterUpdateThreshold = config.valueAs[FiniteDuration](clusterUpdateThresholdKey, DefaultClusterUpdateThreshold),
       maxRetryDelay = config.valueAs[FiniteDuration](maxRetryDelayKey, DefaultMaxRetryDelay),
       unhealthyConsecutiveErrorCount =
-        config.valueAs[Int](unhealthyConsecutiveErrorCountKey, DefaultUnhealthyConsecutiveErrorCount)
+        config.valueAs[Int](unhealthyConsecutiveErrorCountKey, DefaultUnhealthyConsecutiveErrorCount),
+      awsCredentialsProviderProviderClassName = {
+        val className = config
+          .valueAs[String](
+            awsCredentialsProviderProviderClassNameKey,
+            DefaultAWSCredentialsProviderProviderClassName
+          )
+        ClassCheckUtils.requireClassByName(
+          AWSCredentialsProviderProviderClassName,
+          className,
+          classNameValidation
+        )
+      },
+      awsCredentialsProviderClassName = {
+        val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
+        ClassCheckUtils.requireClassByName(AWSCredentialsProviderClassName, className, classNameValidation)
+      }
     )
     logger.debug("result = {}", result)
     result
@@ -97,5 +120,7 @@ final case class DynamoDBClientV1DaxConfig(
     clusterUpdateInterval: FiniteDuration,
     clusterUpdateThreshold: FiniteDuration,
     maxRetryDelay: FiniteDuration,
-    unhealthyConsecutiveErrorCount: Int
-) {}
+    unhealthyConsecutiveErrorCount: Int,
+    awsCredentialsProviderProviderClassName: String,
+    awsCredentialsProviderClassName: Option[String]
+)

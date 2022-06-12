@@ -18,6 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import akka.actor.DynamicAccess
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 
 import scala.collection.immutable.Seq
@@ -29,7 +30,12 @@ trait AWSCredentialsProviderProvider {
 
 object AWSCredentialsProviderProvider {
   def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AWSCredentialsProviderProvider = {
-    val className = pluginConfig.clientConfig.v1ClientConfig.awsCredentialsProviderProviderClassName
+    val className = pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V1 =>
+        pluginConfig.clientConfig.v1ClientConfig.awsCredentialsProviderProviderClassName
+      case ClientVersion.V1Dax =>
+        pluginConfig.clientConfig.v1DaxClientConfig.awsCredentialsProviderProviderClassName
+    }
     dynamicAccess
       .createInstanceFor[AWSCredentialsProviderProvider](
         className,

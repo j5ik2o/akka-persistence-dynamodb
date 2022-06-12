@@ -27,7 +27,7 @@ object V1DaxSyncClientFactory {
 
   class Default extends V1DaxSyncClientFactory {
     override def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDB = {
-      V1ClientUtils.createV1DaxSyncClient(pluginConfig.configRootPath, pluginConfig.clientConfig)
+      V1ClientUtils.createV1DaxSyncClient(dynamicAccess, pluginConfig.configRootPath, pluginConfig)
     }
   }
 

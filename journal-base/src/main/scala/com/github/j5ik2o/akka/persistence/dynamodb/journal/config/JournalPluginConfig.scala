@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
 
 import akka.stream.OverflowStrategy
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
@@ -92,6 +93,24 @@ object JournalPluginConfig extends LoggingSupport {
     val result = JournalPluginConfig(
       legacyConfigFormat,
       sourceConfig = config,
+      v1AsyncClientFactoryClassName = {
+        config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+      },
+      v1SyncClientFactoryClassName = {
+        config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+      },
+      v1DaxAsyncClientFactoryClassName = {
+        config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+      },
+      v1DaxSyncClientFactoryClassName = {
+        config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+      },
+      v2AsyncClientFactoryClassName = {
+        config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+      },
+      v2SyncClientFactoryClassName = {
+        config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+      },
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       getJournalRowsIndexName = config
@@ -180,6 +199,12 @@ object JournalPluginConfig extends LoggingSupport {
 final case class JournalPluginConfig(
     legacyConfigFormat: Boolean,
     sourceConfig: Config,
+    v1AsyncClientFactoryClassName: String,
+    v1SyncClientFactoryClassName: String,
+    v1DaxAsyncClientFactoryClassName: String,
+    v1DaxSyncClientFactoryClassName: String,
+    v2AsyncClientFactoryClassName: String,
+    v2SyncClientFactoryClassName: String,
     tableName: String,
     columnsDefConfig: JournalColumnsDefConfig,
     getJournalRowsIndexName: String,

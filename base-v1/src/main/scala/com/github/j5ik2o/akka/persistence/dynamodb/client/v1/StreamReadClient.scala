@@ -17,7 +17,7 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters._
 
-class StreamReadClient(
+final class StreamReadClient(
     val system: ActorSystem,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],

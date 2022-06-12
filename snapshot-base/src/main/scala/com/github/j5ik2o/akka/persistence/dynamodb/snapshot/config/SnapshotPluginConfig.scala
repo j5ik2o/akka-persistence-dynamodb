@@ -27,9 +27,15 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig.{
   DefaultV1DaxSyncClientFactoryClassName,
   DefaultV1SyncClientFactoryClassName,
   DefaultV2AsyncClientFactoryClassName,
-  DefaultV2SyncClientFactoryClassName
+  DefaultV2SyncClientFactoryClassName,
+  V1AsyncClientFactoryClassName,
+  V1DaxAsyncClientFactoryClassName,
+  V1DaxSyncClientFactoryClassName,
+  V1SyncClientFactoryClassName,
+  V2AsyncClientFactoryClassName,
+  V2SyncClientFactoryClassName
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientVersion, DynamoDBClientConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
@@ -63,26 +69,46 @@ object SnapshotPluginConfig extends LoggingSupport {
   def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
     val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    val clientConfig = DynamoDBClientConfig
+      .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = SnapshotPluginConfig(
       sourceConfig = config,
       v1AsyncClientFactoryClassName = {
-        config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+        val className = config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(V1AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1SyncClientFactoryClassName = {
-        config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+        val className = config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(V1SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1DaxAsyncClientFactoryClassName = {
-        config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+        val className = config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+        ClassCheckUtils.requireClassByName(
+          V1DaxAsyncClientFactoryClassName,
+          className,
+          clientConfig.clientVersion == ClientVersion.V1Dax
+        )
       },
       v1DaxSyncClientFactoryClassName = {
-        config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+        val className = config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+        ClassCheckUtils.requireClassByName(
+          V1DaxSyncClientFactoryClassName,
+          className,
+          clientConfig.clientVersion == ClientVersion.V1Dax
+        )
       },
       v2AsyncClientFactoryClassName = {
-        config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+        val className = config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(V2AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2SyncClientFactoryClassName = {
-        config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+        val className = config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       legacyConfigFormat,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
@@ -108,8 +134,7 @@ object SnapshotPluginConfig extends LoggingSupport {
       },
       writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
       readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
-      clientConfig = DynamoDBClientConfig
-        .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
+      clientConfig = clientConfig
     )
     logger.debug("result = {}", result)
     result

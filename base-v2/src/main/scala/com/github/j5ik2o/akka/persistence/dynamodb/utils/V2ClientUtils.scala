@@ -1,24 +1,21 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import akka.actor.DynamicAccess
-import akka.event.LoggingAdapter
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
-object V2ClientUtils {
+private[utils] object V2ClientUtils extends LoggingSupport {
 
   def createV2SyncClient(
       dynamicAccess: DynamicAccess,
       configRootPath: String,
       pluginConfig: PluginConfig
-  )(implicit
-      log: LoggingAdapter
   ): JavaDynamoDbSyncClient = {
     if (pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
-      log.warning(
+      logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
     val javaSyncClientV2 = V2DynamoDbClientBuilderUtils

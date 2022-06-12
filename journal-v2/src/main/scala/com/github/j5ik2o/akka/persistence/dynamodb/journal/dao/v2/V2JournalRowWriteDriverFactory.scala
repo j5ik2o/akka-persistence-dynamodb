@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import akka.actor.{ ActorSystem, DynamicAccess }
-import akka.event.LoggingAdapter
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
@@ -11,7 +10,9 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
   SortKeyResolver
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.V2ClientUtils
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2AsyncClientFactory, V2SyncClientFactory }
+
+import scala.collection.immutable
 
 class V2JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
 
@@ -23,14 +24,22 @@ class V2JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
       sortKeyResolver: SortKeyResolver,
       metricsReporter: Option[MetricsReporter]
   ): JournalRowWriteDriver = {
-    implicit val log: LoggingAdapter = system.log
     val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val client =
-          V2ClientUtils.createV2SyncClient(dynamicAccess, journalPluginConfig.configRootPath, journalPluginConfig)
+        val f = dynamicAccess
+          .createInstanceFor[V2SyncClientFactory](
+            journalPluginConfig.v2SyncClientFactoryClassName,
+            immutable.Seq.empty
+          ).get
+        val client = f.create(dynamicAccess, journalPluginConfig)
         (Some(client), None)
       case ClientType.Async =>
-        val client = V2ClientUtils.createV2AsyncClient(dynamicAccess, journalPluginConfig)
+        val f = dynamicAccess
+          .createInstanceFor[V2AsyncClientFactory](
+            journalPluginConfig.v2AsyncClientFactoryClassName,
+            immutable.Seq.empty
+          ).get
+        val client = f.create(dynamicAccess, journalPluginConfig)
         (None, Some(client))
     }
     new V2JournalRowWriteDriver(

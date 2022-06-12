@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.dynamodb.{
 
 import java.net.URI
 
-object V2DynamoDbClientBuilderUtils {
+private[utils] object V2DynamoDbClientBuilderUtils {
 
   def setupSync(
       dynamicAccess: DynamicAccess,

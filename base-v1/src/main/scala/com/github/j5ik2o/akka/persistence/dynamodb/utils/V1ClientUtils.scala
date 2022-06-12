@@ -18,7 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import akka.actor.DynamicAccess
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
 private[utils] object V1ClientUtils extends LoggingSupport {
 
@@ -26,7 +25,7 @@ private[utils] object V1ClientUtils extends LoggingSupport {
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
   ): AmazonDynamoDBAsync = {
-    V1DynamoDBClientBuilderUtils.setupAsync(dynamicAccess, pluginConfig).build()
+    V1ClientBuilderUtils.setupAsync(dynamicAccess, pluginConfig).build()
   }
 
   def createV1SyncClient(
@@ -38,21 +37,22 @@ private[utils] object V1ClientUtils extends LoggingSupport {
       logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v1.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
-    V1DynamoDBClientBuilderUtils.setupSync(dynamicAccess, pluginConfig).build()
+    V1ClientBuilderUtils.setupSync(dynamicAccess, pluginConfig).build()
   }
 
   def createV1DaxSyncClient(
+      dynamicAccess: DynamicAccess,
       configRootPath: String,
-      dynamoDBClientConfig: DynamoDBClientConfig
+      pluginConfig: PluginConfig
   ): AmazonDynamoDB = {
-    if (dynamoDBClientConfig.v1DaxClientConfig.dispatcherName.isEmpty)
+    if (pluginConfig.clientConfig.v1DaxClientConfig.dispatcherName.isEmpty)
       logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v1-dax.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
-    V1DaxClientBuilderUtils.setupSync(dynamoDBClientConfig).build()
+    V1DaxClientBuilderUtils.setupSync(dynamicAccess, pluginConfig).build()
   }
 
-  def createV1DaxAsyncClient(dynamoDBClientConfig: DynamoDBClientConfig): AmazonDynamoDBAsync = {
-    V1DaxClientBuilderUtils.setupAsync(dynamoDBClientConfig).build()
+  def createV1DaxAsyncClient(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBAsync = {
+    V1DaxClientBuilderUtils.setupAsync(dynamicAccess, pluginConfig).build()
   }
 }

@@ -56,7 +56,8 @@ object DynamoDBClientConfig extends LoggingSupport {
         config.valueOptAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(DefaultClientType),
       DynamoDBClientV1Config
         .fromConfig(config.configAs(v1Key, ConfigFactory.empty()), clientVersion == ClientVersion.V1),
-      DynamoDBClientV1DaxConfig.fromConfig(config.configAs(v1DaxKey, ConfigFactory.empty())), {
+      DynamoDBClientV1DaxConfig
+        .fromConfig(config.configAs(v1DaxKey, ConfigFactory.empty()), clientVersion == ClientVersion.V1Dax), {
         if (legacyConfigFormat) {
           logger.warn(
             "<<<!!!CAUTION: PLEASE MIGRATE TO NEW CONFIG FORMAT!!!>>>\n" +

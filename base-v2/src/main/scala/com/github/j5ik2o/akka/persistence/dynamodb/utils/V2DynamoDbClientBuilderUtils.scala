@@ -41,7 +41,6 @@ private[utils] object V2DynamoDbClientBuilderUtils {
     val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
-    val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
 
     var builder =
       DynamoDbClient
@@ -52,6 +51,7 @@ private[utils] object V2DynamoDbClientBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
+        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
         awsCredentialsProviderProvider.create.foreach { cp => builder = builder.credentialsProvider(cp) }
     }
     pluginConfig.clientConfig.endpoint.foreach { ep => builder = builder.endpointOverride(URI.create(ep)) }

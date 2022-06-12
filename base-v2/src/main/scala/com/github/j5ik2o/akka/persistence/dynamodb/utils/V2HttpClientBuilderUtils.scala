@@ -9,7 +9,7 @@ import java.net.InetAddress
 import java.time.{ Duration => JavaDuration }
 import scala.concurrent.duration.Duration
 
-object V2HttpClientBuilderUtils {
+private[utils] object V2HttpClientBuilderUtils {
 
   def setupSync(pluginConfig: PluginConfig): ApacheHttpClient.Builder = {
     import pluginConfig.clientConfig.v2ClientConfig.syncClientConfig._

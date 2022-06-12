@@ -6,7 +6,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientC
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
-object V1DaxClientConfigUtils {
+private[utils] object V1DaxClientConfigUtils {
 
   def setup(dynamoDBClientConfig: DynamoDBClientConfig): ClientConfig = {
     import dynamoDBClientConfig.v1DaxClientConfig._

@@ -14,7 +14,7 @@ import java.net.InetAddress
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
-object V1ClientConfigurationUtils {
+private[utils] object V1ClientConfigurationUtils {
 
   def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientConfiguration = {
     val result = new ClientConfiguration()

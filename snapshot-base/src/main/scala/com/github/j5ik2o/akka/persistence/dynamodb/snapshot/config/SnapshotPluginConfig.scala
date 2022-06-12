@@ -15,6 +15,20 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig.{
+  v1AsyncClientFactoryClassNameKey,
+  v1DaxAsyncClientFactoryClassNameKey,
+  v1DaxSyncClientFactoryClassNameKey,
+  v1SyncClientFactoryClassNameKey,
+  v2AsyncClientFactoryClassNameKey,
+  v2SyncClientFactoryClassNameKey,
+  DefaultV1AsyncClientFactoryClassName,
+  DefaultV1DaxAsyncClientFactoryClassName,
+  DefaultV1DaxSyncClientFactoryClassName,
+  DefaultV1SyncClientFactoryClassName,
+  DefaultV2AsyncClientFactoryClassName,
+  DefaultV2SyncClientFactoryClassName
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
@@ -52,6 +66,24 @@ object SnapshotPluginConfig extends LoggingSupport {
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = SnapshotPluginConfig(
       sourceConfig = config,
+      v1AsyncClientFactoryClassName = {
+        config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+      },
+      v1SyncClientFactoryClassName = {
+        config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+      },
+      v1DaxAsyncClientFactoryClassName = {
+        config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+      },
+      v1DaxSyncClientFactoryClassName = {
+        config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+      },
+      v2AsyncClientFactoryClassName = {
+        config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+      },
+      v2SyncClientFactoryClassName = {
+        config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+      },
       legacyConfigFormat,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
@@ -87,6 +119,12 @@ object SnapshotPluginConfig extends LoggingSupport {
 
 final case class SnapshotPluginConfig(
     sourceConfig: Config,
+    v1AsyncClientFactoryClassName: String,
+    v1SyncClientFactoryClassName: String,
+    v1DaxAsyncClientFactoryClassName: String,
+    v1DaxSyncClientFactoryClassName: String,
+    v2AsyncClientFactoryClassName: String,
+    v2SyncClientFactoryClassName: String,
     legacyConfigFormat: Boolean,
     tableName: String,
     columnsDefConfig: SnapshotColumnsDefConfig,

@@ -4,7 +4,7 @@ import com.amazon.dax.client.dynamodbv2.{ AmazonDaxAsyncClientBuilder, AmazonDax
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientConfig
 
-object V1DaxClientBuilderUtils {
+private[utils] object V1DaxClientBuilderUtils {
 
   def setupSync(dynamoDBClientConfig: DynamoDBClientConfig): AmazonDaxClientBuilder = {
     val cc      = V1DaxClientConfigUtils.setup(dynamoDBClientConfig)

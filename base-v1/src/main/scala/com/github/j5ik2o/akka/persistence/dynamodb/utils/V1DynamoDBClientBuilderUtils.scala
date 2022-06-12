@@ -7,7 +7,7 @@ import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, Ama
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
-object V1DynamoDBClientBuilderUtils {
+private[utils] object V1DynamoDBClientBuilderUtils {
 
   def setupSync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBClientBuilder = {
     val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)

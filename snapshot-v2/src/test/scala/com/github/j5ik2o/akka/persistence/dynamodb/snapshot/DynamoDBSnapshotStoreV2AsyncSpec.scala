@@ -60,11 +60,11 @@ class DynamoDBSnapshotStoreV2AsyncSpec
   override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
 
   before {
-    createTable
+    createTable()
   }
 
   after {
-    deleteTable
+    deleteTable()
   }
 
 }

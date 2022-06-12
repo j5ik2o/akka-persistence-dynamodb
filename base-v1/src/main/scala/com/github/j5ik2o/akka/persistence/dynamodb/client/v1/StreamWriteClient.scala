@@ -17,7 +17,7 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters._
 
-class StreamWriteClient(
+final class StreamWriteClient(
     val system: ActorSystem,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],

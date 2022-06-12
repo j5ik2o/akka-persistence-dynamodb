@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture
 import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
-class StreamReadClient(
+final class StreamReadClient(
     val system: ActorSystem,
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbClient],

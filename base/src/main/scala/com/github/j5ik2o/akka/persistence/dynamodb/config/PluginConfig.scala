@@ -23,6 +23,13 @@ object PluginConfig {
     "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory$Default"
   val DefaultV2SyncClientFactoryClassName =
     "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory$Default"
+
+  val V1AsyncClientFactoryClassName    = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory"
+  val V1SyncClientFactoryClassName     = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory"
+  val V1DaxAsyncClientFactoryClassName = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory"
+  val V1DaxSyncClientFactoryClassName  = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxSyncClientFactory"
+  val V2AsyncClientFactoryClassName    = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory"
+  val V2SyncClientFactoryClassName     = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory"
 }
 
 trait PluginConfig {

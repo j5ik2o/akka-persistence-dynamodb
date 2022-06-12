@@ -22,6 +22,10 @@ object ClassCheckUtils extends LoggingSupport {
     className
   }
 
+  def requireClassByName(expectedClassName: String, className: String): String = {
+    requireClassByName(expectedClassName, className, validation = true)
+  }
+
   def requireClassByName(
       expectedClassName: String,
       classNameOpt: Option[String],

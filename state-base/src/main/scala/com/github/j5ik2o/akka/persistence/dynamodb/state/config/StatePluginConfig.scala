@@ -97,6 +97,24 @@ object StatePluginConfig extends LoggingSupport {
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
+      v2DaxAsyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxAsyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2Dax
+          )
+      },
+      v2DaxSyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxSyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2Dax
+          )
+      },
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = StateColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
@@ -154,6 +172,8 @@ final case class StatePluginConfig(
     v1DaxSyncClientFactoryClassName: String,
     v2AsyncClientFactoryClassName: String,
     v2SyncClientFactoryClassName: String,
+    v2DaxAsyncClientFactoryClassName: String,
+    v2DaxSyncClientFactoryClassName: String,
     tableName: String,
     columnsDefConfig: StateColumnsDefConfig,
     tableNameResolverClassName: String,

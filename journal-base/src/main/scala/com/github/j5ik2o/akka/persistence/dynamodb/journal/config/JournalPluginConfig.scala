@@ -131,6 +131,24 @@ object JournalPluginConfig extends LoggingSupport {
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
+      v2DaxAsyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxAsyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
+      v2DaxSyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxSyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       getJournalRowsIndexName = config
@@ -224,6 +242,8 @@ final case class JournalPluginConfig(
     v1DaxSyncClientFactoryClassName: String,
     v2AsyncClientFactoryClassName: String,
     v2SyncClientFactoryClassName: String,
+    v2DaxAsyncClientFactoryClassName: String,
+    v2DaxSyncClientFactoryClassName: String,
     tableName: String,
     columnsDefConfig: JournalColumnsDefConfig,
     getJournalRowsIndexName: String,

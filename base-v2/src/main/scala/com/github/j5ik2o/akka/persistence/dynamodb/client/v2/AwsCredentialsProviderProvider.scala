@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 
@@ -29,7 +30,13 @@ trait AwsCredentialsProviderProvider {
 
 object AwsCredentialsProviderProvider {
   def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AwsCredentialsProviderProvider = {
-    val className = pluginConfig.clientConfig.v2ClientConfig.awsCredentialsProviderProviderClassName
+    val className =
+      pluginConfig.clientConfig.clientVersion match {
+        case ClientVersion.V2 =>
+          pluginConfig.clientConfig.v2ClientConfig.awsCredentialsProviderProviderClassName
+        case ClientVersion.V2Dax =>
+          pluginConfig.clientConfig.v2DaxClientConfig.awsCredentialsProviderProviderClassName
+      }
     dynamicAccess
       .createInstanceFor[AwsCredentialsProviderProvider](
         className,
@@ -43,7 +50,12 @@ object AwsCredentialsProviderProvider {
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends AwsCredentialsProviderProvider {
     override def create: Option[AwsCredentialsProvider] = {
-      val classNameOpt = pluginConfig.clientConfig.v2ClientConfig.awsCredentialsProviderClassName
+      val classNameOpt = pluginConfig.clientConfig.clientVersion match {
+        case ClientVersion.V2 =>
+          pluginConfig.clientConfig.v2ClientConfig.awsCredentialsProviderClassName
+        case ClientVersion.V2Dax =>
+          pluginConfig.clientConfig.v2DaxClientConfig.awsCredentialsProviderClassName
+      }
       classNameOpt.map { className =>
         dynamicAccess
           .createInstanceFor[AwsCredentialsProvider](

@@ -22,11 +22,11 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2AsyncClientFactory, V2SyncClientFactory }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2DaxAsyncClientFactory, V2DaxSyncClientFactory }
 
 import scala.collection.immutable
 
-class V2SnapshotDaoFactory extends SnapshotDaoFactory {
+class V2DaxSnapshotDaoFactory extends SnapshotDaoFactory {
   override def create(
       system: ActorSystem,
       dynamicAccess: DynamicAccess,
@@ -40,12 +40,18 @@ class V2SnapshotDaoFactory extends SnapshotDaoFactory {
     val (async, sync) = pluginConfig.clientConfig.clientType match {
       case ClientType.Async =>
         val f = dynamicAccess
-          .createInstanceFor[V2AsyncClientFactory](pluginConfig.v2AsyncClientFactoryClassName, immutable.Seq.empty).get
+          .createInstanceFor[V2DaxAsyncClientFactory](
+            pluginConfig.v2DaxAsyncClientFactoryClassName,
+            immutable.Seq.empty
+          ).get
         val v1JavaAsyncClient = f.create(dynamicAccess, pluginConfig)
         (Some(v1JavaAsyncClient), None)
       case ClientType.Sync =>
         val f = dynamicAccess
-          .createInstanceFor[V2SyncClientFactory](pluginConfig.v2SyncClientFactoryClassName, immutable.Seq.empty).get
+          .createInstanceFor[V2DaxSyncClientFactory](
+            pluginConfig.v2DaxSyncClientFactoryClassName,
+            immutable.Seq.empty
+          ).get
         val v1JavaSyncClient = f.create(dynamicAccess, pluginConfig)
         (None, Some(v1JavaSyncClient))
     }

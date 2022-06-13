@@ -21,7 +21,8 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
 object SnapshotColumnsDefConfig extends LoggingSupport {
-
+  val partitionKeyColumnNameKey  = "partition-key-column-name"
+  val sortKeyColumnNameKey       = "sort-key-column-name"
   val persistenceIdColumnNameKey = "persistence-id-column-name"
   val sequenceNrColumnNameKey    = "sequence-nr-column-name"
   val snapshotColumnNameKey      = "snapshot-column-name"
@@ -31,6 +32,9 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = SnapshotColumnsDefConfig(
       sourceConfig = config,
+      partitionKeyColumnName =
+        config.valueAs[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
+      sortKeyColumnName = config.valueAs[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
       persistenceIdColumnName =
         config.valueAs[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
       sequenceNrColumnName = config.valueAs[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
@@ -45,6 +49,8 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
 
 case class SnapshotColumnsDefConfig(
     sourceConfig: Config,
+    partitionKeyColumnName: String,
+    sortKeyColumnName: String,
     persistenceIdColumnName: String,
     sequenceNrColumnName: String,
     snapshotColumnName: String,

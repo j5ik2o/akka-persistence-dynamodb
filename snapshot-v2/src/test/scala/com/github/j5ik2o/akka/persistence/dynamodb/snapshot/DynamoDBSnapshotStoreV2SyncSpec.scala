@@ -34,11 +34,11 @@ class DynamoDBSnapshotStoreV2SyncSpec
         .parseString(
           s"""
              |j5ik2o.dynamo-db-journal.dynamo-db-client {
-             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort}/"
              |}
              |
              |j5ik2o.dynamo-db-snapshot.dynamo-db-client {
-             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort}/"
              |  region = "ap-northeast-1"
              |  access-key-id = "x"
              |  secret-key = "x"
@@ -47,7 +47,7 @@ class DynamoDBSnapshotStoreV2SyncSpec
              |}
              |
              |j5ik2o.dynamo-db-read-journal.dynamo-db-client {
-             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort}/"
+             |  endpoint = "http://${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBHost}:${DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort}/"
              |}
          """.stripMargin
         ).withFallback(ConfigFactory.load("snapshot-reference"))
@@ -57,7 +57,7 @@ class DynamoDBSnapshotStoreV2SyncSpec
 
   implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2AsyncSpec.dynamoDBPort
+  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort
 
   before {
     createTable()

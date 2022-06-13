@@ -1,0 +1,27 @@
+{
+  "TableName": "Snapshot",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "persistence-id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "sequence-nr",
+      "AttributeType": "N"
+    }
+  ],
+  "KeySchema": [
+    {
+      "KeyType": "HASH",
+      "AttributeName": "persistence-id"
+    },
+    {
+      "KeyType": "RANGE",
+      "AttributeName": "sequence-nr"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "WriteCapacityUnits": 10,
+    "ReadCapacityUnits": 10
+  }
+}

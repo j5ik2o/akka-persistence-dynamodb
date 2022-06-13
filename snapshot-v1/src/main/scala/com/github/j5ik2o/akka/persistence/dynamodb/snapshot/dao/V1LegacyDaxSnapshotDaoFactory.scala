@@ -19,18 +19,21 @@ import akka.actor.{ ActorSystem, DynamicAccess }
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1DaxAsyncClientFactory, V1DaxSyncClientFactory }
 
 import scala.collection.immutable
 
-class V1DaxSnapshotDaoFactory extends SnapshotDaoFactory {
+class V1LegacyDaxSnapshotDaoFactory extends SnapshotDaoFactory {
   override def create(
       system: ActorSystem,
       dynamicAccess: DynamicAccess,
       serialization: Serialization,
       pluginConfig: SnapshotPluginConfig,
+      partitionKeyResolver: PartitionKeyResolver,
+      sortKeyResolver: SortKeyResolver,
       metricsReporter: Option[MetricsReporter],
       traceReporter: Option[TraceReporter]
   ): SnapshotDao = {
@@ -52,6 +55,19 @@ class V1DaxSnapshotDaoFactory extends SnapshotDaoFactory {
         val v1JavaSyncClient = f.create(dynamicAccess, pluginConfig)
         (None, Some(v1JavaSyncClient))
     }
-    new V1SnapshotDaoImpl(system, async, sync, serialization, pluginConfig, metricsReporter, traceReporter)
+    if (pluginConfig.legacyTableFormat)
+      new V1LegacySnapshotDaoImpl(system, async, sync, serialization, pluginConfig, metricsReporter, traceReporter)
+    else
+      new V1NewSnapshotDaoImpl(
+        system,
+        async,
+        sync,
+        serialization,
+        pluginConfig,
+        partitionKeyResolver,
+        sortKeyResolver,
+        metricsReporter,
+        traceReporter
+      )
   }
 }

@@ -102,7 +102,8 @@ trait DynamoDBContainerHelper {
     Thread.sleep(500)
   }
 
-  val legacyJournalTable = false
+  val legacyJournalTable  = false
+  val legacySnapshotTable = false
 
   def createTable(): Unit = synchronized {
     Thread.sleep(500)
@@ -110,7 +111,10 @@ trait DynamoDBContainerHelper {
       createLegacyJournalTable()
     else
       createJournalTable()
-    createSnapshotTable()
+    if (legacySnapshotTable)
+      createLegacySnapshotTable()
+    else
+      createSnapshotTable()
     createStateTable()
     waitDynamoDBLocal(Seq(journalTableName, snapshotTableName))
   }
@@ -139,7 +143,7 @@ trait DynamoDBContainerHelper {
     require(!result.getTableNames.asScala.exists(_.contains(stateTableName)))
   }
 
-  def createSnapshotTable(): Unit = {
+  def createLegacySnapshotTable(): Unit = {
     val listTablesResult = dynamoDBClient.listTables(2)
     if (!listTablesResult.getTableNames.asScala.exists(_.contains(snapshotTableName))) {
       val createRequest = new CreateTableRequest()
@@ -154,6 +158,45 @@ trait DynamoDBContainerHelper {
             new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
           ).asJava
         ).withProvisionedThroughput(
+          new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+        )
+      val createResponse = dynamoDBClient.createTable(createRequest)
+      require(createResponse.getSdkHttpMetadata.getHttpStatusCode == 200)
+    }
+  }
+
+  def createSnapshotTable(): Unit = {
+    val listTablesResult = dynamoDBClient.listTables(2)
+    if (!listTablesResult.getTableNames.asScala.exists(_.contains(snapshotTableName))) {
+      val createRequest = new CreateTableRequest()
+        .withTableName(snapshotTableName).withAttributeDefinitions(
+          Seq(
+            new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition().withAttributeName("skey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition().withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N)
+          ).asJava
+        ).withKeySchema(
+          Seq(
+            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH),
+            new KeySchemaElement().withAttributeName("skey").withKeyType(KeyType.RANGE)
+          ).asJava
+        )
+        .withGlobalSecondaryIndexes(
+          Seq(
+            new GlobalSecondaryIndex()
+              .withIndexName("GetSnapshotRowsIndex").withKeySchema(
+                Seq(
+                  new KeySchemaElement().withAttributeName("persistence-id").withKeyType(KeyType.HASH),
+                  new KeySchemaElement().withAttributeName("sequence-nr").withKeyType(KeyType.RANGE)
+                ).asJava
+              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
+              .withProvisionedThroughput(
+                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
+              )
+          ).asJava
+        )
+        .withProvisionedThroughput(
           new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
         )
       val createResponse = dynamoDBClient.createTable(createRequest)

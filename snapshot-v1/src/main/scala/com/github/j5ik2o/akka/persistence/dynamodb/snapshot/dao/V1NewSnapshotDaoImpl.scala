@@ -25,6 +25,7 @@ import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{ StreamReadClient, StreamWriteClient }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolver, SortKeyResolver }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.serialization.ByteArraySnapshotSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
@@ -34,12 +35,14 @@ import java.nio.ByteBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.jdk.CollectionConverters._
 
-final class V1SnapshotDaoImpl(
+final class V1NewSnapshotDaoImpl(
     system: ActorSystem,
     asyncClient: Option[AmazonDynamoDBAsync],
     syncClient: Option[AmazonDynamoDB],
     serialization: Serialization,
     pluginConfig: SnapshotPluginConfig,
+    partitionKeyResolver: PartitionKeyResolver,
+    sortKeyResolver: SortKeyResolver,
     metricsReporter: Option[MetricsReporter],
     traceReporter: Option[TraceReporter]
 ) extends SnapshotDao {
@@ -64,6 +67,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
@@ -83,6 +87,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
@@ -101,6 +106,7 @@ final class V1SnapshotDaoImpl(
   ): Source[Unit, NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
       .withExpressionAttributeNames(
@@ -127,6 +133,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
       .withExpressionAttributeNames(
@@ -167,6 +174,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
@@ -198,6 +206,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
       .withExpressionAttributeNames(
@@ -232,6 +241,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withExpressionAttributeNames(
         Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
@@ -261,6 +271,7 @@ final class V1SnapshotDaoImpl(
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
       .withKeyConditionExpression("#pid = :pid and #snr between :min and :max")
       .withFilterExpression("#created <= :maxTimestamp")
       .withExpressionAttributeNames(
@@ -290,11 +301,13 @@ final class V1SnapshotDaoImpl(
   }
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
+    val pkey = partitionKeyResolver.resolve(persistenceId, sequenceNr)
+    val skey = sortKeyResolver.resolve(persistenceId, sequenceNr)
     val req = new DeleteItemRequest()
       .withTableName(tableName).withKey(
         Map(
-          columnsDefConfig.persistenceIdColumnName -> new AttributeValue().withS(persistenceId.asString),
-          columnsDefConfig.sequenceNrColumnName    -> new AttributeValue().withN(sequenceNr.asString)
+          columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
+          columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString)
         ).asJava
       )
     Source.single(req).via(streamWriteClient.deleteItemFlow).flatMapConcat { response =>
@@ -313,10 +326,14 @@ final class V1SnapshotDaoImpl(
     Source
       .future(serializer.serialize(snapshotMetadata, snapshot))
       .flatMapConcat { snapshotRow =>
+        val pkey = partitionKeyResolver.resolve(snapshotRow.persistenceId, snapshotRow.sequenceNumber)
+        val skey = sortKeyResolver.resolve(snapshotRow.persistenceId, snapshotRow.sequenceNumber)
         val req = new PutItemRequest()
           .withTableName(tableName)
           .withItem(
             Map(
+              columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
+              columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString),
               columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
                 .withS(snapshotRow.persistenceId.asString),
               columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(snapshotRow.sequenceNumber.asString),
@@ -357,15 +374,17 @@ final class V1SnapshotDaoImpl(
           .withRequestItems(
             Map(
               tableName -> rows.map { row =>
+                val pkey = partitionKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
+                val skey = sortKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
                 new WriteRequest()
                   .withDeleteRequest(
                     new DeleteRequest()
                       .withKey(
                         Map(
-                          columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
-                            .withS(row.persistenceId.asString),
-                          columnsDefConfig.sequenceNrColumnName -> new AttributeValue()
-                            .withN(row.sequenceNumber.asString)
+                          columnsDefConfig.partitionKeyColumnName -> new AttributeValue()
+                            .withS(pkey.asString),
+                          columnsDefConfig.sortKeyColumnName -> new AttributeValue()
+                            .withS(skey.asString)
                         ).asJava
                       )
                   )

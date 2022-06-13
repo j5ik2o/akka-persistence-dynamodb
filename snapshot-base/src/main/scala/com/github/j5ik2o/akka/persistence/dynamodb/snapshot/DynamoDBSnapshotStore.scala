@@ -68,6 +68,16 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
 
   private implicit val ec: ExecutionContext = pluginExecutor
 
+  private val partitionKeyResolver: PartitionKeyResolver = {
+    val provider = PartitionKeyResolverProvider.create(dynamicAccess, pluginConfig)
+    provider.create
+  }
+
+  private val sortKeyResolver: SortKeyResolver = {
+    val provider = SortKeyResolverProvider.create(dynamicAccess, pluginConfig)
+    provider.create
+  }
+
   private val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(dynamicAccess, pluginConfig)
     metricsReporterProvider.create
@@ -93,6 +103,8 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       dynamicAccess,
       serialization,
       pluginConfig,
+      partitionKeyResolver,
+      sortKeyResolver,
       metricsReporter,
       traceReporter
     )

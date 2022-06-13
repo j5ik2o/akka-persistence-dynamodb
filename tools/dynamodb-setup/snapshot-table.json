@@ -2,6 +2,14 @@
   "TableName": "Snapshot",
   "AttributeDefinitions": [
     {
+      "AttributeName": "pkey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "skey",
+      "AttributeType": "S"
+    },
+    {
       "AttributeName": "persistence-id",
       "AttributeType": "S"
     },
@@ -13,11 +21,33 @@
   "KeySchema": [
     {
       "KeyType": "HASH",
-      "AttributeName": "persistence-id"
+      "AttributeName": "pkey"
     },
     {
       "KeyType": "RANGE",
-      "AttributeName": "sequence-nr"
+      "AttributeName": "skey"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GetSnapshotRowsIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "persistence-id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "sequence-nr",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
     }
   ],
   "ProvisionedThroughput": {

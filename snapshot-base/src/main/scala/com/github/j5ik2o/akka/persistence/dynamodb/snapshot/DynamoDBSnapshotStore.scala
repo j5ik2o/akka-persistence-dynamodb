@@ -92,6 +92,8 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     val className = pluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V2SnapshotDaoFactory"
+      case ClientVersion.V2Dax =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V2DaxSnapshotDaoFactory"
       case ClientVersion.V1 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V1SnapshotDaoFactory"
       case ClientVersion.V1Dax =>

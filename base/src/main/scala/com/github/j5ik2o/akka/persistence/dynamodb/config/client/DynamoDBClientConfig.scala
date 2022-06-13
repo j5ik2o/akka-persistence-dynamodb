@@ -18,6 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.config.client
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.DynamoDBClientV1Config
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax.DynamoDBClientV1DaxConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2.DynamoDBClientV2Config
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2dax.DynamoDBClientV2DaxConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -33,6 +34,7 @@ object DynamoDBClientConfig extends LoggingSupport {
   val v1Key                  = "v1"
   val v1DaxKey               = "v1-dax"
   val v2Key                  = "v2"
+  val v2DaxKey               = "v2-dax"
   val batchGetItemLimitKey   = "batch-get-item-limit"
   val batchWriteItemLimitKey = "batch-write-item-limit"
 
@@ -73,6 +75,8 @@ object DynamoDBClientConfig extends LoggingSupport {
             legacyConfigFormat
           )
       },
+      DynamoDBClientV2DaxConfig
+        .fromConfig(config.configAs(v2DaxKey, ConfigFactory.empty()), clientVersion == ClientVersion.V2),
       batchGetItemLimit = config.valueAs(batchGetItemLimitKey, DefaultBatchGetItemLimit),
       batchWriteItemLimit = config.valueAs(batchWriteItemLimitKey, DefaultBatchWriteItemLimit)
     )
@@ -93,6 +97,7 @@ final case class DynamoDBClientConfig(
     v1ClientConfig: DynamoDBClientV1Config,
     v1DaxClientConfig: DynamoDBClientV1DaxConfig,
     v2ClientConfig: DynamoDBClientV2Config,
+    v2DaxClientConfig: DynamoDBClientV2DaxConfig,
     batchGetItemLimit: Int, // Currently unused
     batchWriteItemLimit: Int
 ) {

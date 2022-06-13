@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import software.amazon.awssdk.metrics.MetricPublisher
 
@@ -30,7 +31,12 @@ trait MetricPublishersProvider {
 object MetricPublishersProvider {
 
   def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): MetricPublishersProvider = {
-    val className = pluginConfig.clientConfig.v2ClientConfig.metricPublishersProviderClassName
+    val className = pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V2 =>
+        pluginConfig.clientConfig.v2ClientConfig.metricPublishersProviderClassName
+      case ClientVersion.V2Dax =>
+        pluginConfig.clientConfig.v2DaxClientConfig.metricPublishersProviderClassName
+    }
     dynamicAccess
       .createInstanceFor[MetricPublishersProvider](
         className,
@@ -48,7 +54,12 @@ object MetricPublishersProvider {
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MetricPublishersProvider {
 
     override def create: scala.collection.Seq[MetricPublisher] = {
-      val classNames = pluginConfig.clientConfig.v2ClientConfig.metricPublisherClassNames
+      val classNames = pluginConfig.clientConfig.clientVersion match {
+        case ClientVersion.V2 =>
+          pluginConfig.clientConfig.v2ClientConfig.metricPublisherClassNames
+        case ClientVersion.V2Dax =>
+          pluginConfig.clientConfig.v2DaxClientConfig.metricPublisherClassNames
+      }
       classNames.map { className =>
         dynamicAccess
           .createInstanceFor[MetricPublisher](

@@ -15,26 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig.{
-  v1AsyncClientFactoryClassNameKey,
-  v1DaxAsyncClientFactoryClassNameKey,
-  v1DaxSyncClientFactoryClassNameKey,
-  v1SyncClientFactoryClassNameKey,
-  v2AsyncClientFactoryClassNameKey,
-  v2SyncClientFactoryClassNameKey,
-  DefaultV1AsyncClientFactoryClassName,
-  DefaultV1DaxAsyncClientFactoryClassName,
-  DefaultV1DaxSyncClientFactoryClassName,
-  DefaultV1SyncClientFactoryClassName,
-  DefaultV2AsyncClientFactoryClassName,
-  DefaultV2SyncClientFactoryClassName,
-  V1AsyncClientFactoryClassName,
-  V1DaxAsyncClientFactoryClassName,
-  V1DaxSyncClientFactoryClassName,
-  V1SyncClientFactoryClassName,
-  V2AsyncClientFactoryClassName,
-  V2SyncClientFactoryClassName
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig._
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientVersion, DynamoDBClientConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
@@ -136,6 +117,24 @@ object SnapshotPluginConfig extends LoggingSupport {
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
+      v2DaxAsyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxAsyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
+      v2DaxSyncClientFactoryClassName = {
+        val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
+        ClassCheckUtils
+          .requireClassByName(
+            V2DaxSyncClientFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
       legacyConfigFormat = legacyConfigFormat,
       legacyTableFormat = legacyTableFormat,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
@@ -200,6 +199,8 @@ final case class SnapshotPluginConfig(
     v1DaxSyncClientFactoryClassName: String,
     v2AsyncClientFactoryClassName: String,
     v2SyncClientFactoryClassName: String,
+    v2DaxAsyncClientFactoryClassName: String,
+    v2DaxSyncClientFactoryClassName: String,
     legacyConfigFormat: Boolean,
     legacyTableFormat: Boolean,
     tableName: String,

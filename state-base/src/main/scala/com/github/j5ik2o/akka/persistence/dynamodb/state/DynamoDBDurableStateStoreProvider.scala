@@ -90,6 +90,8 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
     val className = statePluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.V2ScalaDurableStateUpdateStoreFactory"
+      case ClientVersion.V2Dax =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.V2DaxScalaDurableStateUpdateStoreFactory"
       case ClientVersion.V1 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.V1ScalaDurableStateUpdateStoreFactory"
       case ClientVersion.V1Dax =>

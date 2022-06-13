@@ -19,4 +19,5 @@ object ClientVersion extends Enumeration {
   val V1: ClientVersion.Value    = Value("v1")
   val V1Dax: ClientVersion.Value = Value("v1-dax")
   val V2: ClientVersion.Value    = Value("v2")
+  val V2Dax: ClientVersion.Value = Value("v2-dax")
 }

@@ -118,6 +118,8 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val className = journalPluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriverFactory"
+      case ClientVersion.V2Dax =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2DaxJournalRowWriteDriverFactory"
       case ClientVersion.V1 =>
         "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriverFactory"
       case ClientVersion.V1Dax =>

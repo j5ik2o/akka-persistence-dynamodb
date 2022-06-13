@@ -22,7 +22,7 @@ import software.amazon.awssdk.services.dynamodb.{
   DynamoDbClient => JavaDynamoDbSyncClient
 }
 
-private[utils] object V2ClientUtils extends LoggingSupport {
+object V2ClientUtils extends LoggingSupport {
 
   def createV2SyncClient(
       dynamicAccess: DynamicAccess,

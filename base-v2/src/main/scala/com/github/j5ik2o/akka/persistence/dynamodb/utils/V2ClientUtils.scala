@@ -33,7 +33,7 @@ object V2ClientUtils extends LoggingSupport {
       logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
-    val javaSyncClientV2 = V2DynamoDbClientBuilderUtils
+    val javaSyncClientV2 = V2ClientBuilderUtils
       .setupSync(
         dynamicAccess,
         pluginConfig
@@ -45,7 +45,7 @@ object V2ClientUtils extends LoggingSupport {
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
   ): JavaDynamoDbAsyncClient = {
-    val javaAsyncClientV2 = V2DynamoDbClientBuilderUtils
+    val javaAsyncClientV2 = V2ClientBuilderUtils
       .setupAsync(
         dynamicAccess,
         pluginConfig

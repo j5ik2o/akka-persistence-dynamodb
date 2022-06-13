@@ -19,7 +19,7 @@ import akka.actor.DynamicAccess
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
-private[utils] object V1ClientUtils extends LoggingSupport {
+object V1ClientUtils extends LoggingSupport {
 
   def createV1AsyncClient(
       dynamicAccess: DynamicAccess,

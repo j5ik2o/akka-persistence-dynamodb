@@ -24,6 +24,7 @@ import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ Materializer, SystemMaterializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
@@ -99,7 +100,10 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V1DaxSnapshotDaoFactory"
     }
-    val f = dynamicAccess.createInstanceFor[SnapshotDaoFactory](className, immutable.Seq.empty).get
+    val f = dynamicAccess.createInstanceFor[SnapshotDaoFactory](className, immutable.Seq.empty) match {
+      case Success(value) => value
+      case Failure(ex)    => throw new PluginException("Failed to initialize SnapshotDaoFactory", Some(ex))
+    }
     f.create(
       system,
       dynamicAccess,

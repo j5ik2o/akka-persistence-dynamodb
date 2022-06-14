@@ -23,6 +23,7 @@ import akka.persistence.state.javadsl.{ DurableStateUpdateStore => JavaDurableSt
 import akka.persistence.state.scaladsl.{ DurableStateUpdateStore => ScalaDurableStateUpdateStore }
 import akka.stream.{ Materializer, SystemMaterializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
@@ -34,6 +35,7 @@ import com.typesafe.config.Config
 import java.util.UUID
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success }
 
 object DynamoDBDurableStateStoreProvider {
 
@@ -97,7 +99,11 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.V1DaxScalaDurableStateUpdateStoreFactory"
     }
-    val f = dynamicAccess.createInstanceFor[ScalaDurableStateUpdateStoreFactory](className, immutable.Seq.empty).get
+    val f = dynamicAccess.createInstanceFor[ScalaDurableStateUpdateStoreFactory](className, immutable.Seq.empty) match {
+      case Success(value) => value
+      case Failure(ex) =>
+        throw new PluginException("Failed to initialize ScalaDurableStateUpdateStoreFactory", Some(ex))
+    }
     f.create(
       system,
       dynamicAccess,

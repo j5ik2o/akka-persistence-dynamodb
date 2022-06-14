@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
@@ -25,6 +26,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory,
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success }
 
 class V1ScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
   override def create[A](
@@ -40,12 +42,24 @@ class V1ScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStore
     val (maybeV1SyncClient, maybeV1AsyncClient) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
         val f = dynamicAccess
-          .createInstanceFor[V1SyncClientFactory](pluginConfig.v1SyncClientFactoryClassName, immutable.Seq.empty).get
+          .createInstanceFor[V1SyncClientFactory](
+            pluginConfig.v1SyncClientFactoryClassName,
+            immutable.Seq.empty
+          ) match {
+          case Success(value) => value
+          case Failure(ex)    => throw new PluginException("Failed to initialize V1SyncClientFactory", Some(ex))
+        }
         val client = f.create(dynamicAccess, pluginConfig)
         (Some(client), None)
       case ClientType.Async =>
         val f = dynamicAccess
-          .createInstanceFor[V1AsyncClientFactory](pluginConfig.v1AsyncClientFactoryClassName, immutable.Seq.empty).get
+          .createInstanceFor[V1AsyncClientFactory](
+            pluginConfig.v1AsyncClientFactoryClassName,
+            immutable.Seq.empty
+          ) match {
+          case Success(value) => value
+          case Failure(ex)    => throw new PluginException("Failed to initialize V1AsyncClientFactory", Some(ex))
+        }
         val client = f.create(dynamicAccess, pluginConfig)
         (None, Some(client))
     }

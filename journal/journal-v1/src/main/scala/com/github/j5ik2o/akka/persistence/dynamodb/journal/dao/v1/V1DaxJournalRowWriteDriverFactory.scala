@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
 import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
@@ -28,6 +29,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1DaxAsyncClientFactory, V1DaxSyncClientFactory }
 
 import scala.collection.immutable
+import scala.util.{ Failure, Success }
 
 class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
 
@@ -46,8 +48,10 @@ class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
             .createInstanceFor[V1DaxSyncClientFactory](
               journalPluginConfig.v1DaxSyncClientFactoryClassName,
               immutable.Seq.empty
-            )
-            .get
+            ) match {
+            case Success(value) => value
+            case Failure(ex)    => throw new PluginException("Failed to initialize V1DaxSyncClientFactory", Some(ex))
+          }
           val client = f.create(dynamicAccess, journalPluginConfig)
           (Some(client), None)
         case ClientType.Async =>
@@ -55,8 +59,10 @@ class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
             .createInstanceFor[V1DaxAsyncClientFactory](
               journalPluginConfig.v1DaxAsyncClientFactoryClassName,
               immutable.Seq.empty
-            )
-            .get
+            ) match {
+            case Success(value) => value
+            case Failure(ex)    => throw new PluginException("Failed to initialize V1DaxAsyncClientFactory", Some(ex))
+          }
           val client = f.create(dynamicAccess, journalPluginConfig)
           (None, Some(client))
       }

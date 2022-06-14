@@ -18,7 +18,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
 import akka.stream.OverflowStrategy
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig._
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientVersion, DynamoDBClientConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
+  ClientVersion,
+  CommonConfigKeys,
+  DynamoDBClientConfig
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
   PartitionKeyResolver,
@@ -57,11 +61,8 @@ object JournalPluginConfig extends LoggingSupport {
   val replayBatchRefreshIntervalKey            = "replay-batch-refresh-interval"
   val readBackoffKey                           = "read-backoff"
   val softDeleteKey                            = "soft-delete"
-  val metricsReporterClassNameKey              = "metrics-reporter-class-name"
-  val metricsReporterProviderClassNameKey      = "metrics-reporter-provider-class-name"
-  val traceReporterClassNameKey                = "trace-reporter-class-name"
-  val traceReporterProviderClassNameKey        = "trace-reporter-provider-class-name"
   val dynamoCbClientKey                        = "dynamo-db-client"
+  val journalRowDriverWrapperClassNameKey      = "journal-row-driver-wrapper-class-name"
 
   val DefaultLegacyConfigFormat: Boolean                   = false
   val DefaultTableName: String                             = "Journal"
@@ -89,8 +90,8 @@ object JournalPluginConfig extends LoggingSupport {
   def fromConfig(config: Config): JournalPluginConfig = {
     logger.debug("config = {}", config)
     val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
-    val clientConfig = DynamoDBClientConfig
-      .fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat)
+    val clientConfig =
+      DynamoDBClientConfig.fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
     val result = JournalPluginConfig(
       legacyConfigFormat,
@@ -141,7 +142,10 @@ object JournalPluginConfig extends LoggingSupport {
           )
       },
       v2DaxSyncClientFactoryClassName = {
-        val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
+        val className = config.valueAs(
+          v2DaxSyncClientFactoryClassNameKey,
+          DefaultV2DaxSyncClientFactoryClassName
+        )
         ClassCheckUtils
           .requireClassByName(
             V2DaxSyncClientFactoryClassName,
@@ -150,7 +154,9 @@ object JournalPluginConfig extends LoggingSupport {
           )
       },
       tableName = config.valueAs(tableNameKey, DefaultTableName),
-      columnsDefConfig = JournalColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
+      columnsDefConfig = JournalColumnsDefConfig.fromConfig(
+        config.configAs(columnsDefKey, ConfigFactory.empty())
+      ),
       getJournalRowsIndexName = config
         .valueAs(getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
       // ---
@@ -158,7 +164,10 @@ object JournalPluginConfig extends LoggingSupport {
       shardCount = config.valueAs(shardCountKey, DefaultShardCount),
       // ---
       partitionKeyResolverClassName = {
-        val className = config.valueAs(partitionKeyResolverClassNameKey, DefaultPartitionKeyResolverClassName)
+        val className = config.valueAs(
+          partitionKeyResolverClassNameKey,
+          DefaultPartitionKeyResolverClassName
+        )
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolver], className)
       },
       partitionKeyResolverProviderClassName = {
@@ -171,8 +180,7 @@ object JournalPluginConfig extends LoggingSupport {
         ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
       },
       sortKeyResolverProviderClassName = {
-        val className =
-          config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
+        val className = config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
         ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
       },
       // ---
@@ -180,16 +188,25 @@ object JournalPluginConfig extends LoggingSupport {
       queueBufferSize = config.valueAs(queueBufferSizeKey, DefaultQueueBufferSize),
       queueOverflowStrategy = {
         config.valueAs(queueOverflowStrategyKey, DefaultQueueOverflowStrategy).toLowerCase match {
-          case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropHead
-          case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase()   => OverflowStrategy.dropTail
-          case s if s == OverflowStrategy.dropBuffer.getClass.getSimpleName.toLowerCase() => OverflowStrategy.dropBuffer
+          case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase() =>
+            OverflowStrategy.dropHead
+          case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase() =>
+            OverflowStrategy.dropTail
+          case s if s == OverflowStrategy.dropBuffer.getClass.getSimpleName.toLowerCase() =>
+            OverflowStrategy.dropBuffer
           case s if s == OverflowStrategy.dropNew.getClass.getSimpleName.toLowerCase() =>
-            logger.warn("DropNew is not recommended. It may be discontinued in the next version.")
+            logger.warn(
+              "DropNew is not recommended. It may be discontinued in the next version."
+            )
             OverflowStrategy.dropNew
-          case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase() => OverflowStrategy.fail
+          case s if s == OverflowStrategy.fail.getClass.getSimpleName.toLowerCase() =>
+            OverflowStrategy.fail
           case s if s == OverflowStrategy.backpressure.getClass.getSimpleName.toLowerCase() =>
             OverflowStrategy.backpressure
-          case _ => throw new IllegalArgumentException("queueOverflowStrategy is invalid")
+          case _ =>
+            throw new IllegalArgumentException(
+              "queueOverflowStrategy is invalid"
+            )
         }
       },
       queueParallelism = config.valueAs(queueParallelismKey, DefaultQueueParallelism),
@@ -204,26 +221,26 @@ object JournalPluginConfig extends LoggingSupport {
       // ---
       softDeleted = config.valueAs(softDeleteKey, DefaultSoftDeleted),
       metricsReporterClassName = {
-        val className = config.valueOptAs[String](metricsReporterClassNameKey)
+        val className = config.valueOptAs[String](CommonConfigKeys.metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       metricsReporterProviderClassName = {
         val className =
-          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+          config.valueAs(CommonConfigKeys.metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       traceReporterProviderClassName = {
         val className =
-          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+          config.valueAs(CommonConfigKeys.traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
       },
       traceReporterClassName = {
-        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        val className = config.valueOptAs[String](CommonConfigKeys.traceReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporter], className)
       },
       clientConfig = clientConfig,
       journalRowDriverWrapperClassName = {
-        val className = config.valueOptAs[String]("journal-row-driver-wrapper-class-name")
+        val className = config.valueOptAs[String](journalRowDriverWrapperClassNameKey)
         ClassCheckUtils.requireClass(classOf[JournalRowWriteDriver], className)
       }
     )

@@ -38,7 +38,9 @@ private[utils] object V1DaxClientBuilderUtils {
         }
     }
     pluginConfig.clientConfig.region.foreach(builder.setRegion)
-    pluginConfig.clientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
+    pluginConfig.clientConfig.endpoint.foreach { v =>
+      builder.setEndpointConfiguration(v.split(","): _*)
+    }
     builder
   }
 
@@ -52,13 +54,16 @@ private[utils] object V1DaxClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
-        val credentialsProviderProvider = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val credentialsProviderProvider =
+          AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
         credentialsProviderProvider.create.foreach { cp =>
           builder.setCredentials(cp)
         }
     }
     pluginConfig.clientConfig.region.foreach(builder.setRegion)
-    pluginConfig.clientConfig.endpoint.foreach { v => builder.setEndpointConfiguration(v.split(","): _*) }
+    pluginConfig.clientConfig.endpoint.foreach { v =>
+      builder.setEndpointConfiguration(v.split(","): _*)
+    }
     builder
   }
 

@@ -24,12 +24,13 @@ import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableSt
 
 import java.util.Optional
 import java.util.concurrent.CompletionStage
+import scala.annotation.unused
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 
 @ApiMayChange
 final class JavaDynamoDBDurableStateStore[A](
-    system: ActorSystem,
+    @unused system: ActorSystem,
     pluginExecutor: ExecutionContext,
     underlying: ScalaDurableStateUpdateStore[A]
 ) extends JavaDurableStateUpdateStore[A] {

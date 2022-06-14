@@ -35,10 +35,16 @@ private[utils] object V1ClientBuilderUtils {
 
     val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
 
-    csmConfigurationProviderProvider.create.foreach { c => builder.setClientSideMonitoringConfigurationProvider(c) }
-    monitoringListenerProvider.create.foreach { m => builder.setMonitoringListener(m) }
+    csmConfigurationProviderProvider.create.foreach { c =>
+      builder.setClientSideMonitoringConfigurationProvider(c)
+    }
+    monitoringListenerProvider.create.foreach { m =>
+      builder.setMonitoringListener(m)
+    }
     builder.setRequestHandlers(requestHandlersProvider.create: _*)
-    requestMetricCollectorProvider.create.foreach { r => builder.setMetricsCollector(r) }
+    requestMetricCollectorProvider.create.foreach { r =>
+      builder.setMetricsCollector(r)
+    }
 
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
@@ -60,7 +66,10 @@ private[utils] object V1ClientBuilderUtils {
     builder
   }
 
-  def setupAsync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBAsyncClientBuilder = {
+  def setupAsync(
+      dynamicAccess: DynamicAccess,
+      pluginConfig: PluginConfig
+  ): AmazonDynamoDBAsyncClientBuilder = {
     val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
 
     val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
@@ -70,10 +79,16 @@ private[utils] object V1ClientBuilderUtils {
 
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
 
-    csmConfigurationProviderProvider.create.foreach { c => builder.setClientSideMonitoringConfigurationProvider(c) }
-    monitoringListenerProvider.create.foreach { m => builder.setMonitoringListener(m) }
+    csmConfigurationProviderProvider.create.foreach { c =>
+      builder.setClientSideMonitoringConfigurationProvider(c)
+    }
+    monitoringListenerProvider.create.foreach { m =>
+      builder.setMonitoringListener(m)
+    }
     builder.setRequestHandlers(requestHandlersProvider.create: _*)
-    requestMetricCollectorProvider.create.foreach { r => builder.setMetricsCollector(r) }
+    requestMetricCollectorProvider.create.foreach { r =>
+      builder.setMetricsCollector(r)
+    }
 
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
@@ -81,7 +96,8 @@ private[utils] object V1ClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
-        val credentialsProviderProvider = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val credentialsProviderProvider =
+          AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
         credentialsProviderProvider.create.foreach { cp =>
           builder.setCredentials(cp)
         }

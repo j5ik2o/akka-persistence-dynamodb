@@ -16,7 +16,11 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig._
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientVersion, DynamoDBClientConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
+  ClientVersion,
+  CommonConfigKeys,
+  DynamoDBClientConfig
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{
@@ -40,19 +44,17 @@ object SnapshotPluginConfig extends LoggingSupport {
 
   val getSnapshotRowsIndexNameKey = "get-snapshot-rows-index"
 
-  val metricsReporterClassNameKey         = "metrics-reporter-class-name"
-  val metricsReporterProviderClassNameKey = "metrics-reporter-provider-class-name"
-  val traceReporterClassNameKey           = "trace-reporter-class-name"
-  val traceReporterProviderClassNameKey   = "trace-reporter-provider-class-name"
-  val dynamoDbClientKey                   = "dynamo-db-client"
-  val writeBackoffKey                     = "write-backoff"
-  val readBackoffKey                      = "read-backoff"
+  val dynamoDbClientKey = "dynamo-db-client"
+  val writeBackoffKey   = "write-backoff"
+  val readBackoffKey    = "read-backoff"
 
-  val shardCountKey                            = "shard-count"
-  val partitionKeyResolverClassNameKey         = "partition-key-resolver-class-name"
-  val partitionKeyResolverProviderClassNameKey = "partition-key-resolver-provider-class-name"
-  val sortKeyResolverClassNameKey              = "sort-key-resolver-class-name"
-  val sortKeyResolverProviderClassNameKey      = "sort-key-resolver-provider-class-name"
+  val shardCountKey                    = "shard-count"
+  val partitionKeyResolverClassNameKey = "partition-key-resolver-class-name"
+  val partitionKeyResolverProviderClassNameKey =
+    "partition-key-resolver-provider-class-name"
+  val sortKeyResolverClassNameKey = "sort-key-resolver-class-name"
+  val sortKeyResolverProviderClassNameKey =
+    "sort-key-resolver-provider-class-name"
 
   val DefaultLegacyConfigFormat: Boolean                   = false
   val DefaultLegacyTableFormat: Boolean                    = false
@@ -73,12 +75,17 @@ object SnapshotPluginConfig extends LoggingSupport {
 
   def fromConfig(config: Config): SnapshotPluginConfig = {
     logger.debug("config = {}", config)
-    val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    val legacyConfigFormat =
+      config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
-    val legacyTableFormat = config.valueAs(legacyTableFormatKey, DefaultLegacyTableFormat)
+    val legacyTableFormat =
+      config.valueAs(legacyTableFormatKey, DefaultLegacyTableFormat)
     logger.debug("legacy-table-format = {}", legacyTableFormat)
     val clientConfig = DynamoDBClientConfig
-      .fromConfig(config.configAs(dynamoDbClientKey, ConfigFactory.empty()), legacyConfigFormat)
+      .fromConfig(
+        config.configAs(dynamoDbClientKey, ConfigFactory.empty()),
+        legacyConfigFormat
+      )
     val result = SnapshotPluginConfig(
       sourceConfig = config,
       v1AsyncClientFactoryClassName = {
@@ -119,28 +126,25 @@ object SnapshotPluginConfig extends LoggingSupport {
       },
       v2DaxAsyncClientFactoryClassName = {
         val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
-        ClassCheckUtils
-          .requireClassByName(
-            V2DaxAsyncClientFactoryClassName,
-            className,
-            clientConfig.clientVersion == ClientVersion.V2
-          )
+        ClassCheckUtils.requireClassByName(
+          V2DaxAsyncClientFactoryClassName,
+          className,
+          clientConfig.clientVersion == ClientVersion.V2
+        )
       },
       v2DaxSyncClientFactoryClassName = {
         val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
-        ClassCheckUtils
-          .requireClassByName(
-            V2DaxSyncClientFactoryClassName,
-            className,
-            clientConfig.clientVersion == ClientVersion.V2
-          )
+        ClassCheckUtils.requireClassByName(
+          V2DaxSyncClientFactoryClassName,
+          className,
+          clientConfig.clientVersion == ClientVersion.V2
+        )
       },
       legacyConfigFormat = legacyConfigFormat,
       legacyTableFormat = legacyTableFormat,
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = SnapshotColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
-      getSnapshotRowsIndexName = config
-        .valueAs(getSnapshotRowsIndexNameKey, DefaultGetSnapshotRowsIndexName),
+      getSnapshotRowsIndexName = config.valueAs(getSnapshotRowsIndexNameKey, DefaultGetSnapshotRowsIndexName),
       consistentRead = config.valueAs(consistentReadKey, DefaultConsistentRead),
       shardCount = config.valueAs(shardCountKey, DefaultShardCount),
       // ---
@@ -158,31 +162,35 @@ object SnapshotPluginConfig extends LoggingSupport {
         ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
       },
       sortKeyResolverProviderClassName = {
-        val className =
-          config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
+        val className = config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
         ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
       },
       // ---
       metricsReporterProviderClassName = {
         val className =
-          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
-        ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
+          config.valueAs(CommonConfigKeys.metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+        ClassCheckUtils
+          .requireClass(classOf[MetricsReporterProvider], className)
       },
       metricsReporterClassName = {
-        val className = config.valueOptAs[String](metricsReporterClassNameKey)
+        val className = config.valueOptAs[String](CommonConfigKeys.metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       traceReporterProviderClassName = {
         val className =
-          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+          config.valueAs(CommonConfigKeys.traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
         ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
       },
       traceReporterClassName = {
-        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        val className = config.valueOptAs[String](CommonConfigKeys.traceReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporter], className)
       },
-      writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
-      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
+      writeBackoffConfig = BackoffConfig.fromConfig(
+        config.configAs(writeBackoffKey, ConfigFactory.empty())
+      ),
+      readBackoffConfig = BackoffConfig.fromConfig(
+        config.configAs(readBackoffKey, ConfigFactory.empty())
+      ),
       clientConfig = clientConfig
     )
     logger.debug("result = {}", result)

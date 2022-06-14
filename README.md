@@ -29,7 +29,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 |Write Sharding|✓|✓|-|
 |Non-blocking I/O|✓|-|-|
 |back pressure|✓|-|-|
-|AWS Client Version| v1,dax,v2 | v1 | - |
+|AWS Client Version| v1,v1-dax,v2,v2-dax | v1 | - |
 |Journal Plugin|✓|✓|✓|
 |Snapshot Plugin|✓|✓|✓|
 |State Plugin|✓|-|✓|

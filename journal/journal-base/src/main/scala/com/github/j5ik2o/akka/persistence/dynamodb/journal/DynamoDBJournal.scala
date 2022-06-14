@@ -125,7 +125,10 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1DaxJournalRowWriteDriverFactory"
     }
-    val f = dynamicAccess.createInstanceFor[JournalRowWriteDriverFactory](className, immutable.Seq.empty).get
+    val f = dynamicAccess.createInstanceFor[JournalRowWriteDriverFactory](className, immutable.Seq.empty) match {
+      case Success(value) => value
+      case Failure(ex)    => throw new PluginException("Failed to initialize JournalRowWriteDriverFactory", Some(ex))
+    }
     f.create(system, dynamicAccess, journalPluginConfig, partitionKeyResolver, sortKeyResolver, metricsReporter)
   }
 

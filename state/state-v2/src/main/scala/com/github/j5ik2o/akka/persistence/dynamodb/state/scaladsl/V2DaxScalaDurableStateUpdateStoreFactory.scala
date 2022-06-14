@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
@@ -25,6 +26,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2DaxAsyncClientFacto
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success }
 
 class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
   override def create[A](
@@ -43,7 +45,10 @@ class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateSt
           .createInstanceFor[V2DaxSyncClientFactory](
             pluginConfig.v2DaxSyncClientFactoryClassName,
             immutable.Seq.empty
-          ).get
+          ) match {
+          case Success(value) => value
+          case Failure(ex)    => throw new PluginException("Failed to initialize V2DaxSyncClientFactory", Some(ex))
+        }
         val client = f.create(dynamicAccess, pluginConfig)
         (Some(client), None)
       case ClientType.Async =>
@@ -51,7 +56,10 @@ class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateSt
           .createInstanceFor[V2DaxAsyncClientFactory](
             pluginConfig.v2DaxAsyncClientFactoryClassName,
             immutable.Seq.empty
-          ).get
+          ) match {
+          case Success(value) => value
+          case Failure(ex)    => throw new PluginException("Failed to initialize V2DaxAsyncClientFactory", Some(ex))
+        }
         val client = f.create(dynamicAccess, pluginConfig)
         (None, Some(client))
     }

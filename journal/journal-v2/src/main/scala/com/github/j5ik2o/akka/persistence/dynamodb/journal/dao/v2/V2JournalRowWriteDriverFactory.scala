@@ -17,6 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
+import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
@@ -28,6 +29,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2AsyncClientFactory, V2SyncClientFactory }
 
 import scala.collection.immutable
+import scala.util.{ Failure, Success }
 
 class V2JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
 
@@ -46,8 +48,10 @@ class V2JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
             .createInstanceFor[V2SyncClientFactory](
               journalPluginConfig.v2SyncClientFactoryClassName,
               immutable.Seq.empty
-            )
-            .get
+            ) match {
+            case Success(value) => value
+            case Failure(ex)    => throw new PluginException("Failed to initialize V2SyncClientFactory", Some(ex))
+          }
           val client = f.create(dynamicAccess, journalPluginConfig)
           (Some(client), None)
         case ClientType.Async =>
@@ -55,8 +59,10 @@ class V2JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
             .createInstanceFor[V2AsyncClientFactory](
               journalPluginConfig.v2AsyncClientFactoryClassName,
               immutable.Seq.empty
-            )
-            .get
+            ) match {
+            case Success(value) => value
+            case Failure(ex)    => throw new PluginException("Failed to initialize V2AsyncClientFactory", Some(ex))
+          }
           val client = f.create(dynamicAccess, journalPluginConfig)
           (None, Some(client))
       }

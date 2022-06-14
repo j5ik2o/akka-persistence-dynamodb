@@ -19,7 +19,7 @@ It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/
 - Java: `1.8+`
 - Scala: `2.12.x` or `2.13.x` 
 - Akka: `2.5.x`(Scala 2.11 only), `2.6.x`(Scala 2.12, 2.13)
-- AWS-SDK: `1.x`, `DAX`, `2.x`
+- AWS-SDK: `1.x`, `v1 DAX`, `2.x`, `v2 DAX`
 
 ## Features
 

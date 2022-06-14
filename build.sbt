@@ -103,7 +103,7 @@ lazy val test = (project in file("test"))
     }
   )
 
-lazy val `base` = (project in file("base"))
+lazy val `base` = (project in file("base/base"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-base",
@@ -144,7 +144,7 @@ lazy val `base` = (project in file("base"))
     }
   ).dependsOn(test % "test->compile")
 
-lazy val `base-v1` = (project in file("base-v1"))
+lazy val `base-v1` = (project in file("base/base-v1"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-base-v1",
@@ -158,7 +158,7 @@ lazy val `base-v1` = (project in file("base-v1"))
     )
   ).dependsOn(base, test % "test->compile")
 
-lazy val `base-v2` = (project in file("base-v2"))
+lazy val `base-v2` = (project in file("base/base-v2"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-base-v2",
@@ -172,7 +172,7 @@ lazy val `base-v2` = (project in file("base-v2"))
     )
   ).dependsOn(base, test % "test->compile")
 
-lazy val `journal-base` = (project in file("journal-base"))
+lazy val `journal-base` = (project in file("journal/journal-base"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-journal-base",
@@ -202,7 +202,7 @@ lazy val `journal-base` = (project in file("journal-base"))
     }
   ).dependsOn(base)
 
-lazy val `journal-v1` = (project in file("journal-v1"))
+lazy val `journal-v1` = (project in file("journal/journal-v1"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-journal-v1",
@@ -232,7 +232,7 @@ lazy val `journal-v1` = (project in file("journal-v1"))
     }
   ).dependsOn(`journal-base`, base % "test->test", `base-v1`, `snapshot-base` % "test->compile")
 
-lazy val `journal-v2` = (project in file("journal-v2"))
+lazy val `journal-v2` = (project in file("journal/journal-v2"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-journal-v2",
@@ -262,7 +262,7 @@ lazy val `journal-v2` = (project in file("journal-v2"))
     }
   ).dependsOn(`journal-base`, base % "test->test", `base-v2`, `snapshot-base` % "test->compile")
 
-lazy val `snapshot-base` = (project in file("snapshot-base"))
+lazy val `snapshot-base` = (project in file("snapshot/snapshot-base"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-snapshot-base",
@@ -280,7 +280,7 @@ lazy val `snapshot-base` = (project in file("snapshot-base"))
     }
   ).dependsOn(base)
 
-lazy val `snapshot-v1` = (project in file("snapshot-v1"))
+lazy val `snapshot-v1` = (project in file("snapshot/snapshot-v1"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-snapshot-v1",
@@ -310,7 +310,7 @@ lazy val `snapshot-v1` = (project in file("snapshot-v1"))
     }
   ).dependsOn(`snapshot-base`, base % "test->test", `base-v1`)
 
-lazy val `snapshot-v2` = (project in file("snapshot-v2"))
+lazy val `snapshot-v2` = (project in file("snapshot/snapshot-v2"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-snapshot-v2",
@@ -340,7 +340,7 @@ lazy val `snapshot-v2` = (project in file("snapshot-v2"))
     }
   ).dependsOn(`snapshot-base`, base % "test->test", `base-v2`)
 
-lazy val `state-base` = (project in file("state-base"))
+lazy val `state-base` = (project in file("state/state-base"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-state-base",
@@ -370,7 +370,7 @@ lazy val `state-base` = (project in file("state-base"))
     }
   ).dependsOn(base)
 
-lazy val `state-v1` = (project in file("state-v1"))
+lazy val `state-v1` = (project in file("state/state-v1"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-state-v1",
@@ -406,7 +406,7 @@ lazy val `state-v1` = (project in file("state-v1"))
     `snapshot-base` % "test->compile"
   )
 
-lazy val `state-v2` = (project in file("state-v2"))
+lazy val `state-v2` = (project in file("state/state-v2"))
   .settings(baseSettings)
   .settings(
     name := "akka-persistence-dynamodb-state-v2",

@@ -15,7 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
+  CommonConfigKeys,
+  RetryMode,
+  V2CommonConfigDefaultValues,
+  V2CommonConfigKeys
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -25,53 +30,42 @@ import scala.concurrent.duration.FiniteDuration
 
 object DynamoDBClientV2Config extends LoggingSupport {
 
-  val dispatcherNameKey                          = "dispatcher-name"
-  val asyncKey                                   = "async"
-  val syncKey                                    = "sync"
-  val headersKey                                 = "headers"
-  val retryModeKey                               = "retry-mode"
-  val retryPolicyProviderClassNameKey            = "retry-policy-provider-class-name"
-  val executionInterceptorClassNamesKey          = "execution-interceptor-class-names"
-  val executionInterceptorProviderClassNameKey   = "execution-interceptor-provider-class-name"
-  val apiCallTimeoutKey                          = "api-call-timeout"
-  val apiCallAttemptTimeoutKey                   = "api-call-attempt-timeout"
-  val metricPublisherProviderClassNameKey        = "metric-publishers-provider-class-names"
-  val metricPublisherClassNameKey                = "metric-publisher-class-names"
-  val awsCredentialsProviderProviderClassNameKey = "aws-credentials-provider-provider-class-name"
-  val awsCredentialsProviderClassNameKey         = "aws-credentials-provider-class-name"
-
-  val AwsCredentialsProviderClassName = "software.amazon.awssdk.auth.credentials.AwsCredentialsProvider"
-  val MetricPublisherClassName        = "software.amazon.awssdk.metrics.MetricPublisher"
+  val asyncKey                                 = "async"
+  val syncKey                                  = "sync"
+  val retryPolicyProviderClassNameKey          = "retry-policy-provider-class-name"
+  val executionInterceptorClassNamesKey        = "execution-interceptor-class-names"
+  val executionInterceptorProviderClassNameKey = "execution-interceptor-provider-class-name"
+  val apiCallTimeoutKey                        = "api-call-timeout"
+  val apiCallAttemptTimeoutKey                 = "api-call-attempt-timeout"
 
   val keyNames: Seq[String] =
-    Seq(dispatcherNameKey, asyncKey, syncKey, retryModeKey, apiCallTimeoutKey, apiCallAttemptTimeoutKey)
+    Seq(
+      CommonConfigKeys.dispatcherNameKey,
+      asyncKey,
+      syncKey,
+      CommonConfigKeys.retryModeKey,
+      apiCallTimeoutKey,
+      apiCallAttemptTimeoutKey
+    )
 
   def existsKeyNames(config: Config): Map[String, Boolean] = {
     keyNames.map(v => (v, config.exists(v))).toMap
   }
 
+  val RetryPolicyProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider"
+  val ExecutionInterceptorsProviderClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider"
+
   val DefaultRetryPolicyProviderClassName =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider$Default"
   val DefaultExecutionInterceptorsProviderClassName =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider$Default"
-  val DefaultMetricPublishersProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.MetricPublishersProvider$Default"
-  val DefaultAwsCredentialsProviderProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider$Default"
-
-  val RetryPolicyProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider"
-  val ExecutionInterceptorsProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider"
-  val MetricPublishersProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.MetricPublishersProvider"
-  val AwsCredentialsProviderProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider"
 
   def fromConfig(config: Config, classNameValidation: Boolean, legacyConfigFormat: Boolean): DynamoDBClientV2Config = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV2Config(
       sourceConfig = config,
-      dispatcherName = config.valueOptAs[String](dispatcherNameKey),
+      dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
       asyncClientConfig = {
         if (legacyConfigFormat) {
           logger.warn(
@@ -85,7 +79,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
           AsyncClientConfig.fromConfig(config.configAs(asyncKey, ConfigFactory.empty()))
       },
       syncClientConfig = SyncClientConfig.fromConfig(config.configAs(syncKey, ConfigFactory.empty())),
-      headers = config.mapAs[String](headersKey, Map.empty),
+      headers = config.mapAs[String](CommonConfigKeys.headersKey, Map.empty),
       retryPolicyProviderClassName = {
         val className = config
           .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(
@@ -98,7 +92,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
             classNameValidation
           )
       },
-      retryMode = config.valueOptAs[String](retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
+      retryMode = config.valueOptAs[String](CommonConfigKeys.retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
       executionInterceptorsProviderClassName = {
         val className = config.valueAs[String](
           executionInterceptorProviderClassNameKey,
@@ -113,39 +107,49 @@ object DynamoDBClientV2Config extends LoggingSupport {
       executionInterceptorClassNames = {
         val classNames = config.valuesAs[String](executionInterceptorClassNamesKey, Seq.empty)
         classNames
-          .map(s => ClassCheckUtils.requireClassByName(MetricPublisherClassName, s, classNameValidation)).toIndexedSeq
+          .map(s =>
+            ClassCheckUtils
+              .requireClassByName(V2CommonConfigDefaultValues.MetricPublisherClassName, s, classNameValidation)
+          ).toIndexedSeq
       },
       apiCallTimeout = config.valueOptAs[FiniteDuration](apiCallTimeoutKey),
       apiCallAttemptTimeout = config.valueOptAs[FiniteDuration](apiCallAttemptTimeoutKey),
       metricPublishersProviderClassName = {
         val className = config.valueAs[String](
-          metricPublisherProviderClassNameKey,
-          DefaultMetricPublishersProviderClassName
+          V2CommonConfigKeys.metricPublisherProviderClassNameKey,
+          V2CommonConfigDefaultValues.DefaultMetricPublishersProviderClassName
         )
         ClassCheckUtils.requireClassByName(
-          MetricPublishersProviderClassName,
+          V2CommonConfigDefaultValues.MetricPublishersProviderClassName,
           className,
           classNameValidation
         )
       },
       metricPublisherClassNames = {
-        val classNames = config.valuesAs[String](metricPublisherClassNameKey, Seq.empty)
-        classNames.map(s => ClassCheckUtils.requireClassByName(MetricPublisherClassName, s, classNameValidation))
+        val classNames = config.valuesAs[String](V2CommonConfigKeys.metricPublisherClassNameKey, Seq.empty)
+        classNames.map(s =>
+          ClassCheckUtils
+            .requireClassByName(V2CommonConfigDefaultValues.MetricPublisherClassName, s, classNameValidation)
+        )
       },
       awsCredentialsProviderProviderClassName = {
         val className = config.valueAs[String](
-          awsCredentialsProviderProviderClassNameKey,
-          DefaultAwsCredentialsProviderProviderClassName
+          V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey,
+          V2CommonConfigDefaultValues.DefaultAwsCredentialsProviderProviderClassName
         )
         ClassCheckUtils.requireClassByName(
-          AwsCredentialsProviderProviderClassName,
+          V2CommonConfigDefaultValues.AwsCredentialsProviderProviderClassName,
           className,
           classNameValidation
         )
       },
       awsCredentialsProviderClassName = {
-        val className = config.valueOptAs[String](awsCredentialsProviderClassNameKey)
-        ClassCheckUtils.requireClassByName(AwsCredentialsProviderClassName, className, classNameValidation)
+        val className = config.valueOptAs[String](V2CommonConfigKeys.awsCredentialsProviderClassNameKey)
+        ClassCheckUtils.requireClassByName(
+          V2CommonConfigDefaultValues.AwsCredentialsProviderClassName,
+          className,
+          classNameValidation
+        )
       }
     )
     logger.debug("result = {}", result)

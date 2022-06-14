@@ -21,10 +21,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
 object V1ClientUtils extends LoggingSupport {
 
-  def createV1AsyncClient(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
-  ): AmazonDynamoDBAsync = {
+  def createV1AsyncClient(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBAsync = {
     V1ClientBuilderUtils.setupAsync(dynamicAccess, pluginConfig).build()
   }
 

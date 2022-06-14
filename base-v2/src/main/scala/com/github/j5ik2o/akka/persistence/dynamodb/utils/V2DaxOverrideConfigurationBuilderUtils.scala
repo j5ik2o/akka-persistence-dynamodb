@@ -13,10 +13,8 @@ import software.amazon.dax.Configuration
 import scala.concurrent.duration.Duration
 
 object V2DaxOverrideConfigurationBuilderUtils {
-  def setup(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
-  ): Configuration.Builder = {
+
+  def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): Configuration.Builder = {
     import pluginConfig.clientConfig.v2DaxClientConfig._
     var builder = Configuration.builder()
 
@@ -47,11 +45,16 @@ object V2DaxOverrideConfigurationBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
-        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
-        awsCredentialsProviderProvider.create.foreach { cp => builder.credentialsProvider(cp) }
+        val awsCredentialsProviderProvider =
+          AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        awsCredentialsProviderProvider.create.foreach { cp =>
+          builder.credentialsProvider(cp)
+        }
     }
 
-    pluginConfig.clientConfig.region.foreach { r => builder.region(Region.of(r)) }
+    pluginConfig.clientConfig.region.foreach { r =>
+      builder.region(Region.of(r))
+    }
     urlOpt.foreach(url => builder.url(url))
 
     val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)

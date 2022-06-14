@@ -15,6 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
+  CommonConfigDefaultValues,
+  CommonConfigKeys,
+  V2CommonConfigDefaultValues,
+  V2CommonConfigKeys
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
@@ -22,42 +28,36 @@ import com.typesafe.config.Config
 import scala.concurrent.duration._
 
 object AsyncClientConfig extends LoggingSupport {
-  val maxConcurrencyKey               = "max-concurrency"
-  val maxPendingConnectionAcquiresKey = "max-pending-connection-acquires"
-  val readTimeoutKey                  = "read-timeout"
-  val writeTimeoutKey                 = "write-timeout"
-  val connectionTimeoutKey            = "connection-timeout"
-  val connectionAcquisitionTimeoutKey = "connection-acquisition-timeout"
-  val connectionTimeToLiveKey         = "connection-time-to-live"
-  val maxIdleConnectionTimeoutKey     = "max-idle-connection-timeout"
-  val useConnectionReaperKey          = "use-connection-reaper"
-  val threadsOfEventLoopGroupKey      = "threads-of-event-loop-group"
-  val useHttp2Key                     = "use-http2"
-  val http2MaxStreamsKey              = "http2-max-streams"
-  val http2InitialWindowSizeKey       = "http2-initial-window-size"
-  val http2HealthCheckPingPeriodKey   = "http2-health-check-ping-period"
 
-  val DefaultMaxConcurrency: Int                          = 50
-  val DefaultMaxPendingConnectionAcquires: Int            = 10000
-  val DefaultReadTimeout: FiniteDuration                  = 30.seconds
-  val DefaultWriteTimeout: FiniteDuration                 = 30.seconds
-  val DefaultConnectionTimeout: FiniteDuration            = 2.seconds
-  val DefaultConnectionAcquisitionTimeout: FiniteDuration = 10.seconds
-  val DefaultConnectionTimeToLive: FiniteDuration         = Duration.Zero
-  val DefaultMaxIdleConnectionTimeout: FiniteDuration     = 60.seconds
-  val DefaultUseConnectionReaperKey: Boolean              = true
-  val DefaultUseHttp2Key: Boolean                         = false
-  val DefaultHttp2MaxStreams: Long                        = 4294967295L
-  val DefaultHttp2InitialWindowSize: Int                  = 1048576
+  val readTimeoutKey                = "read-timeout"
+  val writeTimeoutKey               = "write-timeout"
+  val connectionTimeToLiveKey       = "connection-time-to-live"
+  val maxIdleConnectionTimeoutKey   = "max-idle-connection-timeout"
+  val useConnectionReaperKey        = "use-connection-reaper"
+  val threadsOfEventLoopGroupKey    = "threads-of-event-loop-group"
+  val useHttp2Key                   = "use-http2"
+  val http2MaxStreamsKey            = "http2-max-streams"
+  val http2InitialWindowSizeKey     = "http2-initial-window-size"
+  val http2HealthCheckPingPeriodKey = "http2-health-check-ping-period"
+
+  val DefaultReadTimeout: FiniteDuration  = 30.seconds
+  val DefaultWriteTimeout: FiniteDuration = 30.seconds
+
+  val DefaultConnectionTimeToLive: FiniteDuration     = Duration.Zero
+  val DefaultMaxIdleConnectionTimeout: FiniteDuration = 60.seconds
+  val DefaultUseConnectionReaperKey: Boolean          = true
+  val DefaultUseHttp2Key: Boolean                     = false
+  val DefaultHttp2MaxStreams: Long                    = 4294967295L
+  val DefaultHttp2InitialWindowSize: Int              = 1048576
 
   private val keyNames =
     Seq(
-      maxConcurrencyKey,
-      maxPendingConnectionAcquiresKey,
+      V2CommonConfigKeys.maxConcurrencyKey,
+      V2CommonConfigKeys.maxPendingConnectionAcquiresKey,
       readTimeoutKey,
       readTimeoutKey,
-      connectionTimeoutKey,
-      connectionAcquisitionTimeoutKey,
+      CommonConfigKeys.connectionTimeoutKey,
+      V2CommonConfigKeys.connectionAcquisitionTimeoutKey,
       connectionTimeToLiveKey,
       maxIdleConnectionTimeoutKey,
       useConnectionReaperKey,
@@ -76,14 +76,22 @@ object AsyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = AsyncClientConfig(
       sourceConfig = config,
-      maxConcurrency = config.valueAs[Int](maxConcurrencyKey, DefaultMaxConcurrency),
-      maxPendingConnectionAcquires =
-        config.valueAs[Int](maxPendingConnectionAcquiresKey, DefaultMaxPendingConnectionAcquires),
+      maxConcurrency =
+        config.valueAs[Int](V2CommonConfigKeys.maxConcurrencyKey, V2CommonConfigDefaultValues.DefaultMaxConcurrency),
+      maxPendingConnectionAcquires = config.valueAs[Int](
+        V2CommonConfigKeys.maxPendingConnectionAcquiresKey,
+        V2CommonConfigDefaultValues.DefaultMaxPendingConnectionAcquires
+      ),
       readTimeout = config.valueAs[FiniteDuration](readTimeoutKey, DefaultReadTimeout),
       writeTimeout = config.valueAs[FiniteDuration](writeTimeoutKey, DefaultWriteTimeout),
-      connectionTimeout = config.valueAs[FiniteDuration](connectionTimeoutKey, DefaultConnectionTimeout),
-      connectionAcquisitionTimeout =
-        config.valueAs[FiniteDuration](connectionAcquisitionTimeoutKey, DefaultConnectionAcquisitionTimeout),
+      connectionTimeout = config.valueAs[FiniteDuration](
+        CommonConfigKeys.connectionTimeoutKey,
+        CommonConfigDefaultValues.DefaultConnectionTimeout
+      ),
+      connectionAcquisitionTimeout = config.valueAs[FiniteDuration](
+        V2CommonConfigKeys.connectionAcquisitionTimeoutKey,
+        V2CommonConfigDefaultValues.DefaultConnectionAcquisitionTimeout
+      ),
       connectionTimeToLive = config.valueAs[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
       maxIdleConnectionTimeout =
         config.valueAs[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),

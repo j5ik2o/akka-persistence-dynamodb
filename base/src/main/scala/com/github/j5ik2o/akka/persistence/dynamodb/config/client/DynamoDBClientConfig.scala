@@ -43,10 +43,16 @@ object DynamoDBClientConfig extends LoggingSupport {
   val DefaultBatchGetItemLimit                  = 100
   val DefaultBatchWriteItemLimit                = 25
 
-  def fromConfig(config: Config, legacyConfigFormat: Boolean): DynamoDBClientConfig = {
+  def fromConfig(
+      config: Config,
+      legacyConfigFormat: Boolean
+  ): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
     val clientVersion =
-      config.valueOptAs[String](clientVersionKey).map(s => ClientVersion.withName(s)).getOrElse(DefaultClientVersion)
+      config
+        .valueOptAs[String](clientVersionKey)
+        .map(s => ClientVersion.withName(s))
+        .getOrElse(DefaultClientVersion)
     val result = DynamoDBClientConfig(
       sourceConfig = config,
       accessKeyId = config.valueOptAs(accessKeyIdKeyKey),
@@ -54,20 +60,36 @@ object DynamoDBClientConfig extends LoggingSupport {
       endpoint = config.valueOptAs(endpointKey),
       region = config.valueOptAs(regionKey),
       clientVersion,
-      clientType =
-        config.valueOptAs[String](clientTypeKey).map(s => ClientType.withName(s)).getOrElse(DefaultClientType),
+      clientType = config
+        .valueOptAs[String](clientTypeKey)
+        .map(s => ClientType.withName(s))
+        .getOrElse(DefaultClientType),
       DynamoDBClientV1Config
-        .fromConfig(config.configAs(v1Key, ConfigFactory.empty()), clientVersion == ClientVersion.V1),
+        .fromConfig(
+          config.configAs(v1Key, ConfigFactory.empty()),
+          clientVersion == ClientVersion.V1
+        ),
       DynamoDBClientV1DaxConfig
-        .fromConfig(config.configAs(v1DaxKey, ConfigFactory.empty()), clientVersion == ClientVersion.V1Dax), {
+        .fromConfig(
+          config.configAs(v1DaxKey, ConfigFactory.empty()),
+          clientVersion == ClientVersion.V1Dax
+        ), {
         if (legacyConfigFormat) {
           logger.warn(
             "<<<!!!CAUTION: PLEASE MIGRATE TO NEW CONFIG FORMAT!!!>>>\n" +
             "\tThe configuration items of AWS-SDK V2 client remain with the old key names: (j5ik2o.dynamo-db-journal.dynamo-db-client).\n" +
             "\tPlease change current key name to the new key name: (j5ik2o.dynamo-db-journal.dynamo-db-client.v2). \n\t" +
-            DynamoDBClientV2Config.existsKeyNames(config).filter(_._2).keys.mkString("child-keys = [ ", ", ", " ]")
+            DynamoDBClientV2Config
+              .existsKeyNames(config)
+              .filter(_._2)
+              .keys
+              .mkString("child-keys = [ ", ", ", " ]")
           )
-          DynamoDBClientV2Config.fromConfig(config, clientVersion == ClientVersion.V2, legacyConfigFormat)
+          DynamoDBClientV2Config.fromConfig(
+            config,
+            clientVersion == ClientVersion.V2,
+            legacyConfigFormat
+          )
         } else
           DynamoDBClientV2Config.fromConfig(
             config.configAs(v2Key, ConfigFactory.empty()),
@@ -76,7 +98,10 @@ object DynamoDBClientConfig extends LoggingSupport {
           )
       },
       DynamoDBClientV2DaxConfig
-        .fromConfig(config.configAs(v2DaxKey, ConfigFactory.empty()), clientVersion == ClientVersion.V2),
+        .fromConfig(
+          config.configAs(v2DaxKey, ConfigFactory.empty()),
+          clientVersion == ClientVersion.V2
+        ),
       batchGetItemLimit = config.valueAs(batchGetItemLimitKey, DefaultBatchGetItemLimit),
       batchWriteItemLimit = config.valueAs(batchWriteItemLimitKey, DefaultBatchWriteItemLimit)
     )

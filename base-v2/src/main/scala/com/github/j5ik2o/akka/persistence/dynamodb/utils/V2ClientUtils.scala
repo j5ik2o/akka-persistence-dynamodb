@@ -37,7 +37,8 @@ object V2ClientUtils extends LoggingSupport {
       .setupSync(
         dynamicAccess,
         pluginConfig
-      ).build()
+      )
+      .build()
     javaSyncClientV2
   }
 
@@ -49,7 +50,8 @@ object V2ClientUtils extends LoggingSupport {
       .setupAsync(
         dynamicAccess,
         pluginConfig
-      ).build()
+      )
+      .build()
     javaAsyncClientV2
   }
 
@@ -58,15 +60,16 @@ object V2ClientUtils extends LoggingSupport {
       configRootPath: String,
       pluginConfig: PluginConfig
   ): JavaDynamoDbSyncClient = {
-    if (pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
+    if (pluginConfig.clientConfig.v2DaxClientConfig.dispatcherName.isEmpty)
       logger.warn(
-        s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
+        s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2-dax.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
     val javaSyncClientV2 = V2DaxClientBuilderUtils
       .setupSync(
         dynamicAccess,
         pluginConfig
-      ).build()
+      )
+      .build()
     javaSyncClientV2
   }
 
@@ -78,7 +81,8 @@ object V2ClientUtils extends LoggingSupport {
       .setupAsync(
         dynamicAccess,
         pluginConfig
-      ).build()
+      )
+      .build()
     javaAsyncClientV2
   }
 

@@ -20,7 +20,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
 trait V1SyncClientFactory {
+
   def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDB
+
 }
 
 object V1SyncClientFactory {
@@ -30,4 +32,5 @@ object V1SyncClientFactory {
       V1ClientUtils.createV1SyncClient(dynamicAccess, pluginConfig.configRootPath, pluginConfig)
     }
   }
+
 }

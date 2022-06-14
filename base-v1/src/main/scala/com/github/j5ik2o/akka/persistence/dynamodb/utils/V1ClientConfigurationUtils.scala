@@ -31,7 +31,10 @@ import scala.jdk.CollectionConverters._
 
 private[utils] object V1ClientConfigurationUtils {
 
-  def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientConfiguration = {
+  def setup(
+      dynamicAccess: DynamicAccess,
+      pluginConfig: PluginConfig
+  ): ClientConfiguration = {
     val result = new ClientConfiguration()
     import pluginConfig.clientConfig.v1ClientConfig.clientConfiguration._
     protocol.foreach {
@@ -43,7 +46,9 @@ private[utils] object V1ClientConfigurationUtils {
     result.setMaxConnections(maxConnections)
     userAgentPrefix.foreach { v => result.setUserAgentPrefix(v) }
     userAgentSuffix.foreach { v => result.setUserAgentSuffix(v) }
-    localAddress.foreach { v => result.setLocalAddress(InetAddress.getByName(v)) }
+    localAddress.foreach { v =>
+      result.setLocalAddress(InetAddress.getByName(v))
+    }
     proxyProtocol.foreach { v => result.setProtocol(Protocol.valueOf(v)) }
     proxyHost.foreach { v => result.setProxyHost(v) }
     proxyPort.foreach { v => result.setProxyPort(v) }
@@ -54,10 +59,13 @@ private[utils] object V1ClientConfigurationUtils {
     proxyWorkstation.foreach { v => result.setProxyWorkstation(v) }
     nonProxyHosts.foreach { v => result.setNonProxyHosts(v) }
     if (proxyAuthenticationMethods.nonEmpty) {
-      val seq = proxyAuthenticationMethods.map(ProxyAuthenticationMethod.valueOf)
+      val seq =
+        proxyAuthenticationMethods.map(ProxyAuthenticationMethod.valueOf)
       result.setProxyAuthenticationMethods(seq.asJava)
     }
-    RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { p => result.setRetryPolicy(p.create) }
+    RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { p =>
+      result.setRetryPolicy(p.create)
+    }
     maxErrorRetry.foreach { v => result.setMaxErrorRetry(v) }
     retryMode.foreach {
       case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.LEGACY =>
@@ -80,9 +88,13 @@ private[utils] object V1ClientConfigurationUtils {
     result.setUseReaper(useReaper)
 
     // * public ClientConfiguration withThrottledRetries(boolean use) {
-    result.setMaxConsecutiveRetriesBeforeThrottling(maxConsecutiveRetriesBeforeThrottling)
+    result.setMaxConsecutiveRetriesBeforeThrottling(
+      maxConsecutiveRetriesBeforeThrottling
+    )
     result.setUseGzip(useGzip)
-    socketBufferSizeHint.foreach { v => result.setSocketBufferSizeHints(v.send, v.receive) }
+    socketBufferSizeHint.foreach { v =>
+      result.setSocketBufferSizeHints(v.send, v.receive)
+    }
     signerOverride.foreach { v => result.setSignerOverride(v) }
     // * public ClientConfiguration withPreemptiveBasicProxyAuth(boolean preemptiveBasicProxyAuth) {
     connectionTtl.foreach { v =>
@@ -92,21 +104,29 @@ private[utils] object V1ClientConfigurationUtils {
     if (connectionMaxIdle != Duration.Zero)
       result.setConnectionMaxIdleMillis(connectionMaxIdle.toMillis)
     if (validateAfterInactivity != Duration.Zero)
-      result.setValidateAfterInactivityMillis(validateAfterInactivity.toMillis.toInt)
+      result.setValidateAfterInactivityMillis(
+        validateAfterInactivity.toMillis.toInt
+      )
     result.setUseTcpKeepAlive(tcpKeepAlive)
-    val dnsResolverProvider = DnsResolverProvider.create(dynamicAccess, pluginConfig)
-    dnsResolverProvider.create.foreach { dnsResolver => result.setDnsResolver(dnsResolver) }
+    val dnsResolverProvider =
+      DnsResolverProvider.create(dynamicAccess, pluginConfig)
+    dnsResolverProvider.create.foreach { dnsResolver =>
+      result.setDnsResolver(dnsResolver)
+    }
     result.setCacheResponseMetadata(cacheResponseMetadata)
     result.setResponseMetadataCacheSize(responseMetadataCacheSize)
     if (useSecureRandom) {
-      val secureRandomProvider = SecureRandomProvider.create(dynamicAccess, pluginConfig)
+      val secureRandomProvider =
+        SecureRandomProvider.create(dynamicAccess, pluginConfig)
       result.setSecureRandom(secureRandomProvider.create)
     }
     result.setUseExpectContinue(useExpectContinue)
     headers.foreach { case (k, v) =>
       result.addHeader(k, v)
     }
-    disableHostPrefixInjection.foreach { v => result.setDisableHostPrefixInjection(v) }
+    disableHostPrefixInjection.foreach { v =>
+      result.setDisableHostPrefixInjection(v)
+    }
     // * public ClientConfiguration withTlsKeyManagersProvider(TlsKeyManagersProvider tlsKeyManagersProvider) {
 
     result

@@ -31,13 +31,9 @@ import scala.jdk.CollectionConverters._
 
 private[utils] object V2ClientOverrideConfigurationBuilderUtils {
 
-  def setup(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
-  ): ClientOverrideConfiguration.Builder = {
+  def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientOverrideConfiguration.Builder = {
     import pluginConfig.clientConfig.v2ClientConfig._
-    var clientOverrideConfigurationBuilder = ClientOverrideConfiguration
-      .builder()
+    var clientOverrideConfigurationBuilder = ClientOverrideConfiguration.builder()
     headers.foreach { case (k, v) =>
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
     }
@@ -62,19 +58,23 @@ private[utils] object V2ClientOverrideConfigurationBuilderUtils {
     // putAdvancedOption
     apiCallTimeout.foreach { v =>
       if (v != Duration.Zero)
-        clientOverrideConfigurationBuilder =
-          clientOverrideConfigurationBuilder.apiCallTimeout(JavaDuration.ofMillis(v.toMillis))
+        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.apiCallTimeout(
+          JavaDuration.ofMillis(v.toMillis)
+        )
     }
     apiCallAttemptTimeout.foreach { v =>
       if (v != Duration.Zero)
-        clientOverrideConfigurationBuilder =
-          clientOverrideConfigurationBuilder.apiCallAttemptTimeout(JavaDuration.ofMillis(v.toMillis))
+        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.apiCallAttemptTimeout(
+          JavaDuration.ofMillis(v.toMillis)
+        )
     }
     // defaultProfileFile
     // defaultProfileName
     val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
     val metricPublishers         = metricPublishersProvider.create
-    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(metricPublishers.asJava)
+    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(
+      metricPublishers.asJava
+    )
     clientOverrideConfigurationBuilder
   }
 }

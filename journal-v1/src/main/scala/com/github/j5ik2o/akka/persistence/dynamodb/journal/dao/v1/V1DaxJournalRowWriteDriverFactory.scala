@@ -39,24 +39,27 @@ class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
       sortKeyResolver: SortKeyResolver,
       metricsReporter: Option[MetricsReporter]
   ): JournalRowWriteDriver = {
-    val (maybeSyncClient, maybeAsyncClient) = journalPluginConfig.clientConfig.clientType match {
-      case ClientType.Sync =>
-        val f = dynamicAccess
-          .createInstanceFor[V1DaxSyncClientFactory](
-            journalPluginConfig.v1DaxSyncClientFactoryClassName,
-            immutable.Seq.empty
-          ).get
-        val client = f.create(dynamicAccess, journalPluginConfig)
-        (Some(client), None)
-      case ClientType.Async =>
-        val f = dynamicAccess
-          .createInstanceFor[V1DaxAsyncClientFactory](
-            journalPluginConfig.v1DaxAsyncClientFactoryClassName,
-            immutable.Seq.empty
-          ).get
-        val client = f.create(dynamicAccess, journalPluginConfig)
-        (None, Some(client))
-    }
+    val (maybeSyncClient, maybeAsyncClient) =
+      journalPluginConfig.clientConfig.clientType match {
+        case ClientType.Sync =>
+          val f = dynamicAccess
+            .createInstanceFor[V1DaxSyncClientFactory](
+              journalPluginConfig.v1DaxSyncClientFactoryClassName,
+              immutable.Seq.empty
+            )
+            .get
+          val client = f.create(dynamicAccess, journalPluginConfig)
+          (Some(client), None)
+        case ClientType.Async =>
+          val f = dynamicAccess
+            .createInstanceFor[V1DaxAsyncClientFactory](
+              journalPluginConfig.v1DaxAsyncClientFactoryClassName,
+              immutable.Seq.empty
+            )
+            .get
+          val client = f.create(dynamicAccess, journalPluginConfig)
+          (None, Some(client))
+      }
     new V1JournalRowWriteDriver(
       system,
       maybeAsyncClient,

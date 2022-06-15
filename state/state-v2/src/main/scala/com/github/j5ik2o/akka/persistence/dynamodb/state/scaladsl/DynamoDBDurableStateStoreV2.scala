@@ -98,7 +98,7 @@ final class DynamoDBDurableStateStoreV2[A](
           Map(
             pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue.builder().s(pkey.asString).build()
           ).asJava
-        ).build()
+        ).consistentRead(pluginConfig.consistentRead).build()
       Source
         .single(request).via(streamReadClient.getFlow).flatMapConcat { result =>
           if (result.sdkHttpResponse().isSuccessful) {

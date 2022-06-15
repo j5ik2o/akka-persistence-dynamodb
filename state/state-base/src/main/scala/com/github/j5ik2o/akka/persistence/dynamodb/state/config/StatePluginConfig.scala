@@ -29,6 +29,7 @@ object StatePluginConfig extends LoggingSupport {
 
   val DefaultTableName: String                             = "State"
   val DefaultTagSeparator: String                          = ","
+  val DefaultConsistentRead                                = false
   val DefaultShardCount: Int                               = 64
   val DefaultPartitionKeyResolverClassName: String         = classOf[PartitionKeyResolver.Default].getName
   val DefaultPartitionKeyResolverProviderClassName: String = classOf[PartitionKeyResolverProvider.Default].getName
@@ -42,6 +43,7 @@ object StatePluginConfig extends LoggingSupport {
   val tableNameKey                             = "table-name"
   val columnsDefKey                            = "columns-def"
   val tagSeparatorKey                          = "tag-separator"
+  val consistentReadKey                        = "consistent-read"
   val shardCountKey                            = "shard-count"
   val partitionKeyResolverClassNameKey         = "partition-key-resolver-class-name"
   val partitionKeyResolverProviderClassNameKey = "partition-key-resolver-provider-class-name"
@@ -118,6 +120,7 @@ object StatePluginConfig extends LoggingSupport {
       tableName = config.valueAs(tableNameKey, DefaultTableName),
       columnsDefConfig = StateColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
       tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
+      consistentRead = config.valueAs(consistentReadKey, DefaultConsistentRead),
       shardCount = config.valueAs(shardCountKey, DefaultShardCount),
       tableNameResolverClassName = {
         val className = config.valueAs(tableNameResolverClassNameKey, DefaultTableNameResolverClassName)
@@ -179,6 +182,7 @@ final case class StatePluginConfig(
     tableNameResolverClassName: String,
     tableNameResolverProviderClassName: String,
     tagSeparator: String,
+    consistentRead: Boolean,
     shardCount: Int,
     partitionKeyResolverClassName: String,
     partitionKeyResolverProviderClassName: String,

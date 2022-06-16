@@ -290,7 +290,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
     def fetchHighestSeqNr(): Future[Long] = {
       journalDao
-        .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).runWith(Sink.head)
+        .highestSequenceNr(PersistenceId.apply(persistenceId), SequenceNumber(fromSequenceNr)).map(
+          _.getOrElse(0L)
+        ).runWith(Sink.head)
     }
 
     def future = writeInProgress.get(persistenceId) match {

@@ -94,7 +94,7 @@ final class V2JournalRowWriteDriver(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber],
       deleted: Option[Boolean]
-  ): Source[Long, NotUsed] =
+  ): Source[Option[Long], NotUsed] =
     readDriver.highestSequenceNr(persistenceId, fromSequenceNr, deleted)
 
   override def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] =

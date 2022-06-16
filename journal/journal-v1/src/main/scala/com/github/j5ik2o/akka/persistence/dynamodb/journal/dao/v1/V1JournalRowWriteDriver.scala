@@ -87,7 +87,7 @@ final class V1JournalRowWriteDriver(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber],
       deleted: Option[Boolean]
-  ): Source[Long, NotUsed] = readDriver.highestSequenceNr(persistenceId, fromSequenceNr, deleted)
+  ): Source[Option[Long], NotUsed] = readDriver.highestSequenceNr(persistenceId, fromSequenceNr, deleted)
 
   override def singlePutJournalRowFlow: Flow[JournalRow, Long, NotUsed] = Flow[JournalRow].flatMapConcat { journalRow =>
     val pkey = partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString

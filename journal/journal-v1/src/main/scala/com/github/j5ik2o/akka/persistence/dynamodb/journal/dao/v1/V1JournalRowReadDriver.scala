@@ -107,7 +107,7 @@ final class V1JournalRowReadDriver(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber],
       deleted: Option[Boolean]
-  ): Source[Long, NotUsed] = {
+  ): Source[Option[Long], NotUsed] = {
     val queryRequest = createHighestSequenceNrRequest(persistenceId, fromSequenceNr, deleted)
     Source
       .single(queryRequest)
@@ -118,7 +118,7 @@ final class V1JournalRowReadDriver(
             .map(_.asScala).map(_.map(_.asScala))
             .getOrElse(Seq.empty).toVector.headOption.map { head =>
               head(pluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong
-            }.getOrElse(0L)
+            }
           Source.single(result)
         } else {
           val statusCode = response.getSdkHttpMetadata.getHttpStatusCode

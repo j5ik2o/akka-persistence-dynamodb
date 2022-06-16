@@ -172,13 +172,16 @@ class WriteJournalDaoImpl(
         if (!pluginConfig.softDeleted) {
           journalRowDriver
             .highestSequenceNr(persistenceId, deleted = Some(true))
-            .flatMapConcat { highestMarkedSequenceNr =>
-              journalRowDriver
-                .getJournalRows(
-                  persistenceId,
-                  SequenceNumber(highestMarkedSequenceNr - 1),
-                  deleted = false
-                ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+            .flatMapConcat {
+              case Some(highestMarkedSequenceNr) =>
+                journalRowDriver
+                  .getJournalRows(
+                    persistenceId,
+                    SequenceNumber(highestMarkedSequenceNr - 1),
+                    deleted = false
+                  ).flatMapConcat { journalRows => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+              case None =>
+                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
             }
         } else
           Source.single(result)
@@ -200,7 +203,7 @@ class WriteJournalDaoImpl(
   override def highestSequenceNr(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber
-  ): Source[Long, NotUsed] = {
+  ): Source[Option[Long], NotUsed] = {
     journalRowDriver.highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 

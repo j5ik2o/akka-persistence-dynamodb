@@ -28,6 +28,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolv
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.serialization.ByteArraySnapshotSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{
@@ -50,7 +51,8 @@ private[dao] final class V2NewSnapshotDaoImpl(
     sortKeyResolver: SortKeyResolver,
     metricsReporter: Option[MetricsReporter],
     traceReporter: Option[TraceReporter]
-) extends SnapshotDao {
+) extends SnapshotDao
+    with LoggingSupport {
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -68,6 +70,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
   private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
+    logger.info("delete: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -81,12 +84,15 @@ private[dao] final class V2NewSnapshotDaoImpl(
           ":snr" -> AttributeValue.builder().n(sequenceNr.asString).build()
         ).asJava
       ).consistentRead(consistentRead).build()
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.info("delete: finish")
+    result
   }
 
   override def deleteAllSnapshots(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.info("deleteAllSnapshots: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -101,13 +107,16 @@ private[dao] final class V2NewSnapshotDaoImpl(
           ":max" -> AttributeValue.builder().n(Long.MaxValue.toString).build()
         ).asJava
       ).consistentRead(consistentRead).build()
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.info("deleteAllSnapshots: finish")
+    result
   }
 
   override def deleteUpToMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.info("deleteUpToMaxSequenceNr: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -122,12 +131,15 @@ private[dao] final class V2NewSnapshotDaoImpl(
           ":max" -> AttributeValue.builder().n(maxSequenceNr.asString).build()
         ).asJava
       ).consistentRead(consistentRead).build()
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.info("deleteUpToMaxSequenceNr: finish")
+    result
   }
 
   override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long)(implicit
       ec: ExecutionContext
   ): Source[Unit, NotUsed] = {
+    logger.info("deleteUpToMaxTimestamp: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -148,7 +160,9 @@ private[dao] final class V2NewSnapshotDaoImpl(
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         ).asJava
       ).consistentRead(consistentRead).build()
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.info("deleteUpToMaxTimestamp: finish")
+    result
   }
 
   override def deleteUpToMaxSequenceNrAndMaxTimestamp(
@@ -156,6 +170,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.info("deleteUpToMaxSequenceNrAndMaxTimestamp: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -176,7 +191,9 @@ private[dao] final class V2NewSnapshotDaoImpl(
           ":maxTimestamp" -> AttributeValue.builder().n(maxTimestamp.toString).build()
         ).asJava
       ).consistentRead(consistentRead).build()
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.info("deleteUpToMaxSequenceNrAndMaxTimestamp: start")
+    result
   }
 
   private def deserialize(
@@ -236,6 +253,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       persistenceId: PersistenceId,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.info("snapshotForMaxTimestamp: start")
     val queryRequest = QueryRequest
       .builder()
       .indexName(pluginConfig.getSnapshotRowsIndexName)
@@ -258,7 +276,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -268,12 +286,15 @@ private[dao] final class V2NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.mapAsync(1)(deserialize)
+    logger.info("snapshotForMaxTimestamp: finish")
+    result
   }
 
   override def snapshotForMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.info("snapshotForMaxSequenceNr: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -290,7 +311,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -300,6 +321,8 @@ private[dao] final class V2NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.mapAsync(1)(deserialize)
+    logger.info("snapshotForMaxSequenceNr: finish")
+    result
   }
 
   override def snapshotForMaxSequenceNrAndMaxTimestamp(
@@ -307,6 +330,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.info("snapshotForMaxSequenceNrAndMaxTimestamp: start")
     val queryRequest = QueryRequest
       .builder()
       .tableName(tableName)
@@ -329,7 +353,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
       ).scanIndexForward(false)
       .consistentRead(consistentRead)
       .build()
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.sdkHttpResponse().isSuccessful)
           Source.single(Option(response.items).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -339,12 +363,15 @@ private[dao] final class V2NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
         }
       }.mapAsync(1)(deserialize)
+    logger.info("snapshotForMaxSequenceNrAndMaxTimestamp: finish")
+    result
   }
 
   override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any)(implicit
       ec: ExecutionContext
   ): Source[Unit, NotUsed] = {
-    Source
+    logger.info("save: start")
+    val result = Source
       .future(serializer.serialize(snapshotMetadata, snapshot))
       .flatMapConcat { snapshotRow =>
         val pkey = partitionKeyResolver.resolve(snapshotRow.persistenceId, snapshotRow.sequenceNumber)
@@ -376,8 +403,9 @@ private[dao] final class V2NewSnapshotDaoImpl(
             Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
           }
         }
-
       }
+    logger.info("save")
+    result
   }
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
@@ -400,7 +428,6 @@ private[dao] final class V2NewSnapshotDaoImpl(
             Map(
               tableName -> rows.map { row =>
                 val pkey = partitionKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
-                val skey = sortKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
                 WriteRequest
                   .builder().deleteRequest(
                     DeleteRequest
@@ -409,10 +436,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
                         Map(
                           columnsDefConfig.partitionKeyColumnName -> AttributeValue
                             .builder()
-                            .s(pkey.asString).build(),
-                          columnsDefConfig.sortKeyColumnName -> AttributeValue
-                            .builder()
-                            .s(skey.asString).build()
+                            .s(pkey.asString).build()
                         ).asJava
                       ).build()
                   ).build()

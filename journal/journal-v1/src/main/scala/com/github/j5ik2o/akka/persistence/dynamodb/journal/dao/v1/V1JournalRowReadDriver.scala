@@ -132,6 +132,7 @@ final class V1JournalRowReadDriver(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): QueryRequest = {
+    val limit = deleted.map(_ => Int.MaxValue).getOrElse(1)
     new QueryRequest()
       .withTableName(pluginConfig.tableName)
       .withIndexName(pluginConfig.getJournalRowsIndexName)
@@ -139,13 +140,13 @@ final class V1JournalRowReadDriver(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id")).orNull
       )
       .withFilterExpression(deleted.map(_ => "#d = :flg").orNull)
+      .withProjectionExpression((Seq("#snr") ++ deleted.map(_ => "#d")).mkString(","))
       .withExpressionAttributeNames(
         (Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
         ) ++ deleted
-          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-        fromSequenceNr
-          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
+          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
       )
       .withExpressionAttributeValues(
         (Map(
@@ -154,7 +155,7 @@ final class V1JournalRowReadDriver(
           .map(d => Map(":flg" -> new AttributeValue().withBOOL(d))).getOrElse(Map.empty) ++ fromSequenceNr
           .map(nr => Map(":nr" -> new AttributeValue().withN(nr.asString))).getOrElse(Map.empty)).asJava
       ).withScanIndexForward(false)
-      .withLimit(1)
+      .withLimit(limit)
   }
 
   private def createGSIRequest(

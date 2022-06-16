@@ -1,7 +1,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 
 import akka.actor.{ ActorLogging, ActorRef, Props }
-import akka.persistence.{ PersistentActor, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria }
+import akka.persistence.{ PersistentActor, RecoveryCompleted, SnapshotOffer }
 import com.github.j5ik2o.akka.persistence.dynamodb.example.CborSerializable
 import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.{
   GetValueReply,

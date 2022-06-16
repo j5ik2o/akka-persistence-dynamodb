@@ -25,7 +25,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginC
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import org.slf4j.LoggerFactory
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
@@ -38,11 +38,10 @@ class WriteJournalDaoImpl(
     val ec: ExecutionContext,
     system: ActorSystem
 ) extends JournalDaoWithUpdates
-    with DaoSupport {
+    with DaoSupport
+    with LoggingSupport {
 
   implicit val mat: Materializer = SystemMaterializer(system).materializer
-
-  LoggerFactory.getLogger(getClass)
 
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
@@ -164,21 +163,27 @@ class WriteJournalDaoImpl(
       persistenceId: PersistenceId,
       toSequenceNr: SequenceNumber
   ): Source[Long, NotUsed] = {
+    logger.info(s"deleteMessage($persistenceId, $toSequenceNr)")
     journalRowDriver
       .getJournalRows(persistenceId, toSequenceNr, deleted = false)
       .flatMapConcat { journalRows =>
+        logger.info(s"journalRows = $journalRows")
         putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
       }.flatMapConcat { case (result, journalRows) =>
+        logger.info(s"result = $result, journalRows = $journalRows")
         if (!pluginConfig.softDeleted) {
           journalRowDriver
             .highestSequenceNr(persistenceId, deleted = Some(true))
-            .flatMapConcat { highestMarkedSequenceNr =>
-              journalRowDriver
-                .getJournalRows(
-                  persistenceId,
-                  SequenceNumber(highestMarkedSequenceNr - 1),
-                  deleted = false
-                ).flatMapConcat { _ => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+            .flatMapConcat {
+              case Some(sn) =>
+                journalRowDriver
+                  .getJournalRows(
+                    persistenceId,
+                    SequenceNumber(sn - 1),
+                    deleted = false
+                  ).flatMapConcat { journalRows => hardDeleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
+              case None =>
+                hardDeleteBy(persistenceId, journalRows.map(_.sequenceNumber))
             }
         } else
           Source.single(result)
@@ -200,7 +205,7 @@ class WriteJournalDaoImpl(
   override def highestSequenceNr(
       persistenceId: PersistenceId,
       fromSequenceNr: SequenceNumber
-  ): Source[Long, NotUsed] = {
+  ): Source[Option[Long], NotUsed] = {
     journalRowDriver.highestSequenceNr(persistenceId, Some(fromSequenceNr))
   }
 
@@ -233,7 +238,7 @@ class WriteJournalDaoImpl(
         }
       }.withAttributes(logLevels)
 
-  private def deleteBy(persistenceId: PersistenceId, sequenceNrs: Seq[SequenceNumber]): Source[Long, NotUsed] = {
+  private def hardDeleteBy(persistenceId: PersistenceId, sequenceNrs: Seq[SequenceNumber]): Source[Long, NotUsed] = {
     if (sequenceNrs.isEmpty)
       Source.empty
     else {

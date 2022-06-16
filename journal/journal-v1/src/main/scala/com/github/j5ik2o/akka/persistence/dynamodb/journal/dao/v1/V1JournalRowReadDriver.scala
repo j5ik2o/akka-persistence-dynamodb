@@ -26,7 +26,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginB
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import org.slf4j.LoggerFactory
 
 import java.io.IOException
 import scala.collection.mutable.ArrayBuffer
@@ -55,8 +54,6 @@ final class V1JournalRowReadDriver(
 
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
-
-  LoggerFactory.getLogger(getClass)
 
   override def getJournalRows(
       persistenceId: PersistenceId,
@@ -107,18 +104,18 @@ final class V1JournalRowReadDriver(
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber],
       deleted: Option[Boolean]
-  ): Source[Long, NotUsed] = {
+  ): Source[Option[Long], NotUsed] = {
     val queryRequest = createHighestSequenceNrRequest(persistenceId, fromSequenceNr, deleted)
     Source
       .single(queryRequest)
       .via(streamClient.queryFlow)
       .flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
-          val result = Option(response.getItems)
-            .map(_.asScala).map(_.map(_.asScala))
-            .getOrElse(Seq.empty).toVector.headOption.map { head =>
-              head(pluginConfig.columnsDefConfig.sequenceNrColumnName).getN.toLong
-            }.getOrElse(0L)
+          val result = for {
+            items <- Option(response.getItems)
+            head <- items.asScala.headOption
+            sequence <- Option(head.get(pluginConfig.columnsDefConfig.sequenceNrColumnName))
+          } yield sequence.getN.toLong
           Source.single(result)
         } else {
           val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
@@ -132,6 +129,7 @@ final class V1JournalRowReadDriver(
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
   ): QueryRequest = {
+    val limit = deleted.map(_ => Int.MaxValue).getOrElse(1)
     new QueryRequest()
       .withTableName(pluginConfig.tableName)
       .withIndexName(pluginConfig.getJournalRowsIndexName)
@@ -139,13 +137,13 @@ final class V1JournalRowReadDriver(
         fromSequenceNr.map(_ => "#pid = :id and #snr >= :nr").orElse(Some("#pid = :id")).orNull
       )
       .withFilterExpression(deleted.map(_ => "#d = :flg").orNull)
+      .withProjectionExpression((Seq("#snr") ++ deleted.map(_ => "#d")).mkString(","))
       .withExpressionAttributeNames(
         (Map(
-          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName
+          "#pid" -> pluginConfig.columnsDefConfig.persistenceIdColumnName,
+          "#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName
         ) ++ deleted
-          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty) ++
-        fromSequenceNr
-          .map(_ => Map("#snr" -> pluginConfig.columnsDefConfig.sequenceNrColumnName)).getOrElse(Map.empty)).asJava
+          .map(_ => Map("#d" -> pluginConfig.columnsDefConfig.deletedColumnName)).getOrElse(Map.empty)).asJava
       )
       .withExpressionAttributeValues(
         (Map(
@@ -154,7 +152,7 @@ final class V1JournalRowReadDriver(
           .map(d => Map(":flg" -> new AttributeValue().withBOOL(d))).getOrElse(Map.empty) ++ fromSequenceNr
           .map(nr => Map(":nr" -> new AttributeValue().withN(nr.asString))).getOrElse(Map.empty)).asJava
       ).withScanIndexForward(false)
-      .withLimit(1)
+      .withLimit(limit)
   }
 
   private def createGSIRequest(

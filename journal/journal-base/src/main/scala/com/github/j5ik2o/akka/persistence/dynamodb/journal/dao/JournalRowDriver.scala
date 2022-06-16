@@ -56,7 +56,7 @@ trait JournalRowReadDriver extends JournalRowDriver {
       persistenceId: PersistenceId,
       fromSequenceNr: Option[SequenceNumber] = None,
       deleted: Option[Boolean] = None
-  ): Source[Long, NotUsed]
+  ): Source[Option[Long], NotUsed]
 }
 
 trait JournalRowWriteDriver extends JournalRowReadDriver {

@@ -99,7 +99,7 @@ final class StreamWriteClient(
           Flow[BatchWriteItemRequest].map { request => c.batchWriteItem(request) }.withV1Dispatcher(pluginConfig)
         case _ =>
           throw new IllegalStateException("invalid state")
-      }).log("batchWriteItemFlow")
+      }).log("batchWriteItemFlow", { e => s"element = $e" })
     flowWithBackoffSettings(writeBackoffConfig, flow)
   }
 

@@ -32,7 +32,7 @@ trait WriteJournalDao extends JournalDaoWithReadMessages {
       toSequenceNr: SequenceNumber
   ): Source[Long, NotUsed]
 
-  def highestSequenceNr(persistenceId: PersistenceId, fromSequenceNr: SequenceNumber): Source[Long, NotUsed]
+  def highestSequenceNr(persistenceId: PersistenceId, fromSequenceNr: SequenceNumber): Source[Option[Long], NotUsed]
 
   def putMessages(messages: Seq[JournalRow]): Source[Long, NotUsed]
 

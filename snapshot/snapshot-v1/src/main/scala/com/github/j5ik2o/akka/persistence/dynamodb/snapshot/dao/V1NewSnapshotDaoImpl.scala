@@ -169,22 +169,6 @@ final class V1NewSnapshotDaoImpl(
     queryDelete(queryRequest)
   }
 
-  private def deserialize(rowOpt: Option[Map[String, AttributeValue]])(implicit ec: ExecutionContext) = {
-    rowOpt match {
-      case Some(row) =>
-        serializer
-          .deserialize(
-            SnapshotRow(
-              persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).getS),
-              sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).getN.toLong),
-              snapshot = row(columnsDefConfig.snapshotColumnName).getB.array(),
-              created = row(columnsDefConfig.createdColumnName).getN.toLong
-            )
-          ).map(Some(_))
-      case None =>
-        Future.successful(None)
-    }
-  }
   override def latestSnapshot(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
@@ -240,20 +224,6 @@ final class V1NewSnapshotDaoImpl(
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
-    Source
-      .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
-        if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
-          Source.single(Option(response.getItems).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
-        else {
-          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-          Source.failed(new IOException(s"statusCode: $statusCode"))
-        }
-      }.mapAsync(1)(deserialize)
-  }
-
-  private def queryDelete(
-      queryRequest: QueryRequest
-  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
     Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
@@ -364,19 +334,16 @@ final class V1NewSnapshotDaoImpl(
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {
     Source
-      .single(queryRequest).via(streamReadClient.queryFlow).map { v =>
-        Option(v.getItems).map(_.asScala).getOrElse(Seq.empty)
-      }
-      .mapConcat(_.toVector)
-      .grouped(clientConfig.batchWriteItemLimit)
-      .map { rows =>
-        rows.map { row =>
-          val _row = row.asScala
+      .single(queryRequest).via(streamReadClient.queryFlow).map { response =>
+        Option(response.getItems).map(_.asScala).getOrElse(Seq.empty)
+      }.mapConcat(_.toVector).grouped(clientConfig.batchWriteItemLimit).map { rows =>
+        rows.map { javaRow =>
+          val row = javaRow.asScala
           SnapshotRow(
-            persistenceId = PersistenceId(_row(columnsDefConfig.persistenceIdColumnName).getS),
-            sequenceNumber = SequenceNumber(_row(columnsDefConfig.sequenceNrColumnName).getN.toLong),
-            snapshot = _row(columnsDefConfig.snapshotColumnName).getB.array(),
-            created = _row(columnsDefConfig.createdColumnName).getN.toLong
+            persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).getS),
+            sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).getN.toLong),
+            snapshot = row(columnsDefConfig.snapshotColumnName).getB.array(),
+            created = row(columnsDefConfig.createdColumnName).getN.toLong
           )
         }
       }.map { rows =>
@@ -409,6 +376,23 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }
+  }
+
+  private def deserialize(rowOpt: Option[Map[String, AttributeValue]])(implicit ec: ExecutionContext) = {
+    rowOpt match {
+      case Some(row) =>
+        serializer
+          .deserialize(
+            SnapshotRow(
+              persistenceId = PersistenceId(row(columnsDefConfig.persistenceIdColumnName).getS),
+              sequenceNumber = SequenceNumber(row(columnsDefConfig.sequenceNrColumnName).getN.toLong),
+              snapshot = row(columnsDefConfig.snapshotColumnName).getB.array(),
+              created = row(columnsDefConfig.createdColumnName).getN.toLong
+            )
+          ).map(Some(_))
+      case None =>
+        Future.successful(None)
+    }
   }
 
   override def dispose(): Unit = {

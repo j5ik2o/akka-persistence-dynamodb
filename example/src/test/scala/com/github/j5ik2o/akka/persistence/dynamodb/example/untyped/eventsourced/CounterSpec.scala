@@ -12,13 +12,14 @@ import org.testcontainers.DockerClientFactory
 
 import java.util.UUID
 import scala.concurrent.duration.DurationInt
+import com.typesafe.config.Config
 
 object CounterSpec {
   val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode    = false
 
-  val config = ConfigHelper
+  val config: Config = ConfigHelper
     .config(
       Some("persistence-reference"),
       legacyConfigFormat = false,

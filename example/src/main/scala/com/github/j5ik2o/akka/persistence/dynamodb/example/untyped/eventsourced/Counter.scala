@@ -1,7 +1,15 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 
 import akka.actor.{ ActorLogging, ActorRef, Props }
-import akka.persistence.{ PersistentActor, RecoveryCompleted, SnapshotOffer }
+import akka.persistence.{
+  DeleteSnapshotFailure,
+  DeleteSnapshotSuccess,
+  PersistentActor,
+  RecoveryCompleted,
+  SaveSnapshotFailure,
+  SaveSnapshotSuccess,
+  SnapshotOffer
+}
 import com.github.j5ik2o.akka.persistence.dynamodb.example.CborSerializable
 import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.{
   GetValueReply,
@@ -39,9 +47,10 @@ final class Counter(id: UUID) extends PersistentActor with ActorLogging {
   override def persistenceId: String = s"counter-$id"
 
   override def receiveRecover: Receive = {
-    case SnapshotOffer(_, offeredSnapshot: State) =>
-      log.info(s"SnapshotOffer: $offeredSnapshot")
+    case SnapshotOffer(metadata, offeredSnapshot: State) =>
+      log.info(s"SnapshotOffer($metadata, $offeredSnapshot)")
       state = offeredSnapshot
+
     case ValueAdded(v) =>
       state = state.copy(n = state.n + v)
     case RecoveryCompleted =>
@@ -66,6 +75,16 @@ final class Counter(id: UUID) extends PersistentActor with ActorLogging {
       deleteSnapshot(seqNr)
     case CounterProtocol.GetValue(replyTo) =>
       replyTo ! GetValueReply(state.n, lastSequenceNr)
+
+    case SaveSnapshotSuccess(metadata) =>
+      log.info(s"SaveSnapshotSuccess($metadata)")
+    case SaveSnapshotFailure(metadata, cause) =>
+      log.info(s"SaveSnapshotFailure($metadata, $cause)")
+
+    case DeleteSnapshotSuccess(metadata) =>
+      log.info(s"DeleteSnapshotSuccess($metadata)")
+    case DeleteSnapshotFailure(metadata, cause) =>
+      log.info(s"DeleteSnapshotFailure($metadata, $cause)")
   }
 
 }

@@ -9,6 +9,7 @@ import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
 import com.github.dockerjava.core.DockerClientConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.example.CborSerializable
+import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.GetValueReply
 import com.github.j5ik2o.dockerController.WaitPredicates.WaitPredicate
 import com.github.j5ik2o.dockerController.dynamodbLocal.DynamoDBLocalController
 import com.github.j5ik2o.dockerController.{
@@ -221,6 +222,7 @@ class CounterSpec
           .withAttributeDefinitions(
             Seq(
               new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
+              new AttributeDefinition().withAttributeName("skey").withAttributeType(ScalarAttributeType.S),
               new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S),
               new AttributeDefinition().withAttributeName("sequence-nr").withAttributeType(ScalarAttributeType.N)
             ).asJava
@@ -254,14 +256,29 @@ class CounterSpec
 
   "CounterSpec" - {
     "increment & getValue" in {
-      val counterRef = system.actorOf(Counter.props(UUID.randomUUID()))
-      counterRef ! CounterProtocol.Increment
-      counterRef ! CounterProtocol.Increment
-      counterRef ! CounterProtocol.Increment
       val testProbe = TestProbe()
-      counterRef ! CounterProtocol.GetValue(testProbe.ref)
-      val n = testProbe.expectMsgType[Int](3.seconds)
-      assert(n == 3)
+      val actorId   = UUID.randomUUID()
+
+      {
+        val counterRef = system.actorOf(Counter.props(actorId))
+        counterRef ! CounterProtocol.Increment // seqNr = 1, 1,
+        counterRef ! CounterProtocol.Increment // seqNr = 2, 2, saveSnapshot(2)
+        counterRef ! CounterProtocol.Increment // seqNr = 3, 3,
+        counterRef ! CounterProtocol.Increment // seqNr = 4, 4, saveSnapshot(4)
+
+        counterRef ! CounterProtocol.GetValue(testProbe.ref)
+        val reply = testProbe.expectMsgType[GetValueReply](3.seconds)
+        assert(reply.n == 4)
+        counterRef ! CounterProtocol.DeleteSnapshot(reply.seqNr)
+        killActors(counterRef)
+      }
+
+      {
+        val counterRef = system.actorOf(Counter.props(actorId))
+        counterRef ! CounterProtocol.GetValue(testProbe.ref)
+        val reply = testProbe.expectMsgType[GetValueReply](3.seconds)
+        assert(reply.n == 4)
+      }
     }
   }
 }

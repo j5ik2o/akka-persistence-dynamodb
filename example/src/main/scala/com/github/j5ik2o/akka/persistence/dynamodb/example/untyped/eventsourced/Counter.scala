@@ -2,6 +2,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 
 import akka.actor.{ ActorLogging, ActorRef, Props }
 import akka.persistence.{
+  DeleteMessagesSuccess,
   DeleteSnapshotFailure,
   DeleteSnapshotSuccess,
   PersistentActor,
@@ -26,7 +27,14 @@ object CounterProtocol {
   final case class IncrementBy(value: Int) extends Command
   final case class GetValue(replyTo: ActorRef) extends Command
   final case class GetValueReply(n: Int, seqNr: Long)
-  final case class DeleteSnapshot(seqNr: Long) extends Command
+
+  case class SaveSnapshot(replyTo: ActorRef) extends Command
+  case class SaveSnapshotReply()
+
+  final case class DeleteMessage(toSeqNr: Long, replyTo: ActorRef) extends Command
+  case class DeleteMessageReply()
+  final case class DeleteSnapshot(seqNr: Long, replyTo: ActorRef) extends Command
+  case class DeleteSnapshotReply()
 
   sealed trait Event extends CborSerializable
 
@@ -61,30 +69,45 @@ final class Counter(id: UUID) extends PersistentActor with ActorLogging {
     case CounterProtocol.Increment =>
       persist(ValueAdded(1)) { event =>
         state = state.copy(n = state.n + 1)
-        if (lastSequenceNr % 2 == 0) {
-          log.info(s"saveSnapshot($state)")
-          saveSnapshot(state)
-        }
         log.info(s"seqNr = $lastSequenceNr, event = $event, state = $state")
       }
     case CounterProtocol.IncrementBy(v) =>
       persist(ValueAdded(v)) { _ =>
         state = state.copy(n = state.n + v)
       }
-    case CounterProtocol.DeleteSnapshot(seqNr) =>
-      deleteSnapshot(seqNr)
     case CounterProtocol.GetValue(replyTo) =>
       replyTo ! GetValueReply(state.n, lastSequenceNr)
 
-    case SaveSnapshotSuccess(metadata) =>
-      log.info(s"SaveSnapshotSuccess($metadata)")
-    case SaveSnapshotFailure(metadata, cause) =>
-      log.info(s"SaveSnapshotFailure($metadata, $cause)")
+    case CounterProtocol.SaveSnapshot(replyTo) =>
+      saveSnapshot(state)
+      context.become(waitingSaveSnapshot(replyTo))
 
-    case DeleteSnapshotSuccess(metadata) =>
-      log.info(s"DeleteSnapshotSuccess($metadata)")
-    case DeleteSnapshotFailure(metadata, cause) =>
-      log.info(s"DeleteSnapshotFailure($metadata, $cause)")
+    case CounterProtocol.DeleteMessage(toSeqNr, replyTo) =>
+      deleteMessages(toSeqNr)
+      context.become(waitingDeleteMessage(replyTo))
+
+    case CounterProtocol.DeleteSnapshot(toSeqNr, replyTo) =>
+      deleteSnapshot(toSeqNr)
+      context.become(waitingDeleteSnapshot(replyTo))
+
+  }
+
+  def waitingSaveSnapshot(replyTo: ActorRef): Receive = { case SaveSnapshotSuccess(metadata) =>
+    log.info(s"SaveSnapshotSuccess($metadata)")
+    replyTo ! CounterProtocol.SaveSnapshotReply()
+    context.unbecome()
+  }
+
+  def waitingDeleteMessage(replyTo: ActorRef): Receive = { case DeleteMessagesSuccess(toSeqNr) =>
+    log.info(s"DeleteMessagesSuccess($toSeqNr)")
+    replyTo ! CounterProtocol.DeleteMessageReply()
+    context.unbecome()
+  }
+
+  def waitingDeleteSnapshot(replyTo: ActorRef): Receive = { case DeleteSnapshotSuccess(metadata) =>
+    log.info(s"DeleteSnapshotSuccess($metadata)")
+    replyTo ! CounterProtocol.DeleteSnapshotReply()
+    context.unbecome()
   }
 
 }

@@ -330,7 +330,16 @@ lazy val example = (project in file("example"))
       "com.github.j5ik2o"                    %% "docker-controller-scala-dynamodb-local" % "1.10.57"
     )
   )
-  .dependsOn(test, `journal-v1`, `journal-v2`, `snapshot-v1`, `snapshot-v2`, `state-v1`, `state-v2`)
+  .dependsOn(
+    test,
+    base % "test->test",
+    `journal-v1`,
+    `journal-v2`,
+    `snapshot-v1`,
+    `snapshot-v2`,
+    `state-v1`,
+    `state-v2`
+  )
 
 lazy val root = (project in file("."))
   .settings(baseSettings)

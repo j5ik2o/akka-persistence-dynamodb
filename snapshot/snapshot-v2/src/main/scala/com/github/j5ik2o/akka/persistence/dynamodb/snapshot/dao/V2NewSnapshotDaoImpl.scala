@@ -68,25 +68,20 @@ private[dao] final class V2NewSnapshotDaoImpl(
   private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
-    val pkey = partitionKeyResolver.resolve(persistenceId, sequenceNr)
-    val skey = sortKeyResolver.resolve(persistenceId, sequenceNr)
-    val req = DeleteItemRequest
+    val queryRequest = QueryRequest
       .builder()
-      .tableName(tableName).key(
+      .tableName(tableName)
+      .indexName(pluginConfig.getSnapshotRowsIndexName)
+      .keyConditionExpression("#pid = :pid and #snr = :snr")
+      .expressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).expressionAttributeValues(
         Map(
-          columnsDefConfig.partitionKeyColumnName -> AttributeValue.builder().s(pkey.asString).build(),
-          columnsDefConfig.sortKeyColumnName      -> AttributeValue.builder().s(skey.asString).build()
+          ":pid" -> AttributeValue.builder().s(persistenceId.asString).build(),
+          ":snr" -> AttributeValue.builder().n(sequenceNr.asString).build()
         ).asJava
-      ).build()
-    Source.single(req).via(streamWriteClient.deleteItemFlow).flatMapConcat { response =>
-      if (response.sdkHttpResponse().isSuccessful)
-        Source.single(())
-      else {
-        val statusCode = response.sdkHttpResponse().statusCode()
-        val statusText = response.sdkHttpResponse().statusText()
-        Source.failed(new IOException(s"statusCode: $statusCode" + statusText.asScala.fold("")(s => s", $s")))
-      }
-    }
+      ).consistentRead(consistentRead).build()
+    queryDelete(queryRequest)
   }
 
   override def deleteAllSnapshots(

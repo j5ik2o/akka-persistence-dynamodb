@@ -28,7 +28,8 @@ object ConfigHelper {
       clientVersion: String,
       clientType: String,
       requestHandlerClassNames: Seq[String] = Seq.empty,
-      journalRowDriverWrapperClassName: Option[String] = None
+      journalRowDriverWrapperClassName: Option[String] = None,
+      softDelete: Boolean = true
   ): Config = {
     val configString = s"""
        |akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
@@ -38,21 +39,22 @@ object ConfigHelper {
        |  legacy-config-format = $legacyConfigFormat
        |  shard-count = 1024
        |  queue-enable = true
-       |  queue-overflow-strategy = backpressure 
+       |  queue-overflow-strategy = backpressure
        |  queue-buffer-size = 1024
        |  queue-parallelism = 32
        |  write-parallelism = 1
        |  query-batch-size = 1024
+       |  soft-delete = $softDelete
        |  dynamo-db-client {
        |    region = "ap-northeast-1"
        |    access-key-id = "x"
-       |    secret-access-key = "x" 
+       |    secret-access-key = "x"
        |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
        |    client-version = "${clientVersion.toLowerCase}"
        |    client-type = "${clientType.toLowerCase()}"
        |    v2 {
        |      async {
-       |        max-concurrency = 64  
+       |        max-concurrency = 64
        |      }
        |      sync {
        |        dispatcher-name = "journal-blocking-io-dispatcher"
@@ -64,7 +66,7 @@ object ConfigHelper {
                            s"""request-handler-class-names = ["${requestHandlerClassNames.mkString(",")}"]"""
                          } else ""}
        |      dispatcher-name = "journal-blocking-io-dispatcher"
-       |    } 
+       |    }
        |  }
        |  ${if (journalRowDriverWrapperClassName.nonEmpty) {
                            s"""journal-row-driver-wrapper-class-name = "${journalRowDriverWrapperClassName.get}" """
@@ -78,13 +80,13 @@ object ConfigHelper {
        |  dynamo-db-client {
        |    region = "ap-northeast-1"
        |    access-key-id = "x"
-       |    secret-access-key = "x" 
+       |    secret-access-key = "x"
        |    endpoint = "http://$dynamoDBHost:$dynamoDBPort/"
        |    v2 {
-       |      dispatcher-name = "snapshot-blocking-io-dispatcher" 
+       |      dispatcher-name = "snapshot-blocking-io-dispatcher"
        |    }
        |    v1 {
-       |      dispatcher-name = "snapshot-blocking-io-dispatcher" 
+       |      dispatcher-name = "snapshot-blocking-io-dispatcher"
        |    }
        |  }
        |}
@@ -129,7 +131,7 @@ object ConfigHelper {
        |  type = "Dispatcher"
        |  executor = "thread-pool-executor"
        |  thread-pool-executor {
-       |    fixed-pool-size = 64 
+       |    fixed-pool-size = 64
        |  }
        |}
        |

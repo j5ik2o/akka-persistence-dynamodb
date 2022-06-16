@@ -62,6 +62,22 @@ final class V1NewSnapshotDaoImpl(
 
   private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 
+  override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
+    val queryRequest = new QueryRequest()
+      .withTableName(tableName)
+      .withIndexName(pluginConfig.getSnapshotRowsIndexName)
+      .withKeyConditionExpression("#pid = :pid and #snr = :snr")
+      .withExpressionAttributeNames(
+        Map("#pid" -> columnsDefConfig.persistenceIdColumnName, "#snr" -> columnsDefConfig.sequenceNrColumnName).asJava
+      ).withExpressionAttributeValues(
+        Map(
+          ":pid" -> new AttributeValue().withS(persistenceId.asString),
+          ":snr" -> new AttributeValue().withN(sequenceNr.asString)
+        ).asJava
+      ).withConsistentRead(consistentRead)
+    queryDelete(queryRequest)
+  }
+
   override def deleteAllSnapshots(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
@@ -235,6 +251,20 @@ final class V1NewSnapshotDaoImpl(
       }.mapAsync(1)(deserialize)
   }
 
+  private def queryDelete(
+      queryRequest: QueryRequest
+  )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    Source
+      .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
+        if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
+          Source.single(Option(response.getItems).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
+        else {
+          val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+          Source.failed(new IOException(s"statusCode: $statusCode"))
+        }
+      }.mapAsync(1)(deserialize)
+  }
+
   override def snapshotForMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
@@ -298,26 +328,6 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }.mapAsync(1)(deserialize)
-  }
-
-  override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
-    val pkey = partitionKeyResolver.resolve(persistenceId, sequenceNr)
-    val skey = sortKeyResolver.resolve(persistenceId, sequenceNr)
-    val req = new DeleteItemRequest()
-      .withTableName(tableName).withKey(
-        Map(
-          columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
-          columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString)
-        ).asJava
-      )
-    Source.single(req).via(streamWriteClient.deleteItemFlow).flatMapConcat { response =>
-      if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
-        Source.single(())
-      else {
-        val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
-        Source.failed(new IOException(s"statusCode: $statusCode"))
-      }
-    }
   }
 
   override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any)(implicit

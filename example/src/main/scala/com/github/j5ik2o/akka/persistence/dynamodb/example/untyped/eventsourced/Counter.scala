@@ -3,11 +3,9 @@ package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 import akka.actor.{ ActorLogging, ActorRef, Props }
 import akka.persistence.{
   DeleteMessagesSuccess,
-  DeleteSnapshotFailure,
   DeleteSnapshotSuccess,
   PersistentActor,
   RecoveryCompleted,
-  SaveSnapshotFailure,
   SaveSnapshotSuccess,
   SnapshotOffer
 }

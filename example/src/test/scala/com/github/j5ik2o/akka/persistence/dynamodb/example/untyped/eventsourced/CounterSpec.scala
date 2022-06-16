@@ -3,11 +3,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ ImplicitSender, TestKit, TestProbe }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.{
-  GetValueReply,
-  SaveSnapshot
-}
-import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterSpec.config
+import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.GetValueReply
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures

@@ -39,6 +39,9 @@ class CounterSpec
     with ScalaFutures
     with DynamoDBSpecSupport {
 
+  val testTimeFactor: Int = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toInt
+  logger.debug(s"testTimeFactor = $testTimeFactor")
+
   implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
   override protected lazy val dynamoDBPort: Int = CounterSpec.dynamoDBPort
@@ -75,6 +78,9 @@ class CounterSpec
         val reply = testProbe.expectMsgType[GetValueReply](3.seconds)
         assert(reply.n == 4)
         counterRef ! CounterProtocol.DeleteSnapshot(reply.seqNr)
+
+        Thread.sleep(1000 * testTimeFactor)
+
         killActors(counterRef)
       }
 

@@ -3,7 +3,11 @@ package com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ ImplicitSender, TestKit, TestProbe }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
-import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.GetValueReply
+import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterProtocol.{
+  GetValueReply,
+  SaveSnapshot
+}
+import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.CounterSpec.config
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -75,11 +79,17 @@ class CounterSpec
         counterRef ! CounterProtocol.Increment // seqNr = 4, 4, saveSnapshot(4)
 
         counterRef ! CounterProtocol.GetValue(testProbe.ref)
-        val reply = testProbe.expectMsgType[GetValueReply](3.seconds)
+        val reply = testProbe.expectMsgType[CounterProtocol.GetValueReply]((3 * testTimeFactor).seconds)
         assert(reply.n == 4)
-        counterRef ! CounterProtocol.DeleteSnapshot(reply.seqNr)
 
-        Thread.sleep(1000 * testTimeFactor)
+        counterRef ! CounterProtocol.SaveSnapshot(testProbe.ref)
+        testProbe.expectMsgType[CounterProtocol.SaveSnapshotReply]((3 * testTimeFactor).seconds)
+
+        counterRef ! CounterProtocol.DeleteMessage(reply.seqNr, testProbe.ref)
+        testProbe.expectMsgType[CounterProtocol.DeleteMessageReply]((3 * testTimeFactor).seconds)
+
+        counterRef ! CounterProtocol.DeleteSnapshot(reply.seqNr, testProbe.ref)
+        testProbe.expectMsgType[CounterProtocol.DeleteSnapshotReply]((3 * testTimeFactor).seconds)
 
         killActors(counterRef)
       }
@@ -87,8 +97,8 @@ class CounterSpec
       {
         val counterRef = system.actorOf(Counter.props(actorId))
         counterRef ! CounterProtocol.GetValue(testProbe.ref)
-        val reply = testProbe.expectMsgType[GetValueReply](3.seconds)
-        assert(reply.n == 4)
+        val reply = testProbe.expectMsgType[GetValueReply]((3 * testTimeFactor).seconds)
+        assert(reply.n == 0)
       }
     }
   }

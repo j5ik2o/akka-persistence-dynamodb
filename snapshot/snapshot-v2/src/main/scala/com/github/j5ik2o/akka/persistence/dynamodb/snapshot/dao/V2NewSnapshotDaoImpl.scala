@@ -428,6 +428,7 @@ private[dao] final class V2NewSnapshotDaoImpl(
             Map(
               tableName -> rows.map { row =>
                 val pkey = partitionKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
+                val skey = sortKeyResolver.resolve(row.persistenceId, row.sequenceNumber)
                 WriteRequest
                   .builder().deleteRequest(
                     DeleteRequest
@@ -436,7 +437,8 @@ private[dao] final class V2NewSnapshotDaoImpl(
                         Map(
                           columnsDefConfig.partitionKeyColumnName -> AttributeValue
                             .builder()
-                            .s(pkey.asString).build()
+                            .s(pkey.asString).build(),
+                          columnsDefConfig.sortKeyColumnName -> AttributeValue.builder().s(skey.asString).build()
                         ).asJava
                       ).build()
                   ).build()

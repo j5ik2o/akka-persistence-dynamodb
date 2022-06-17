@@ -6,8 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import org.slf4j.bridge.SLF4JBridgeHandler
 import org.slf4j.{ Logger, LoggerFactory }
 
-import scala.concurrent.duration._
-
 trait DynamoDBSpecSupport
     extends Matchers
     with Eventually

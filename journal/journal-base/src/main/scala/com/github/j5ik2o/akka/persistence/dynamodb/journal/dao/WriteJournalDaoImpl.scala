@@ -166,28 +166,11 @@ class WriteJournalDaoImpl(
     journalRowDriver
       .getJournalRows(persistenceId, toSequenceNr, deleted = false)
       .flatMapConcat { journalRows =>
-        putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-      }
-      .flatMapConcat { case (result, journalRows) =>
-        if (!pluginConfig.softDeleted) {
+        if (pluginConfig.softDeleted) {
+          putMessages(journalRows.map(_.withDeleted))
+        } else {
           deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-//          journalRowDriver
-//            .highestSequenceNr(persistenceId, deleted = Some(true))
-//            .flatMapConcat {
-//              case Some(highestMarkedSequenceNr) =>
-//                journalRowDriver
-//                  .getJournalRows(
-//                    persistenceId,
-//                    SequenceNumber(highestMarkedSequenceNr),
-//                    deleted = true
-//                  ).flatMapConcat { journalRows =>
-//                    deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-//                  }
-//              case None =>
-//                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-//            }
-        } else
-          Source.single(result)
+        }
       }.withAttributes(logLevels)
   }
 

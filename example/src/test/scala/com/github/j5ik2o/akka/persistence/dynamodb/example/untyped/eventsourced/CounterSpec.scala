@@ -21,7 +21,7 @@ object CounterSpec {
   val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
   val legacyJournalMode    = false
-  val softDelete           = true
+  val softDelete           = false
 
   val config: Config = ConfigHelper
     .config(
@@ -132,36 +132,35 @@ class CounterSpec
         ).withLimit(limit)
       val result = dynamoDBClient.query(queryRequest)
 
-      if (result.getCount > 0) {
-        val items = result.getItems.asScala.map(_.asScala).toVector
-        items.foreach { item =>
-          println(
-            Seq(
-              "pkey"           -> item("pkey").toString,
-              "skey"           -> item("skey").toString,
-              "persistence-id" -> item("persistence-id").toString,
-              "sequence-nr"    -> item("sequence-nr").toString,
-              "deleted"        -> item("deleted").toString
-            ).map { case (k, v) => s"$k = $v" }.mkString("[\n", ", \n", "\n]")
-          )
-        }
+      assert(result.getCount > 0)
+      val items = result.getItems.asScala.map(_.asScala).toVector
+      items.foreach { item =>
+        println(
+          Seq(
+            "pkey"           -> item("pkey").toString,
+            "skey"           -> item("skey").toString,
+            "persistence-id" -> item("persistence-id").toString,
+            "sequence-nr"    -> item("sequence-nr").toString,
+            "deleted"        -> item("deleted").toString
+          ).map { case (k, v) => s"$k = $v" }.mkString("[\n", ", \n", "\n]")
+        )
+      }
 
-        if (!CounterSpec.softDelete) {
-          assert(items.size == 1)
-          assert(items(0)("persistence-id").getS == Counter.pid(actorId))
-          assert(items(0)("sequence-nr").getN.toInt == 4)
-          assert(items(0)("deleted").getBOOL == false)
-        } else {
-          assert(items.size == 4)
-          items.zipWithIndex.foreach { case (item, idx) =>
-            assert(item("persistence-id").getS == Counter.pid(actorId))
-            assert(item("sequence-nr").getN.toInt == idx + 1)
-            idx + 1 match {
-              case n if 1 <= n && n <= 3 =>
-                assert(item("deleted").getBOOL == true)
-              case 4 =>
-                assert(item("deleted").getBOOL == false)
-            }
+      if (!CounterSpec.softDelete) {
+        assert(items.size == 1)
+        assert(items(0)("persistence-id").getS == Counter.pid(actorId))
+        assert(items(0)("sequence-nr").getN.toInt == 4)
+        assert(items(0)("deleted").getBOOL == false)
+      } else {
+        assert(items.size == 4)
+        items.zipWithIndex.foreach { case (item, idx) =>
+          assert(item("persistence-id").getS == Counter.pid(actorId))
+          assert(item("sequence-nr").getN.toInt == idx + 1)
+          idx + 1 match {
+            case n if 1 <= n && n <= 3 =>
+              assert(item("deleted").getBOOL == true)
+            case 4 =>
+              assert(item("deleted").getBOOL == false)
           }
         }
       }

@@ -25,6 +25,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginC
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -38,11 +39,10 @@ class WriteJournalDaoImpl(
     val ec: ExecutionContext,
     system: ActorSystem
 ) extends JournalDaoWithUpdates
-    with DaoSupport {
+    with DaoSupport
+    with LoggingSupport {
 
   implicit val mat: Materializer = SystemMaterializer(system).materializer
-
-  LoggerFactory.getLogger(getClass)
 
   private val queueBufferSize: Int  = if (pluginConfig.queueEnable) pluginConfig.queueBufferSize else 0
   private val queueParallelism: Int = if (pluginConfig.queueEnable) pluginConfig.queueParallelism else 0
@@ -168,21 +168,25 @@ class WriteJournalDaoImpl(
       .getJournalRows(persistenceId, toSequenceNr, deleted = false)
       .flatMapConcat { journalRows =>
         putMessages(journalRows.map(_.withDeleted)).map(result => (result, journalRows))
-      }.flatMapConcat { case (result, journalRows) =>
+      }
+      .flatMapConcat { case (result, journalRows) =>
         if (!pluginConfig.softDeleted) {
-          journalRowDriver
-            .highestSequenceNr(persistenceId, deleted = Some(true))
-            .flatMapConcat {
-              case Some(highestMarkedSequenceNr) =>
-                journalRowDriver
-                  .getJournalRows(
-                    persistenceId,
-                    SequenceNumber(highestMarkedSequenceNr - 1),
-                    deleted = false
-                  ).flatMapConcat { journalRows => deleteBy(persistenceId, journalRows.map(_.sequenceNumber)) }
-              case None =>
-                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
-            }
+          deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+//          journalRowDriver
+//            .highestSequenceNr(persistenceId, deleted = Some(true))
+//            .flatMapConcat {
+//              case Some(highestMarkedSequenceNr) =>
+//                journalRowDriver
+//                  .getJournalRows(
+//                    persistenceId,
+//                    SequenceNumber(highestMarkedSequenceNr),
+//                    deleted = true
+//                  ).flatMapConcat { journalRows =>
+//                    deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+//                  }
+//              case None =>
+//                deleteBy(persistenceId, journalRows.map(_.sequenceNumber))
+//            }
         } else
           Source.single(result)
       }.withAttributes(logLevels)

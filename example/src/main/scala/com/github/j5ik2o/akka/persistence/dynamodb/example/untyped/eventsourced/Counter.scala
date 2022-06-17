@@ -43,6 +43,7 @@ object CounterProtocol {
 
 object Counter {
 
+  def pid(id: UUID): String  = s"counter-$id"
   def props(id: UUID): Props = Props(new Counter(id))
 
 }
@@ -50,7 +51,7 @@ object Counter {
 final class Counter(id: UUID) extends PersistentActor with ActorLogging {
   private var state: State = State(0)
 
-  override def persistenceId: String = s"counter-$id"
+  override def persistenceId: String = Counter.pid(id)
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, offeredSnapshot: State) =>
@@ -77,26 +78,29 @@ final class Counter(id: UUID) extends PersistentActor with ActorLogging {
       replyTo ! GetValueReply(state.n, lastSequenceNr)
 
     case CounterProtocol.SaveSnapshot(replyTo) =>
+      log.info(s"SaveSnapshot($replyTo)")
       saveSnapshot(state)
       context.become(waitingSaveSnapshot(replyTo))
 
     case CounterProtocol.DeleteMessage(toSeqNr, replyTo) =>
+      log.info(s"DeleteMessage($toSeqNr, $replyTo)")
       deleteMessages(toSeqNr)
       context.become(waitingDeleteMessage(replyTo))
 
     case CounterProtocol.DeleteSnapshot(toSeqNr, replyTo) =>
+      log.info(s"DeleteSnapshot($toSeqNr, $replyTo)")
       deleteSnapshot(toSeqNr)
       context.become(waitingDeleteSnapshot(replyTo))
 
   }
 
-  def waitingSaveSnapshot(replyTo: ActorRef): Receive = { case SaveSnapshotSuccess(metadata) =>
+  private def waitingSaveSnapshot(replyTo: ActorRef): Receive = { case SaveSnapshotSuccess(metadata) =>
     log.info(s"SaveSnapshotSuccess($metadata)")
     replyTo ! CounterProtocol.SaveSnapshotReply()
     context.unbecome()
   }
 
-  def waitingDeleteMessage(replyTo: ActorRef): Receive = { case DeleteMessagesSuccess(toSeqNr) =>
+  private def waitingDeleteMessage(replyTo: ActorRef): Receive = { case DeleteMessagesSuccess(toSeqNr) =>
     log.info(s"DeleteMessagesSuccess($toSeqNr)")
     replyTo ! CounterProtocol.DeleteMessageReply()
     context.unbecome()

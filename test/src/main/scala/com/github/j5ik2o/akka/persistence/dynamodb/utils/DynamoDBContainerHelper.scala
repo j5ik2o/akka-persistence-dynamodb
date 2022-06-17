@@ -253,6 +253,8 @@ trait DynamoDBContainerHelper {
     }
   }
 
+  val GetJournalRowsIndexName = "GetJournalRowsIndex"
+
   protected def createJournalTable(): Unit = {
     val listTablesResult = dynamoDBClient.listTables(2)
     if (!listTablesResult.getTableNames.asScala.exists(_.contains(journalTableName))) {

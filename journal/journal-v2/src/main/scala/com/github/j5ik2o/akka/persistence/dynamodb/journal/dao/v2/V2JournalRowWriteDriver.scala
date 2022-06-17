@@ -99,16 +99,16 @@ final class V2JournalRowWriteDriver(
 
   override def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] =
     Flow[PersistenceIdWithSeqNr].flatMapConcat { persistenceIdWithSeqNr =>
+      val pkey =
+        partitionKeyResolver
+          .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
+      val skey =
+        sortKeyResolver.resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
       val deleteRequest = DeleteItemRequest
         .builder().key(
           Map(
-            pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
-              .builder()
-              .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
-            pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
-              .builder().n(
-                persistenceIdWithSeqNr.sequenceNumber.asString
-              ).build()
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue.builder().s(pkey).build(),
+            pluginConfig.columnsDefConfig.sortKeyColumnName      -> AttributeValue.builder().s(skey).build()
           ).asJava
         ).build()
       Source.single(deleteRequest).via(streamClient.deleteItemFlow).flatMapConcat { response =>
@@ -230,18 +230,18 @@ final class V2JournalRowWriteDriver(
         else
           Source
             .single(persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
+              val pkey = partitionKeyResolver
+                .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
+              val skey = sortKeyResolver
+                .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
               WriteRequest
                 .builder().deleteRequest(
                   DeleteRequest
                     .builder().key(
                       Map(
-                        pluginConfig.columnsDefConfig.persistenceIdColumnName -> AttributeValue
-                          .builder()
-                          .s(persistenceIdWithSeqNr.persistenceId.asString).build(),
-                        pluginConfig.columnsDefConfig.sequenceNrColumnName -> AttributeValue
-                          .builder().n(
-                            persistenceIdWithSeqNr.sequenceNumber.asString
-                          ).build()
+                        pluginConfig.columnsDefConfig.partitionKeyColumnName -> AttributeValue
+                          .builder().s(pkey).build(),
+                        pluginConfig.columnsDefConfig.sortKeyColumnName -> AttributeValue.builder().s(skey).build()
                       ).asJava
                     ).build()
                 ).build()
@@ -270,7 +270,7 @@ final class V2JournalRowWriteDriver(
           (journalRow, pkey, skey)
         }
         logger.debug(
-          s"journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
+          s"multiPutJournalRowsFlow: journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
         )
         require(
           journalRowWithPKeyWithSKeys.map { case (_, p, s) => (p, s) }.toSet.size == journalRows.size,

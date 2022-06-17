@@ -140,7 +140,7 @@ final class V1JournalRowWriteDriver(
           (journalRow, pkey, skey)
         }
         logger.debug(
-          s"journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
+          s"multiPutJournalRowsFlow: journalRowWithPKeyWithSKeys = ${journalRowWithPKeyWithSKeys.mkString("\n", ",\n", "\n")}"
         )
         require(
           journalRowWithPKeyWithSKeys.map { case (_, p, s) => (p, s) }.toSet.size == journalRows.size,
@@ -205,14 +205,16 @@ final class V1JournalRowWriteDriver(
         else {
           Source
             .single(persistenceIdWithSeqNrs.map { persistenceIdWithSeqNr =>
+              val pkey = partitionKeyResolver
+                .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
+              val skey =
+                sortKeyResolver
+                  .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
               new WriteRequest().withDeleteRequest(
                 new DeleteRequest().withKey(
                   Map(
-                    pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
-                      .withS(persistenceIdWithSeqNr.persistenceId.asString),
-                    pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
-                      persistenceIdWithSeqNr.sequenceNumber.asString
-                    )
+                    pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey),
+                    pluginConfig.columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey)
                   ).asJava
                 )
               )
@@ -231,14 +233,15 @@ final class V1JournalRowWriteDriver(
 
   override def singleDeleteJournalRowFlow: Flow[PersistenceIdWithSeqNr, Long, NotUsed] = {
     Flow[PersistenceIdWithSeqNr].flatMapConcat { persistenceIdWithSeqNr =>
+      val pkey = partitionKeyResolver
+        .resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
+      val skey =
+        sortKeyResolver.resolve(persistenceIdWithSeqNr.persistenceId, persistenceIdWithSeqNr.sequenceNumber).asString
       val deleteRequest = new DeleteItemRequest()
         .withKey(
           Map(
-            pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue()
-              .withS(persistenceIdWithSeqNr.persistenceId.asString),
-            pluginConfig.columnsDefConfig.sequenceNrColumnName -> new AttributeValue().withN(
-              persistenceIdWithSeqNr.sequenceNumber.asString
-            )
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey),
+            pluginConfig.columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey)
           ).asJava
         )
       Source.single(deleteRequest).via(streamClient.deleteItemFlow).flatMapConcat { response =>

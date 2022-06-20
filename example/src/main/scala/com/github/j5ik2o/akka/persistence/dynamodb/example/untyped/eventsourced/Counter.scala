@@ -43,12 +43,12 @@ object CounterProtocol {
 
 object Counter {
 
-  def pid(id: UUID): String  = s"counter-$id"
-  def props(id: UUID): Props = Props(new Counter(id))
+  def pid(id: String): String  = s"counter-$id"
+  def props(id: String): Props = Props(new Counter(id))
 
 }
 
-final class Counter(id: UUID) extends PersistentActor with ActorLogging {
+final class Counter(id: String) extends PersistentActor with ActorLogging {
   private var state: State = State(0)
 
   override def persistenceId: String = Counter.pid(id)

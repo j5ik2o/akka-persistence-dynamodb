@@ -8,7 +8,6 @@ Status of This Document: [WIP]
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb?ref=badge_shield)
 
-
 `j5ik2o/akka-persistence-dynamodb` is a plugin for akka-persistence.
 You can persist your Actor's state to `AWS DynamoDB` without having to worry about detailed persistence techniques.
 
@@ -20,12 +19,13 @@ The plugin features the following.
 - [Durable state](https://doc.akka.io/docs/akka/current/typed/index-persistence-durable-state.html)
   - Durable State Store Plugin
 
-
 ## Sitemap
 
 ```{toctree}
 ---
 maxdepth: 2
 ---
+overview.md
 getting-started.md
+customize.md
 ```

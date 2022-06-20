@@ -48,6 +48,78 @@ Since version 1.7, the plugin have been split by AWS SDK version. There are no c
 
 ### Journal Plugin
 
+#### Create Table
+
+Create the table using the JSON file under `tools` directory.
+
+```shell
+$ aws dynamodb create-table --cli-input-json file://./tools/journal-table.json
+```
+
+#### Preparing for application.conf
+
+Please add the following settings to your `application.conf`.
+
+```hocon
+akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
+```
+
+If you use the v1 module, the following configuration is required.
+
+```hocon
+j5ik2o.dynamo-db-journal {
+  dynamo-db-client.client-version = "v1"
+}
+```
+
 ### Snapshot Store Plugin
 
+#### Create Table
+
+Create the table using the JSON file under `tools` directory.
+
+```shell
+$ aws dynamodb create-table --cli-input-json file://./tools/snapshot-table.json
+```
+
+#### Preparing for application.conf
+
+Please add the following settings to your `application.conf`.
+
+```hocon
+akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
+```
+
+If you use the v1 module, the following configuration is required.
+
+```hocon
+j5ik2o.dynamo-db-snapshot {
+  dynamo-db-client.client-version = "v1"
+}
+```
+
 ### State Store Plugin
+
+#### Create Table
+
+Create the table using the JSON file under `tools` directory.
+
+```shell
+$ aws dynamodb create-table --cli-input-json file://./tools/state-table.json
+```
+
+#### Preparing for application.conf
+
+Please add the following settings to your `application.conf`.
+
+```hocon
+akka.persistence.state.plugin = "j5ik2o.dynamo-db-state"
+```
+
+If you use the v1 module, the following configuration is required.
+
+```hocon
+j5ik2o.dynamo-db-state {
+  dynamo-db-client.client-version = "v1"
+}
+```

@@ -149,7 +149,7 @@ j5ik2o.dynamo-db-journal {
 }
 ```
 
-`shard-count` is the logical number of shards.
+`shard-count` is the logical number of shards. default value is `64`.
 
 `partition-key-resolver-class-name` specifies the implementation class that generates pkey from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
 
@@ -170,6 +170,15 @@ j5ik2o.dynamo-db-journal {
   - `skey = ${persistenceId.body}-${sequenceNumber}`
   - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
 
+If you need, set up your own implementation.
+
+```
+j5ik2o.dynamo-db-journal {
+  partition-key-resolver-class-name = "your class name(fqcn)"
+  sort-key-resolver-class-name = "your class name(fqcn)"
+}
+```
+
 ### Snapshot
 
 ```
@@ -180,7 +189,7 @@ j5ik2o.dynamo-db-snapshot {
 }
 ```
 
-`shard-count` is the logical number of shards.
+`shard-count` is the logical number of shards. default value is `64`.
 
 `partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. 
 
@@ -191,12 +200,6 @@ j5ik2o.dynamo-db-snapshot {
   - `pkey = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.
     
-You may also set up your own implementation.
-
-```
-partition-key-resolver-class-name = "your class name(fqcn)"
-```
-
 `sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use.
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr`
@@ -206,10 +209,13 @@ partition-key-resolver-class-name = "your class name(fqcn)"
   - `skey = ${persistenceId.body}-${sequenceNumber}`
   - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
     
-You may also set up your own implementation.
+If you need, set up your own implementation.
 
 ```
-partition-key-resolver-class-name = "your class name(fqcn)"
+j5ik2o.dynamo-db-snapshot {
+  partition-key-resolver-class-name = "your class name(fqcn)"
+  sort-key-resolver-class-name = "your class name(fqcn)"
+}
 ```
 
 ```{admonition} Data images
@@ -256,3 +262,11 @@ There are one standard implementations as follows. You may also set up your own 
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased`
   - This is the same implementation as Journal or Snapshot.
+
+If you need, set up your own implementation.
+
+```
+j5ik2o.dynamo-db-state {
+  partition-key-resolver-class-name = "your class name(fqcn)"
+}
+```

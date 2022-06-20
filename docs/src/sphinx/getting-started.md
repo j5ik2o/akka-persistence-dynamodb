@@ -60,13 +60,13 @@ $ aws dynamodb create-table --cli-input-json file://./tools/journal-table.json
 
 Please add the following settings to your `application.conf`.
 
-```hocon
+```
 akka.persistence.journal.plugin = "j5ik2o.dynamo-db-journal"
 ```
 
 If you use the v1 module, the following configuration is required.
 
-```hocon
+```
 j5ik2o.dynamo-db-journal {
   dynamo-db-client.client-version = "v1"
 }
@@ -86,13 +86,13 @@ $ aws dynamodb create-table --cli-input-json file://./tools/snapshot-table.json
 
 Please add the following settings to your `application.conf`.
 
-```hocon
+```
 akka.persistence.snapshot-store.plugin = "j5ik2o.dynamo-db-snapshot"
 ```
 
 If you use the v1 module, the following configuration is required.
 
-```hocon
+```
 j5ik2o.dynamo-db-snapshot {
   dynamo-db-client.client-version = "v1"
 }
@@ -112,14 +112,23 @@ $ aws dynamodb create-table --cli-input-json file://./tools/state-table.json
 
 Please add the following settings to your `application.conf`.
 
-```hocon
+```
 akka.persistence.state.plugin = "j5ik2o.dynamo-db-state"
 ```
 
 If you use the v1 module, the following configuration is required.
 
-```hocon
+```
 j5ik2o.dynamo-db-state {
   dynamo-db-client.client-version = "v1"
 }
 ```
+
+## Persistent Actor Implementation
+
+See below for an example implementation of a persistent actor by using akka typed. Note that akka classic is not recommended.
+
+- [Event Sourced](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/eventsourced)
+- [Durable State](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate)
+
+Please also see [the official documentation](https://doc.akka.io/docs/akka/current/typed/persistence.html).

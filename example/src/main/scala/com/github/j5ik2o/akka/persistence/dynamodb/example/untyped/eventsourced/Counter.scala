@@ -16,7 +16,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.example.untyped.eventsourced.
   ValueAdded
 }
 
-
 object CounterProtocol {
   sealed trait Command extends CborSerializable
 

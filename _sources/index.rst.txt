@@ -2,6 +2,7 @@ j5ik2o/akka-persistence-dynamodb for AWS DynamoDB
 =================================================
 
 `j5ik2o/akka-persistence-dynamodb` is a plugin for akka-persistence.
+You can persist your Actor's state to `AWS DynamoDB` without having to worry about detailed persistence techniques.
 
 The plugin features the following.
 
@@ -22,4 +23,3 @@ Sitemap
   :maxdepth: 2
 
   getting-started.md
-  test.md

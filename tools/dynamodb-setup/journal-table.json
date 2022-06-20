@@ -56,22 +56,6 @@
         "ReadCapacityUnits": 10,
         "WriteCapacityUnits": 10
       }
-    },
-    {
-      "IndexName": "TagsIndex",
-      "KeySchema": [
-        {
-          "AttributeName": "tags",
-          "KeyType": "HASH"
-        }
-      ],
-      "Projection": {
-        "ProjectionType": "ALL"
-      },
-      "ProvisionedThroughput": {
-        "ReadCapacityUnits": 10,
-        "WriteCapacityUnits": 10
-      }
     }
   ],
   "StreamSpecification": {

@@ -224,15 +224,6 @@ trait DynamoDBContainerHelper {
         ).withGlobalSecondaryIndexes(
           Seq(
             new GlobalSecondaryIndex()
-              .withIndexName("TagsIndex").withKeySchema(
-                Seq(
-                  new KeySchemaElement().withAttributeName("tags").withKeyType(KeyType.HASH)
-                ).asJava
-              ).withProjection(new Projection().withProjectionType(ProjectionType.ALL))
-              .withProvisionedThroughput(
-                new ProvisionedThroughput().withReadCapacityUnits(10L).withWriteCapacityUnits(10L)
-              ),
-            new GlobalSecondaryIndex()
               .withIndexName("GetJournalRowsIndex").withKeySchema(
                 Seq(
                   new KeySchemaElement().withAttributeName("persistence-id").withKeyType(KeyType.HASH),

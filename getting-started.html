@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+2-1027737c+20220620-1247-SNAPSHOT documentation</title>
+  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+2-1027737c+20220620-1256-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -43,6 +43,12 @@
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configurations">Configurations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#journal-plugin">Journal Plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#snapshot-store-plugin">Snapshot Store Plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#state-store-plugin">State Store Plugin</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -76,6 +82,10 @@
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h2>
 <p>Add the following to your sbt build (2.12.x, 2.13.x):</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The plugin uses the AWS SDK to access DynamoDB. The plugin has separate modules for each AWS SDK, so please decide on the version of the module you want to use. We recommend the module for AWS SDK v2.</p>
+</div>
 <ul class="simple">
 <li><p>if you use event sourced</p></li>
 </ul>
@@ -104,6 +114,18 @@
 <p class="admonition-title">Note</p>
 <p>Since version 1.7, the plugin have been split by AWS SDK version. There are no changes to the configuration file specifications. Currently used configuration files can be used as they are.</p>
 </div>
+</section>
+<section id="configurations">
+<h2>Configurations<a class="headerlink" href="#configurations" title="Permalink to this heading">¶</a></h2>
+<section id="journal-plugin">
+<h3>Journal Plugin<a class="headerlink" href="#journal-plugin" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="snapshot-store-plugin">
+<h3>Snapshot Store Plugin<a class="headerlink" href="#snapshot-store-plugin" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="state-store-plugin">
+<h3>State Store Plugin<a class="headerlink" href="#state-store-plugin" title="Permalink to this heading">¶</a></h3>
+</section>
 </section>
 </section>
 

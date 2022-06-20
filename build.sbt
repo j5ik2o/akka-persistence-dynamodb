@@ -348,11 +348,12 @@ lazy val example = (project in file("example"))
   )
 
 lazy val docs = (project in file("docs"))
-  .enablePlugins(SphinxPlugin, GhpagesPlugin)
+  .enablePlugins(SphinxPlugin, SiteScaladocPlugin, GhpagesPlugin, PreprocessPlugin)
   .settings(baseSettings)
   .settings(
     name := "documents",
-    git.remoteRepo := scmInfo.value.get.connection.replace("scm:git:", "")
+    git.remoteRepo := "git@github.com:j5ik2o/akka-persistence-dynamodb.git",
+    ghpagesNoJekyll := true
   )
 
 lazy val root = (project in file("."))

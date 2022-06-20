@@ -126,7 +126,7 @@ j5ik2o.dynamo-db-state {
 
 ## Persistent Actor Implementation
 
-See below for an example implementation of a persistent actor. Note that akka classic is not recommended.
+See below for an example implementation of a persistent actor by using akka typed. Note that akka classic is not recommended.
 
 - [Event Sourced](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/eventsourced)
 - [Durable State](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate)

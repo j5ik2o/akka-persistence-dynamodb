@@ -6,4 +6,5 @@ Sitemap
 .. toctree::
   :maxdepth: 2
 
+  getting-started.md
   test.md

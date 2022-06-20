@@ -26,7 +26,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginB
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import org.slf4j.LoggerFactory
 
 import java.io.IOException
 import scala.collection.mutable.ArrayBuffer
@@ -55,8 +54,6 @@ final class V1JournalRowReadDriver(
 
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
-
-  LoggerFactory.getLogger(getClass)
 
   override def getJournalRows(
       persistenceId: PersistenceId,

@@ -20,6 +20,13 @@ libraryDependencies += Seq(
 )
 ```
 
+```{figure} ./images/tag-list.png
+:height: 250px
+:name: tag-list
+
+Choose from the tag list in the Github repository
+```
+
 The Journal and Snapshot plugins are independent and can be used separately. For example, you can use DynamoDB for Journal and another plugin for Snapshot. And vice versa.
 
 - if you use durable state

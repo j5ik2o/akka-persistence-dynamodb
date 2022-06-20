@@ -131,6 +131,4 @@ See below for an example implementation of a persistent actor. Note that akka cl
 - [Event Sourced](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/eventsourced)
 - [Durable State](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate)
 
-Please also see the official documentation.
-
-https://doc.akka.io/docs/akka/current/typed/persistence.html
+Please also see [the official documentation](https://doc.akka.io/docs/akka/current/typed/persistence.html).

@@ -37,7 +37,6 @@ lazy val baseSettings = Seq(
       "scm:git@github.com:j5ik2o/akka-persistence-dynamodb.git"
     )
   ),
-  git.remoteRepo := scmInfo.value.get.connection.replace("scm:git:", ""),
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(
     Versions.scala212Version,
@@ -352,7 +351,8 @@ lazy val docs = (project in file("docs"))
   .enablePlugins(SphinxPlugin, GhpagesPlugin)
   .settings(baseSettings)
   .settings(
-    name := "documents"
+    name := "documents",
+    git.remoteRepo := scmInfo.value.get.connection.replace("scm:git:", "")
   )
 
 lazy val root = (project in file("."))

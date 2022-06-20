@@ -1,6 +1,6 @@
 .. title:: j5ik2o/akka-persistence-dynamodb for AWS DynamoDB
 
-.. mdinclude:: ./abstraction.md
+.. include:: ./abstraction.md
 
 Sitemap
 =======

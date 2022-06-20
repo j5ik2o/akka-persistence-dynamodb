@@ -17,7 +17,13 @@ jobs:
       with:
         java-version: "adopt@1.8"
     - uses: coursier/cache-action@v6
-    - uses: olafurpg/setup-gpg@v3
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+        architecture: x64
+    - name: Install sphinx
+      run: pip install -r docs/requirements.txt
     - name: sbt makeSite
       run: sbt 'docs/makeSite'
     - name: Deploy

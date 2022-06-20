@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+14-d4a3df3d+20220620-1825-SNAPSHOT documentation</title>
+  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+14-d4a3df3d+20220620-1833-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -71,6 +71,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#persistent-actor-implementation">Persistent Actor Implementation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="customize.html">Customize</a><ul>
@@ -192,13 +193,13 @@
 <section id="preparing-for-application-conf">
 <h4>Preparing for application.conf<a class="headerlink" href="#preparing-for-application-conf" title="Permalink to this heading">¶</a></h4>
 <p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.journal.plugin = &quot;j5ik2o.dynamo-db-journal&quot;
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">akka</span><span class="o">.</span><span class="n">persistence</span><span class="o">.</span><span class="n">journal</span><span class="o">.</span><span class="n">plugin</span> <span class="o">=</span> <span class="s2">&quot;j5ik2o.dynamo-db-journal&quot;</span>
 </pre></div>
 </div>
 <p>If you use the v1 module, the following configuration is required.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-journal {
-  dynamo-db-client.client-version = &quot;v1&quot;
-}
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
+  <span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">client</span><span class="o">-</span><span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
@@ -215,13 +216,13 @@
 <section id="id2">
 <h4>Preparing for application.conf<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
 <p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.snapshot-store.plugin = &quot;j5ik2o.dynamo-db-snapshot&quot;
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">akka</span><span class="o">.</span><span class="n">persistence</span><span class="o">.</span><span class="n">snapshot</span><span class="o">-</span><span class="n">store</span><span class="o">.</span><span class="n">plugin</span> <span class="o">=</span> <span class="s2">&quot;j5ik2o.dynamo-db-snapshot&quot;</span>
 </pre></div>
 </div>
 <p>If you use the v1 module, the following configuration is required.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-snapshot {
-  dynamo-db-client.client-version = &quot;v1&quot;
-}
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">snapshot</span> <span class="p">{</span>
+  <span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">client</span><span class="o">-</span><span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
@@ -238,17 +239,27 @@
 <section id="id4">
 <h4>Preparing for application.conf<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h4>
 <p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.state.plugin = &quot;j5ik2o.dynamo-db-state&quot;
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">akka</span><span class="o">.</span><span class="n">persistence</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">plugin</span> <span class="o">=</span> <span class="s2">&quot;j5ik2o.dynamo-db-state&quot;</span>
 </pre></div>
 </div>
 <p>If you use the v1 module, the following configuration is required.</p>
-<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-state {
-  dynamo-db-client.client-version = &quot;v1&quot;
-}
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">state</span> <span class="p">{</span>
+  <span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">client</span><span class="o">.</span><span class="n">client</span><span class="o">-</span><span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;v1&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
 </section>
+</section>
+<section id="persistent-actor-implementation">
+<h2>Persistent Actor Implementation<a class="headerlink" href="#persistent-actor-implementation" title="Permalink to this heading">¶</a></h2>
+<p>See below for an example implementation of a persistent actor. Note that akka classic is not recommended.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/eventsourced">Event Sourced</a></p></li>
+<li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate">Durable State</a></p></li>
+</ul>
+<p>Please also see the official documentation.</p>
+<p>https://doc.akka.io/docs/akka/current/typed/persistence.html</p>
 </section>
 </section>
 

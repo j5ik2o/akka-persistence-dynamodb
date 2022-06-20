@@ -28,5 +28,10 @@ jobs:
         PGP_SECRET: ${{ secrets.PGP_SECRET }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+    - name: git setting
+      run: |
+        git config --local user.email "82752207+j5ik2o-bot[bot]@users.noreply.github.com"
+        git config --local user.name "j5ik2o-bot[bot]"
+    - run: sbt 'docs/ghpagesPushSite'
     - name: clean up
       run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

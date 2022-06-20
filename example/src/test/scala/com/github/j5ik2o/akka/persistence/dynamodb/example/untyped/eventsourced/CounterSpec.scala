@@ -67,11 +67,13 @@ abstract class BaseCounterSpec(
     super.afterAll()
   }
 
+  def newId(): String = UUID.randomUUID().toString.replace("-", "")
+
   def killActors(actors: ActorRef*): Unit = {
     actors.foreach { actorRef => system.stop(actorRef) }
   }
 
-  def getJournalRows(actorId: UUID, pluginConfig: JournalPluginConfig): QueryResult = {
+  def getJournalRows(actorId: String, pluginConfig: JournalPluginConfig): QueryResult = {
     val persistenceId  = Counter.pid(actorId)
     val fromSequenceNr = 0
     val toSequenceNr   = Long.MaxValue
@@ -104,7 +106,7 @@ abstract class BaseCounterSpec(
   "CounterSpec" - {
     "increment & getValue" in {
       val testProbe = TestProbe()
-      val actorId   = UUID.randomUUID()
+      val actorId   = newId()
 
       {
         val counterRef = system.actorOf(Counter.props(actorId))

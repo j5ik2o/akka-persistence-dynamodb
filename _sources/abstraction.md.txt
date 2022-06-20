@@ -1,1 +1,9 @@
-# Abstraction
+## Abstraction
+
+`j5ik2o/akka-persistence-dynamodb` is a plugin for akka-persistence.
+The plugin features the following.
+
+- `Event sourcing <https://doc.akka.io/docs/akka/current/typed/index-persistence.html>`_
+- `Durable state <https://doc.akka.io/docs/akka/current/typed/index-persistence-durable-state.html>`_
+
+It implements the full akka-persistence-query API and is therefore very useful for implementing DDD-style application models using Akka and Scala for creating reactive applications.

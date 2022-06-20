@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Abstraction &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+2-1027737c+20220620-1156-SNAPSHOT documentation</title>
+  <title>Abstraction &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+2-1027737c+20220620-1158-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -18,9 +18,7 @@
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Getting started" href="getting-started.html" />
-    <link rel="prev" title="Sitemap" href="index.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,8 +39,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Abstraction</a></li>
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing">installing</a></li>
 </ul>
@@ -76,15 +73,19 @@
              
   <section id="abstraction">
 <h1>Abstraction<a class="headerlink" href="#abstraction" title="Permalink to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">j5ik2o/akka-persistence-dynamodb</span></code> is a plugin for akka-persistence.
+The plugin features the following.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Event</span> <span class="pre">sourcing</span> <span class="pre">&lt;https://doc.akka.io/docs/akka/current/typed/index-persistence.html&gt;</span></code>_</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Durable</span> <span class="pre">state</span> <span class="pre">&lt;https://doc.akka.io/docs/akka/current/typed/index-persistence-durable-state.html&gt;</span></code>_</p></li>
+</ul>
+<p>It implements the full akka-persistence-query API and is therefore very useful for implementing DDD-style application models using Akka and Scala for creating reactive applications.</p>
 </section>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="Sitemap" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="getting-started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

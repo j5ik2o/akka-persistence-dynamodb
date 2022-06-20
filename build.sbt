@@ -31,6 +31,13 @@ lazy val baseSettings = Seq(
       url = url("https://blog.j5ik2o.me")
     )
   ),
+  scmInfo := Some(
+    ScmInfo(
+      url("https://github.com/j5ik2o/akka-persistence-dynamodb"),
+      "scm:git@github.com:j5ik2o/akka-persistence-dynamodb.git"
+    )
+  ),
+  git.remoteRepo := scmInfo.value.get.connection.replace("scm:git:", ""),
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(
     Versions.scala212Version,
@@ -341,6 +348,13 @@ lazy val example = (project in file("example"))
     `state-v2`
   )
 
+lazy val docs = (project in file("docs"))
+  .enablePlugins(SphinxPlugin, GhpagesPlugin)
+  .settings(baseSettings)
+  .settings(
+    name := "documents"
+  )
+
 lazy val root = (project in file("."))
   .settings(baseSettings)
   .settings(
@@ -348,6 +362,7 @@ lazy val root = (project in file("."))
     publish / skip := true
   )
   .aggregate(
+    docs,
     test,
     base,
     `base-v1`,

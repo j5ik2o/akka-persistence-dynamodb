@@ -149,14 +149,26 @@ j5ik2o.dynamo-db-journal {
 }
 ```
 
-shard-count is the logical number of shards.
+`shard-count` is the logical number of shards.
 
-There are two standard implementations as follows. You may also set up your own implementation.
+`partition-key-resolver-class-name` specifies the implementation class that generates pkey from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased` (Default)
+  - `pkey = ${persistenceId}-${sequenceNumber % shardCount}`
   - The same `PersistenceId` will be assigned to a different shard if the `Sequence Number` is different. This is a write-specific sharding.
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased`
+  - `pkey = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
+  - e.g) `counter-875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.prefix` is `counter`.
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.
+    
+`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
+
+- `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr`
+  - `skey = $sequenceNumber`
+  - An implementation in which `pkey` is the `Sequence Number`.
+- `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr`
+  - `skey = ${persistenceId.body}-${sequenceNumber}`
+  - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
 
 ### Snapshot
 
@@ -170,28 +182,37 @@ j5ik2o.dynamo-db-snapshot {
 
 `shard-count` is the logical number of shards.
 
-There are two standard implementations as follows. You may also set up your own implementation.
+`partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased` (Default)
+  - `pkey =${persistenceId}-${sequenceNumber % shardCount}`
   - The same `PersistenceId` will be assigned to a different shard if the `Sequence Number` is different. This is a write-specific sharding.
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased`
+  - `pkey = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.
+
+`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
+
+- `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr`
+  - `skey = $sequenceNumber`
+  - An implementation in which `pkey` is the `Sequence Number`.
+- `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr`
+  - `skey = ${persistenceId.body}-${sequenceNumber}`
+  - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
 
 ```{admonition} Data images
 
-#### SequenceNumberBased
+| persistenceId                            | sequence-nr | pkey(SequenceNumberBased)                  | skey(SeqNr)         |
+|:-----------------------------------------|------------:|:-------------------------------------------|:--------------------|
+| counter-875e6ce0425e4d2b8203f3b44b9b531a |           1 | counter-875e6ce0425e4d2b8203f3b44b9b531a-1 | 0000000000000000001 |
+| counter-875e6ce0425e4d2b8203f3b44b9b531a |           2 | counter-875e6ce0425e4d2b8203f3b44b9b531a-2 | 0000000000000000002 |
+| counter-875e6ce0425e4d2b8203f3b44b9b531a |           3 | counter-875e6ce0425e4d2b8203f3b44b9b531a-3 | 0000000000000000003 |
+| counter-875e6ce0425e4d2b8203f3b44b9b531a |           4 | counter-875e6ce0425e4d2b8203f3b44b9b531a-4 | 0000000000000000004 |
+| counter-875e6ce0425e4d2b8203f3b44b9b531a |           5 | counter-875e6ce0425e4d2b8203f3b44b9b531a-5 | 0000000000000000005 |
 
-| persistenceId                            | sequence-nr | pkey                                       | skey                                                 |
-|:-----------------------------------------|------------:|:-------------------------------------------|:-----------------------------------------------------|
-| counter-875e6ce0425e4d2b8203f3b44b9b531a |           1 | counter-875e6ce0425e4d2b8203f3b44b9b531a-1 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000001 |
-| counter-875e6ce0425e4d2b8203f3b44b9b531a |           2 | counter-875e6ce0425e4d2b8203f3b44b9b531a-2 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000002 |
-| counter-875e6ce0425e4d2b8203f3b44b9b531a |           3 | counter-875e6ce0425e4d2b8203f3b44b9b531a-3 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000003 |
-| counter-875e6ce0425e4d2b8203f3b44b9b531a |           4 | counter-875e6ce0425e4d2b8203f3b44b9b531a-4 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000004 |
-| counter-875e6ce0425e4d2b8203f3b44b9b531a |           5 | counter-875e6ce0425e4d2b8203f3b44b9b531a-5 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000005 |
+#### 
 
-#### PersistenceIdBased
-
-| persistenceId                            | sequence-nr | pkey                                             | skey                                                 |
+| persistenceId                            | sequence-nr | pkey(PersistenceIdBased)                         | skey(PersistenceIdWithSeqNr)                         |
 |:-----------------------------------------|------------:|:-------------------------------------------------|:-----------------------------------------------------|
 | counter-a8d46579bc2f4caf8c3b8dc2db984227 |           1 | counter-0000000000000000000000000000000000000803 | a8d46579bc2f4caf8c3b8dc2db984227-0000000000000000001 |
 | counter-a8d46579bc2f4caf8c3b8dc2db984227 |           2 | counter-0000000000000000000000000000000000000803 | a8d46579bc2f4caf8c3b8dc2db984227-0000000000000000002 |

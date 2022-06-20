@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+12-4af626ed-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+12-4af626ed+20220620-1814-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -285,17 +285,35 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>shard-count is the logical number of shards.</p>
-<p>There are two standard implementations as follows. You may also set up your own implementation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards.</p>
+<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates pkey from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased</span></code> (Default)</p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=</span> <span class="pre">${persistenceId}-${sequenceNumber</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
 <li><p>The same <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> will be assigned to a different shard if the <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code> is different. This is a write-specific sharding.</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased</span></code></p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=</span> <span class="pre">${persistenceId.prefix}-${md5(persistenceId.reverse)</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
+<li><p>e.g) <code class="docutils literal notranslate"><span class="pre">counter-875e6ce0425e4d2b8203f3b44b9b531a</span></code>, <code class="docutils literal notranslate"><span class="pre">persistenceId.prefix</span></code> is <code class="docutils literal notranslate"><span class="pre">counter</span></code>.</p></li>
 <li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.</p></li>
+</ul>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">skey</span> <span class="pre">=</span> <span class="pre">$sequenceNumber</span></code></p></li>
+<li><p>An implementation in which <code class="docutils literal notranslate"><span class="pre">pkey</span></code> is the <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">skey</span> <span class="pre">=</span> <span class="pre">${persistenceId.body}-${sequenceNumber}</span></code></p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">persistenceId.body</span></code> as the prefix since <code class="docutils literal notranslate"><span class="pre">shard-count</span></code> may cause multiple <code class="docutils literal notranslate"><span class="pre">persistenceId</span></code>s events to be stored in the same shard.</p></li>
 </ul>
 </li>
 </ul>
@@ -310,65 +328,81 @@
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards.</p>
-<p>There are two standard implementations as follows. You may also set up your own implementation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased</span></code> (Default)</p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=${persistenceId}-${sequenceNumber</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
 <li><p>The same <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> will be assigned to a different shard if the <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code> is different. This is a write-specific sharding.</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased</span></code></p>
 <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=</span> <span class="pre">${persistenceId.prefix}-${md5(persistenceId.reverse)</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
 <li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.</p></li>
+</ul>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">skey</span> <span class="pre">=</span> <span class="pre">$sequenceNumber</span></code></p></li>
+<li><p>An implementation in which <code class="docutils literal notranslate"><span class="pre">pkey</span></code> is the <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">skey</span> <span class="pre">=</span> <span class="pre">${persistenceId.body}-${sequenceNumber}</span></code></p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">persistenceId.body</span></code> as the prefix since <code class="docutils literal notranslate"><span class="pre">shard-count</span></code> may cause multiple <code class="docutils literal notranslate"><span class="pre">persistenceId</span></code>s events to be stored in the same shard.</p></li>
 </ul>
 </li>
 </ul>
 <div class="admonition-data-images admonition">
 <p class="admonition-title">Data images</p>
-<p class="rubric">SequenceNumberBased</p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="text-left head"><p>persistenceId</p></th>
 <th class="text-right head"><p>sequence-nr</p></th>
-<th class="text-left head"><p>pkey</p></th>
-<th class="text-left head"><p>skey</p></th>
+<th class="text-left head"><p>pkey(SequenceNumberBased)</p></th>
+<th class="text-left head"><p>skey(SeqNr)</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a</p></td>
 <td class="text-right"><p>1</p></td>
 <td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a-1</p></td>
-<td class="text-left"><p>875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000001</p></td>
+<td class="text-left"><p>0000000000000000001</p></td>
 </tr>
 <tr class="row-odd"><td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a</p></td>
 <td class="text-right"><p>2</p></td>
 <td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a-2</p></td>
-<td class="text-left"><p>875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000002</p></td>
+<td class="text-left"><p>0000000000000000002</p></td>
 </tr>
 <tr class="row-even"><td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a</p></td>
 <td class="text-right"><p>3</p></td>
 <td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a-3</p></td>
-<td class="text-left"><p>875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000003</p></td>
+<td class="text-left"><p>0000000000000000003</p></td>
 </tr>
 <tr class="row-odd"><td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a</p></td>
 <td class="text-right"><p>4</p></td>
 <td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a-4</p></td>
-<td class="text-left"><p>875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000004</p></td>
+<td class="text-left"><p>0000000000000000004</p></td>
 </tr>
 <tr class="row-even"><td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a</p></td>
 <td class="text-right"><p>5</p></td>
 <td class="text-left"><p>counter-875e6ce0425e4d2b8203f3b44b9b531a-5</p></td>
-<td class="text-left"><p>875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000005</p></td>
+<td class="text-left"><p>0000000000000000005</p></td>
 </tr>
 </tbody>
 </table>
-<p class="rubric">PersistenceIdBased</p>
+<p class="rubric"></p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="text-left head"><p>persistenceId</p></th>
 <th class="text-right head"><p>sequence-nr</p></th>
-<th class="text-left head"><p>pkey</p></th>
-<th class="text-left head"><p>skey</p></th>
+<th class="text-left head"><p>pkey(PersistenceIdBased)</p></th>
+<th class="text-left head"><p>skey(PersistenceIdWithSeqNr)</p></th>
 </tr>
 </thead>
 <tbody>

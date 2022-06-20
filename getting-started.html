@@ -4,9 +4,9 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+6-dbe58b65+20220620-1423-SNAPSHOT documentation</title>
+  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+12-4af626ed-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -19,7 +19,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="j5ik2o/akka-persistence-dynamodb" href="index.html" /> 
+    <link rel="next" title="Customize" href="customize.html" />
+    <link rel="prev" title="Overview" href="overview.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,12 +42,68 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#features">Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="overview.html#programming-language-support">Programming Language Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="overview.html#akka-support">Akka Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="overview.html#aws-dynamodb-client-support">AWS DynamoDB Client Support</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configurations">Configurations</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#journal-plugin">Journal Plugin</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#snapshot-store-plugin">Snapshot Store Plugin</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#state-store-plugin">State Store Plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#journal-plugin">Journal Plugin</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#create-table">Create Table</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#preparing-for-application-conf">Preparing for application.conf</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#snapshot-store-plugin">Snapshot Store Plugin</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Create Table</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Preparing for application.conf</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#state-store-plugin">State Store Plugin</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id3">Create Table</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Preparing for application.conf</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="customize.html">Customize</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="customize.html#modify-plugin-dispatcher">Modify Plugin dispatcher</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#journal">Journal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#snapshot">Snapshot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#state">State</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="customize.html#modify-the-table-name">Modify the table name</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id1">Journal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id2">Snapshot</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="customize.html#id3">State</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="customize.html#modify-the-table-column-names">Modify the table column names</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id4">Journal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id5">Snapshot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id6">State</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="customize.html#modify-the-index-name">Modify the index name</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id7">Journal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id8">Snapshot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id9">State</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="customize.html#modify-write-sharding">Modify Write sharding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id10">Journal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id11">Snapshot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="customize.html#id12">State</a></li>
 </ul>
 </li>
 </ul>
@@ -125,12 +182,72 @@
 <h2>Configurations<a class="headerlink" href="#configurations" title="Permalink to this heading">¶</a></h2>
 <section id="journal-plugin">
 <h3>Journal Plugin<a class="headerlink" href="#journal-plugin" title="Permalink to this heading">¶</a></h3>
+<section id="create-table">
+<h4>Create Table<a class="headerlink" href="#create-table" title="Permalink to this heading">¶</a></h4>
+<p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/journal-table.json
+</pre></div>
+</div>
+</section>
+<section id="preparing-for-application-conf">
+<h4>Preparing for application.conf<a class="headerlink" href="#preparing-for-application-conf" title="Permalink to this heading">¶</a></h4>
+<p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.journal.plugin = &quot;j5ik2o.dynamo-db-journal&quot;
+</pre></div>
+</div>
+<p>If you use the v1 module, the following configuration is required.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-journal {
+  dynamo-db-client.client-version = &quot;v1&quot;
+}
+</pre></div>
+</div>
+</section>
 </section>
 <section id="snapshot-store-plugin">
 <h3>Snapshot Store Plugin<a class="headerlink" href="#snapshot-store-plugin" title="Permalink to this heading">¶</a></h3>
+<section id="id1">
+<h4>Create Table<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
+<p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/snapshot-table.json
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h4>Preparing for application.conf<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h4>
+<p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.snapshot-store.plugin = &quot;j5ik2o.dynamo-db-snapshot&quot;
+</pre></div>
+</div>
+<p>If you use the v1 module, the following configuration is required.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-snapshot {
+  dynamo-db-client.client-version = &quot;v1&quot;
+}
+</pre></div>
+</div>
+</section>
 </section>
 <section id="state-store-plugin">
 <h3>State Store Plugin<a class="headerlink" href="#state-store-plugin" title="Permalink to this heading">¶</a></h3>
+<section id="id3">
+<h4>Create Table<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h4>
+<p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/state-table.json
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h4>Preparing for application.conf<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h4>
+<p>Please add the following settings to your <code class="docutils literal notranslate"><span class="pre">application.conf</span></code>.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>akka.persistence.state.plugin = &quot;j5ik2o.dynamo-db-state&quot;
+</pre></div>
+</div>
+<p>If you use the v1 module, the following configuration is required.</p>
+<div class="highlight-hocon notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-state {
+  dynamo-db-client.client-version = &quot;v1&quot;
+}
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 </section>
@@ -139,7 +256,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="j5ik2o/akka-persistence-dynamodb" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="overview.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="customize.html" class="btn btn-neutral float-right" title="Customize" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+12-4af626ed-SNAPSHOT documentation</title>
+  <title>Overview &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+12-4af626ed-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -16,8 +17,10 @@
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
-    <link rel="index" title="Index" href="#" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="getting-started.html" />
+    <link rel="prev" title="j5ik2o/akka-persistence-dynamodb" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -38,12 +41,12 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="overview.html#features">Features</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="overview.html#programming-language-support">Programming Language Support</a></li>
-<li class="toctree-l3"><a class="reference internal" href="overview.html#akka-support">Akka Support</a></li>
-<li class="toctree-l3"><a class="reference internal" href="overview.html#aws-dynamodb-client-support">AWS DynamoDB Client Support</a></li>
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#features">Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#programming-language-support">Programming Language Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#akka-support">Akka Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#aws-dynamodb-client-support">AWS DynamoDB Client Support</a></li>
 </ul>
 </li>
 </ul>
@@ -121,8 +124,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Index</li>
+      <li>Overview</li>
       <li class="wy-breadcrumbs-aside">
+            <a href="_sources/overview.md.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -130,17 +134,102 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- 
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Permalink to this heading">¶</a></h2>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="text-center head"><p>Product</p></th>
+<th class="text-center head"><p><strong><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb">j5ik2o/akka-persistence-dynamodb</a></strong></p></th>
+<th class="text-center head"><p><strong><a class="reference external" href="https://github.com/akka/akka-persistence-dynamodb">akka/akka-persistence-dynamodb</a></strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-center"><p>DynamoDB support</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>✓</p></td>
+</tr>
+<tr class="row-odd"><td class="text-center"><p>Write Sharding</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>✓</p></td>
+</tr>
+<tr class="row-even"><td class="text-center"><p>Non-blocking I/O</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>-</p></td>
+</tr>
+<tr class="row-odd"><td class="text-center"><p>back pressure</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>-</p></td>
+</tr>
+<tr class="row-even"><td class="text-center"><p>AWS Client Version</p></td>
+<td class="text-center"><p>v1,v1-dax,v2,v2-dax</p></td>
+<td class="text-center"><p>v1</p></td>
+</tr>
+<tr class="row-odd"><td class="text-center"><p>Journal Plugin</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>✓</p></td>
+</tr>
+<tr class="row-even"><td class="text-center"><p>Snapshot Plugin</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>✓</p></td>
+</tr>
+<tr class="row-odd"><td class="text-center"><p>State Plugin</p></td>
+<td class="text-center"><p>✓</p></td>
+<td class="text-center"><p>-</p></td>
+</tr>
+<tr class="row-even"><td class="text-center"><p>Query Plugin</p></td>
+<td class="text-center"><p>-</p></td>
+<td class="text-center"><p>-</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since version 1.7.x, the query plugin was discontinued. You can’t get throughput by simply doing a Scan like the query plugin. A better way is to use <a class="reference external" href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html">DynamoDB Streams</a> or <a class="reference external" href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/kds.html">KDS for DynamoDB</a>.</p>
 </div>
+<section id="programming-language-support">
+<h3>Programming Language Support<a class="headerlink" href="#programming-language-support" title="Permalink to this heading">¶</a></h3>
+<p>Java 1.8+ or Scala 2.12.x or 2.13.x</p>
+</section>
+<section id="akka-support">
+<h3>Akka Support<a class="headerlink" href="#akka-support" title="Permalink to this heading">¶</a></h3>
+<p><a class="reference external" href="https://akka.io/">Akka</a> 2.6+</p>
+<p>The following modules are required to use the plugins.</p>
+<ul class="simple">
+<li><p>akka typed</p>
+<ul>
+<li><p><a class="reference external" href="https://doc.akka.io/docs/akka/current/typed/index.html">akka-actor-typed</a></p></li>
+<li><p><a class="reference external" href="https://doc.akka.io/docs/akka/current/typed/index-persistence.html">akka-persistence-typed</a></p></li>
+</ul>
+</li>
+<li><p>akka classic</p>
+<ul>
+<li><p><a class="reference external" href="https://doc.akka.io/docs/akka/current/actors.html">akka-actor</a></p></li>
+<li><p><a class="reference external" href="https://doc.akka.io/docs/akka/current/persistence.html">akka-persistence</a></p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="aws-dynamodb-client-support">
+<h3>AWS DynamoDB Client Support<a class="headerlink" href="#aws-dynamodb-client-support" title="Permalink to this heading">¶</a></h3>
+<p>The plugins use the AWS SDK for communication with <code class="docutils literal notranslate"><span class="pre">AWS</span> <span class="pre">DynamoDB</span></code>.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/aws/aws-sdk-java">aws-sdk-java-v1</a></p></li>
+<li><p><a class="reference external" href="https://github.com/aws/aws-sdk-java-v2">aws-sdk-java-v2</a></p></li>
+<li><p><a class="reference external" href="https://aws.amazon.com/jp/dynamodb/dax/">Amazon DynamoDB Accelerator(DAX) Client</a></p></li>
+</ul>
+</section>
+</section>
+</section>
 
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="j5ik2o/akka-persistence-dynamodb" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="getting-started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 

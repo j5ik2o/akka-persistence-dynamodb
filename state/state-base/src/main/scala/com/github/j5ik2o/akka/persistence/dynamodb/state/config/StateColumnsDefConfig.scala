@@ -65,4 +65,4 @@ final case class StateColumnsDefConfig(
     serializerManifestColumnName: String,
     orderingColumnName: String,
     tagsColumnName: String
-) {}
+)

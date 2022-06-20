@@ -1,6 +1,19 @@
-.. title:: j5ik2o/akka-persistence-dynamodb for AWS DynamoDB
+j5ik2o/akka-persistence-dynamodb for AWS DynamoDB
+=================================================
 
-.. include:: ./abstraction.md
+`j5ik2o/akka-persistence-dynamodb` is a plugin for akka-persistence.
+
+The plugin features the following.
+
+* `Event sourcing <https://doc.akka.io/docs/akka/current/typed/index-persistence.html>`_
+
+  * Journal Plugin
+  * Snapshot Store Plugin
+
+* `Durable state <https://doc.akka.io/docs/akka/current/typed/index-persistence-durable-state.html>`_
+
+  * Durable State Store Plugin
+
 
 Sitemap
 =======

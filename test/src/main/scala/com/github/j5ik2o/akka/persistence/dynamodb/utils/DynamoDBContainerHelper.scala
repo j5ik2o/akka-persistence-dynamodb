@@ -21,7 +21,6 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
 import com.dimafeng.testcontainers.FixedHostPortGenericContainer
-import org.slf4j.LoggerFactory
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.wait.strategy.Wait
 
@@ -29,7 +28,6 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
 trait DynamoDBContainerHelper {
-  LoggerFactory.getLogger(getClass)
 
   protected lazy val region: Regions = Regions.AP_NORTHEAST_1
 

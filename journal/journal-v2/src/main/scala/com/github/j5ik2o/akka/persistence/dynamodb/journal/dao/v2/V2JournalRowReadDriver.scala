@@ -24,7 +24,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginB
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import org.slf4j.LoggerFactory
 import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
 
@@ -45,8 +44,6 @@ final class V2JournalRowReadDriver(
       throw new IllegalArgumentException("aws clients is both None")
     case _ =>
   }
-
-  LoggerFactory.getLogger(getClass)
 
   private val streamClient =
     new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)

@@ -16,17 +16,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        ref: ${{ github.event.workflow_run.head_branch }}
         fetch-depth: 0
+        persist-credentials: false
+        token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
     - uses: olafurpg/setup-scala@v13
       with:
         java-version: "adopt@1.8"
     - uses: coursier/cache-action@v6
     - uses: olafurpg/setup-gpg@v3
-    - name: git setting
-      run: |
-        git config --local user.email "82752207+j5ik2o-bot[bot]@users.noreply.github.com"
-        git config --local user.name "j5ik2o-bot[bot]"
-    - run: sbt 'docs/ghpagesPushSite'
+    - name: sbt makeSite
+      run: sbt 'docs/makeSite'
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        personal_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        publish_dir: ./docs/target/site
     - name: clean up
       run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

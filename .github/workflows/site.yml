@@ -1,5 +1,6 @@
-name: Snapshot
+name: Site
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - CI
@@ -22,11 +23,10 @@ jobs:
         java-version: "adopt@1.8"
     - uses: coursier/cache-action@v6
     - uses: olafurpg/setup-gpg@v3
-    - run: sbt -v ci-release
-      env:
-        PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-        PGP_SECRET: ${{ secrets.PGP_SECRET }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+    - name: git setting
+      run: |
+        git config --local user.email "82752207+j5ik2o-bot[bot]@users.noreply.github.com"
+        git config --local user.name "j5ik2o-bot[bot]"
+    - run: sbt 'docs/ghpagesPushSite'
     - name: clean up
       run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

@@ -72,6 +72,22 @@ j5ik2o.dynamo-db-journal {
 }
 ```
 
+If you want to use DynamoDB Local, do the following
+
+```
+j5ik2o.dynamo-db-journal {
+  dynamo-db-client {
+    access-key-id = "x"
+    secret-access-key = "x"
+    endpoint = "http://localhost:8000/"
+  }
+}
+```
+
+```{warning}
+Do not use the above method in the production environment. Be sure to use IAM Role without specifying the above parameters.
+```
+
 ### Snapshot Store Plugin
 
 #### Create Table
@@ -98,6 +114,22 @@ j5ik2o.dynamo-db-snapshot {
 }
 ```
 
+If you want to use DynamoDB Local, do the following
+
+```
+j5ik2o.dynamo-db-snapshot {
+  dynamo-db-client {
+    access-key-id = "x"
+    secret-access-key = "x"
+    endpoint = "http://localhost:8000/"
+  }
+}
+```
+
+```{warning}
+Do not use the above method in the production environment. Be sure to use IAM Role without specifying the above parameters.
+```
+
 ### State Store Plugin
 
 #### Create Table
@@ -122,6 +154,22 @@ If you use the v1 module, the following configuration is required.
 j5ik2o.dynamo-db-state {
   dynamo-db-client.client-version = "v1"
 }
+```
+
+If you want to use DynamoDB Local, do the following
+
+```
+j5ik2o.dynamo-db-state {
+  dynamo-db-client {
+    access-key-id = "x"
+    secret-access-key = "x"
+    endpoint = "http://localhost:8000/"
+  }
+}
+```
+
+```{warning}
+Do not use the above method in the production environment. Be sure to use IAM Role without specifying the above parameters.
 ```
 
 ## Persistent Actor Implementation

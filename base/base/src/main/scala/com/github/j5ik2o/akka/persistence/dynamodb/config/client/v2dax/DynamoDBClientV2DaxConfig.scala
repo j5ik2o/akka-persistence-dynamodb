@@ -1,7 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2dax
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
-  CommonConfigDefaultValues,
   CommonConfigKeys,
   V2CommonConfigDefaultValues,
   V2CommonConfigKeys
@@ -20,42 +19,24 @@ object DynamoDBClientV2DaxConfig extends LoggingSupport {
   val skipHostNameVerificationKey = "skip-host-name-verification"
   val urlKey                      = "url"
 
-  val DefaultIdleTimeout: FiniteDuration            = 30000.milliseconds
-  val DefaultClusterUpdateInterval: FiniteDuration  = 4000.milliseconds
-  val DefaultEndpointRefreshTimeout: FiniteDuration = 6000.milliseconds
-  val DefaultMaxConcurrency                         = 1000
-  val DefaultSkipHostNameVerification               = false
-
   def fromConfig(config: Config, classNameValidation: Boolean): DynamoDBClientV2DaxConfig = {
     logger.debug("config = {}", config)
     val result = new DynamoDBClientV2DaxConfig(
       dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
-      idleTimeout = config.valueAs[FiniteDuration](idleTimeoutKey, DefaultIdleTimeout),
-      connectionTtl = config
-        .valueAs[FiniteDuration](CommonConfigKeys.connectionTtlKey, CommonConfigDefaultValues.DefaultConnectionTtl),
-      connectionTimeout = config.valueAs[FiniteDuration](
-        CommonConfigKeys.connectionTimeoutKey,
-        CommonConfigDefaultValues.DefaultConnectionTimeout
-      ),
-      requestTimeout = config
-        .valueAs[FiniteDuration](CommonConfigKeys.requestTimeoutKey, CommonConfigDefaultValues.DefaultRequestTimeout),
-      writeRetries =
-        config.valueAs[Int](CommonConfigKeys.writeRetriesKey, CommonConfigDefaultValues.DefaultWriteRetries),
-      readRetries = config.valueAs[Int](CommonConfigKeys.readRetriesKey, CommonConfigDefaultValues.DefaultReadRetries),
-      clusterUpdateInterval = config.valueAs[FiniteDuration](clusterUpdateIntervalKey, DefaultClusterUpdateInterval),
-      endpointRefreshTimeout = config.valueAs[FiniteDuration](endpointRefreshTimeoutKey, DefaultEndpointRefreshTimeout),
-      maxPendingConnectionAcquires = config.valueAs[Int](
-        V2CommonConfigKeys.maxPendingConnectionAcquiresKey,
-        V2CommonConfigDefaultValues.DefaultMaxPendingConnectionAcquires
-      ),
-      maxConcurrency = config.valueAs[Int](V2CommonConfigKeys.maxConcurrencyKey, DefaultMaxConcurrency),
-      skipHostNameVerification = config.valueAs[Boolean](skipHostNameVerificationKey, DefaultSkipHostNameVerification),
+      idleTimeout = config.value[FiniteDuration](idleTimeoutKey),
+      connectionTtl = config.value[FiniteDuration](CommonConfigKeys.connectionTtlKey),
+      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      requestTimeout = config.value[FiniteDuration](CommonConfigKeys.requestTimeoutKey),
+      writeRetries = config.value[Int](CommonConfigKeys.writeRetriesKey),
+      readRetries = config.value[Int](CommonConfigKeys.readRetriesKey),
+      clusterUpdateInterval = config.value[FiniteDuration](clusterUpdateIntervalKey),
+      endpointRefreshTimeout = config.value[FiniteDuration](endpointRefreshTimeoutKey),
+      maxPendingConnectionAcquires = config.value[Int](V2CommonConfigKeys.maxPendingConnectionAcquiresKey),
+      maxConcurrency = config.value[Int](V2CommonConfigKeys.maxConcurrencyKey),
+      skipHostNameVerification = config.value[Boolean](skipHostNameVerificationKey),
       urlOpt = config.valueOptAs[String](urlKey),
       metricPublishersProviderClassName = {
-        val className = config.valueAs[String](
-          V2CommonConfigKeys.metricPublisherProviderClassNameKey,
-          V2CommonConfigDefaultValues.DefaultMetricPublishersProviderClassName
-        )
+        val className = config.value[String](V2CommonConfigKeys.metricPublisherProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V2CommonConfigDefaultValues.MetricPublishersProviderClassName,
           className,
@@ -70,10 +51,7 @@ object DynamoDBClientV2DaxConfig extends LoggingSupport {
         }
       },
       awsCredentialsProviderProviderClassName = {
-        val className = config.valueAs[String](
-          V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey,
-          V2CommonConfigDefaultValues.DefaultAwsCredentialsProviderProviderClassName
-        )
+        val className = config.value[String](V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V2CommonConfigDefaultValues.AwsCredentialsProviderProviderClassName,
           className,

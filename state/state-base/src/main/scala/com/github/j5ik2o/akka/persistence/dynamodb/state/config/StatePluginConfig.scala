@@ -27,19 +27,6 @@ import com.typesafe.config.{ Config, ConfigFactory }
 
 object StatePluginConfig extends LoggingSupport {
 
-  val DefaultTableName: String                             = "State"
-  val DefaultTagSeparator: String                          = ","
-  val DefaultConsistentRead                                = false
-  val DefaultShardCount: Int                               = 64
-  val DefaultPartitionKeyResolverClassName: String         = classOf[PartitionKeyResolver.Default].getName
-  val DefaultPartitionKeyResolverProviderClassName: String = classOf[PartitionKeyResolverProvider.Default].getName
-  val DefaultTableNameResolverClassName: String            = classOf[TableNameResolver.Default].getName
-  val DefaultTableNameResolverProviderClassName: String    = classOf[TableNameResolverProvider.Default].getName
-  val DefaultMetricsReporterClassName: String              = classOf[MetricsReporter.None].getName
-  val DefaultMetricsReporterProviderClassName: String      = classOf[MetricsReporterProvider.Default].getName
-  val DefaultTraceReporterClassName: String                = classOf[TraceReporter.None].getName
-  val DefaultTraceReporterProviderClassName: String        = classOf[TraceReporterProvider.Default].getName
-
   val tableNameKey                             = "table-name"
   val columnsDefKey                            = "columns-def"
   val tagSeparatorKey                          = "tag-separator"
@@ -64,17 +51,17 @@ object StatePluginConfig extends LoggingSupport {
     val result = new StatePluginConfig(
       sourceConfig = config,
       v1AsyncClientFactoryClassName = {
-        val className = config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+        val className = config.value[String](v1AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1SyncClientFactoryClassName = {
-        val className = config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+        val className = config.value[String](v1SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1DaxAsyncClientFactoryClassName = {
-        val className = config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+        val className = config.value[String](v1DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxAsyncClientFactoryClassName,
           className,
@@ -82,7 +69,7 @@ object StatePluginConfig extends LoggingSupport {
         )
       },
       v1DaxSyncClientFactoryClassName = {
-        val className = config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+        val className = config.value[String](v1DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxSyncClientFactoryClassName,
           className,
@@ -90,17 +77,17 @@ object StatePluginConfig extends LoggingSupport {
         )
       },
       v2AsyncClientFactoryClassName = {
-        val className = config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+        val className = config.value[String](v2AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2SyncClientFactoryClassName = {
-        val className = config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+        val className = config.value[String](v2SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2DaxAsyncClientFactoryClassName = {
-        val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
+        val className = config.value[String](v2DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxAsyncClientFactoryClassName,
@@ -109,7 +96,7 @@ object StatePluginConfig extends LoggingSupport {
           )
       },
       v2DaxSyncClientFactoryClassName = {
-        val className = config.valueAs(v2DaxSyncClientFactoryClassNameKey, DefaultV2DaxSyncClientFactoryClassName)
+        val className = config.value[String](v2DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxSyncClientFactoryClassName,
@@ -117,27 +104,25 @@ object StatePluginConfig extends LoggingSupport {
             clientConfig.clientVersion == ClientVersion.V2Dax
           )
       },
-      tableName = config.valueAs(tableNameKey, DefaultTableName),
+      tableName = config.value[String](tableNameKey),
       columnsDefConfig = StateColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
-      tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
-      consistentRead = config.valueAs(consistentReadKey, DefaultConsistentRead),
-      shardCount = config.valueAs(shardCountKey, DefaultShardCount),
+      tagSeparator = config.value[String](tagSeparatorKey),
+      consistentRead = config.value[Boolean](consistentReadKey),
+      shardCount = config.value[Int](shardCountKey),
       tableNameResolverClassName = {
-        val className = config.valueAs(tableNameResolverClassNameKey, DefaultTableNameResolverClassName)
+        val className = config.value[String](tableNameResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[TableNameResolver], className)
       },
       tableNameResolverProviderClassName = {
-        val className =
-          config.valueAs(tableNameResolverProviderClassNameKey, DefaultTableNameResolverProviderClassName)
+        val className = config.value[String](tableNameResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[TableNameResolverProvider], className)
       },
       partitionKeyResolverClassName = {
-        val className = config.valueAs(partitionKeyResolverClassNameKey, DefaultPartitionKeyResolverClassName)
+        val className = config.value[String](partitionKeyResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolver], className)
       },
       partitionKeyResolverProviderClassName = {
-        val className =
-          config.valueAs(partitionKeyResolverProviderClassNameKey, DefaultPartitionKeyResolverProviderClassName)
+        val className = config.value[String](partitionKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolverProvider], className)
       },
       metricsReporterClassName = {
@@ -145,13 +130,11 @@ object StatePluginConfig extends LoggingSupport {
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       metricsReporterProviderClassName = {
-        val className =
-          config.valueAs(metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+        val className = config.value[String](metricsReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       traceReporterProviderClassName = {
-        val className =
-          config.valueAs(traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+        val className = config.value[String](traceReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
       },
       traceReporterClassName = {

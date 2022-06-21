@@ -48,9 +48,8 @@ private[utils] object V2ClientOverrideConfigurationBuilderUtils {
       }
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(r)
     }
-    RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { rp =>
-      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(rp.create)
-    }
+    val rp = RetryPolicyProvider.create(dynamicAccess, pluginConfig)
+    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(rp.create)
     val provider = ExecutionInterceptorsProvider.create(dynamicAccess, pluginConfig)
     provider.create.foreach { ei =>
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.addExecutionInterceptor(ei)

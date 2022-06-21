@@ -70,10 +70,9 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
 
   private val id = UUID.randomUUID()
 
-  private val defaultExecutionContext: ExecutionContext = context.dispatcher
-  implicit val system: ActorSystem                      = context.system
-  implicit val mat: Materializer                        = SystemMaterializer(system).materializer
-  implicit val _log: LoggingAdapter                     = log
+  implicit val system: ActorSystem  = context.system
+  implicit val mat: Materializer    = SystemMaterializer(system).materializer
+  implicit val _log: LoggingAdapter = log
 
   log.debug("dynamodb journal plugin: id = {}", id)
 
@@ -151,14 +150,14 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
           wrapper,
           serializer,
           metricsReporter
-        )(defaultExecutionContext, system)
+        )(pluginExecutor, system)
       case None =>
         new WriteJournalDaoImpl(
           journalPluginConfig,
           journalRowWriteDriver,
           serializer,
           metricsReporter
-        )(defaultExecutionContext, system)
+        )(pluginExecutor, system)
     }
 
   protected val writeInProgress: mutable.Map[String, Future[_]] = mutable.Map.empty
@@ -232,7 +231,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     val context    = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncDeleteMessagesTo(context))
 
-    implicit val ec: ExecutionContext = defaultExecutionContext
+    implicit val ec: ExecutionContext = pluginExecutor
 
     def future = journalDao
       .deleteMessages(PersistenceId(persistenceId), SequenceNumber(toSequenceNr))
@@ -252,7 +251,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   override def asyncReplayMessages(persistenceId: String, fromSequenceNr: Long, toSequenceNr: Long, max: Long)(
       recoveryCallback: PersistentRepr => Unit
   ): Future[Unit] = {
-    implicit val ec: ExecutionContext = defaultExecutionContext
+    implicit val ec: ExecutionContext = pluginExecutor
 
     val pid        = PersistenceId(persistenceId)
     val context    = Context.newContext(UUID.randomUUID(), pid)
@@ -283,7 +282,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
   }
 
   override def asyncReadHighestSequenceNr(persistenceId: String, fromSequenceNr: Long): Future[Long] = {
-    implicit val ec: ExecutionContext = defaultExecutionContext
+    implicit val ec: ExecutionContext = pluginExecutor
     val pid                           = PersistenceId(persistenceId)
     val context                       = Context.newContext(UUID.randomUUID(), pid)
     val newContext = metricsReporter.fold(context)(_.beforeJournalAsyncReadHighestSequenceNr(context))
@@ -326,7 +325,7 @@ class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLoggin
     case WriteFinished(persistenceId, _) =>
       writeInProgress.remove(persistenceId)
     case InPlaceUpdateEvent(pid, seq, message) =>
-      implicit val ec: ExecutionContext = defaultExecutionContext
+      implicit val ec: ExecutionContext = pluginExecutor
       asyncUpdateEvent(pid, seq, message).pipeTo(sender())
   }
 

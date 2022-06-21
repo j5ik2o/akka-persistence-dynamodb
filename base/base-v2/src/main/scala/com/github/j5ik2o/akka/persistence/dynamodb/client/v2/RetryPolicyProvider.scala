@@ -30,17 +30,15 @@ trait RetryPolicyProvider {
 
 object RetryPolicyProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): Option[RetryPolicyProvider] = {
-    val classNameOpt = pluginConfig.clientConfig.v2ClientConfig.retryPolicyProviderClassName
-    classNameOpt.map { className =>
-      dynamicAccess
-        .createInstanceFor[RetryPolicyProvider](
-          className,
-          Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-        ) match {
-        case Success(value) => value
-        case Failure(ex)    => throw new PluginException("Failed to initialize RetryPolicyProvider", Some(ex))
-      }
+  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): RetryPolicyProvider = {
+    val className = pluginConfig.clientConfig.v2ClientConfig.retryPolicyProviderClassName
+    dynamicAccess
+      .createInstanceFor[RetryPolicyProvider](
+        className,
+        Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
+      ) match {
+      case Success(value) => value
+      case Failure(ex)    => throw new PluginException("Failed to initialize RetryPolicyProvider", Some(ex))
     }
   }
 

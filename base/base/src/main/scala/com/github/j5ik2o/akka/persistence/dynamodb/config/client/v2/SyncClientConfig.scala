@@ -15,12 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
-  CommonConfigDefaultValues,
-  CommonConfigKeys,
-  V2CommonConfigDefaultValues,
-  V2CommonConfigKeys
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V2CommonConfigKeys }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
@@ -35,33 +30,21 @@ object SyncClientConfig extends LoggingSupport {
   val maxIdleConnectionTimeoutKey = "max-idle-connection-timeout"
   val useConnectionReaperKey      = "use-connection-reaper"
 
-  val DefaultConnectionTimeToLive: FiniteDuration     = Duration.Zero
-  val DefaultMaxIdleConnectionTimeout: FiniteDuration = 60.seconds
-  val DefaultUseConnectionReaper: Boolean             = true
-
   def fromConfig(config: Config): SyncClientConfig = {
     logger.debug("config = {}", config)
     val result = SyncClientConfig(
       sourceConfig = config,
       dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
       socketTimeout = config
-        .valueAs[FiniteDuration](CommonConfigKeys.socketTimeoutKey, CommonConfigDefaultValues.DefaultSocketTimeout),
-      connectionTimeout = config.valueAs[FiniteDuration](
-        CommonConfigKeys.connectionTimeoutKey,
-        CommonConfigDefaultValues.DefaultConnectionTimeout
-      ),
-      connectionAcquisitionTimeout = config.valueAs[FiniteDuration](
-        V2CommonConfigKeys.connectionAcquisitionTimeoutKey,
-        V2CommonConfigDefaultValues.DefaultConnectionAcquisitionTimeout
-      ),
-      maxConnections =
-        config.valueAs[Int](CommonConfigKeys.maxConnectionsKey, CommonConfigDefaultValues.DefaultMaxConnections),
+        .value[FiniteDuration](CommonConfigKeys.socketTimeoutKey),
+      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      connectionAcquisitionTimeout = config.value[FiniteDuration](V2CommonConfigKeys.connectionAcquisitionTimeoutKey),
+      maxConnections = config.value[Int](CommonConfigKeys.maxConnectionsKey),
       localAddress = config.valueOptAs[String](localAddressKey),
       expectContinueEnabled = config.valueOptAs[Boolean](expectContinueEnabledKey),
-      connectionTimeToLive = config.valueAs[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
-      maxIdleConnectionTimeout =
-        config.valueAs[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
-      useConnectionReaper = config.valueAs[Boolean](useConnectionReaperKey, DefaultUseConnectionReaper)
+      connectionTimeToLive = config.value[FiniteDuration](connectionTimeToLiveKey),
+      maxIdleConnectionTimeout = config.value[FiniteDuration](maxIdleConnectionTimeoutKey),
+      useConnectionReaper = config.value[Boolean](useConnectionReaperKey)
     )
     logger.debug("result = {}", result)
     result

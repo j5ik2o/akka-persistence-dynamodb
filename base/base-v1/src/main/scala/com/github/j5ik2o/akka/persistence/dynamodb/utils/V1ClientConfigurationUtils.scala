@@ -63,9 +63,8 @@ private[utils] object V1ClientConfigurationUtils {
         proxyAuthenticationMethods.map(ProxyAuthenticationMethod.valueOf)
       result.setProxyAuthenticationMethods(seq.asJava)
     }
-    RetryPolicyProvider.create(dynamicAccess, pluginConfig).foreach { p =>
-      result.setRetryPolicy(p.create)
-    }
+    val p = RetryPolicyProvider.create(dynamicAccess, pluginConfig)
+    result.setRetryPolicy(p.create)
     maxErrorRetry.foreach { v => result.setMaxErrorRetry(v) }
     retryMode.foreach {
       case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.LEGACY =>

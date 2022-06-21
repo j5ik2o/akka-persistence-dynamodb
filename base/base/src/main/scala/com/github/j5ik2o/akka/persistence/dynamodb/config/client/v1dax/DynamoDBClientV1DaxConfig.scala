@@ -15,11 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
-  CommonConfigDefaultValues,
-  CommonConfigKeys,
-  V1CommonConfigKeys
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V1CommonConfigKeys }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.Config
@@ -39,49 +35,27 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
   val maxRetryDelayKey                  = "max-retry-delay"
   val unhealthyConsecutiveErrorCountKey = "unhealthy-consecutive-error-count"
 
-  val DefaultHealthCheckTimeout: FiniteDuration     = 1000.milliseconds
-  val DefaultHealthCheckInterval: FiniteDuration    = 5000.milliseconds
-  val DefaultIdleConnectionTimeout: FiniteDuration  = 30000.milliseconds
-  val DefaultMinIdleConnectionSize: Int             = 1
-  val DefaultMaxPendingConnectionsPerHost: Int      = 10
-  val DefaultThreadKeepAlive: FiniteDuration        = 10000.milliseconds
-  val DefaultClusterUpdateInterval: FiniteDuration  = 4000.milliseconds
-  val DefaultClusterUpdateThreshold: FiniteDuration = 125.milliseconds
-  val DefaultMaxRetryDelay: FiniteDuration          = 7000.milliseconds
-  val DefaultUnhealthyConsecutiveErrorCount         = 5
-
   def fromConfig(config: Config, classNameValidation: Boolean): DynamoDBClientV1DaxConfig = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1DaxConfig(
       sourceConfig = config,
       dispatcherName = config.valueOptAs(CommonConfigKeys.dispatcherNameKey),
-      connectionTimeout = config.valueAs[FiniteDuration](
-        CommonConfigKeys.connectionTimeoutKey,
-        CommonConfigDefaultValues.DefaultConnectionTimeout
-      ),
-      requestTimeout = config
-        .valueAs[FiniteDuration](CommonConfigKeys.requestTimeoutKey, CommonConfigDefaultValues.DefaultRequestTimeout),
-      healthCheckTimeout = config.valueAs[FiniteDuration](healthCheckTimeoutKey, DefaultHealthCheckTimeout),
-      healthCheckInterval = config.valueAs[FiniteDuration](healthCheckIntervalKey, DefaultHealthCheckInterval),
-      idleConnectionTimeout = config.valueAs[FiniteDuration](idleConnectionTimeoutKey, DefaultIdleConnectionTimeout),
-      minIdleConnectionSize = config.valueAs[Int](minIdleConnectionSizeKey, DefaultMinIdleConnectionSize),
-      writeRetries =
-        config.valueAs[Int](CommonConfigKeys.writeRetriesKey, CommonConfigDefaultValues.DefaultWriteRetries),
-      maxPendingConnectionsPerHost =
-        config.valueAs[Int](maxPendingConnectionsPerHostKey, DefaultMaxPendingConnectionsPerHost),
-      readRetries = config.valueAs[Int](CommonConfigKeys.readRetriesKey, CommonConfigDefaultValues.DefaultReadRetries),
-      threadKeepAlive = config.valueAs[FiniteDuration](threadKeepAliveKey, DefaultThreadKeepAlive),
-      clusterUpdateInterval = config.valueAs[FiniteDuration](clusterUpdateIntervalKey, DefaultClusterUpdateInterval),
-      clusterUpdateThreshold = config.valueAs[FiniteDuration](clusterUpdateThresholdKey, DefaultClusterUpdateThreshold),
-      maxRetryDelay = config.valueAs[FiniteDuration](maxRetryDelayKey, DefaultMaxRetryDelay),
-      unhealthyConsecutiveErrorCount =
-        config.valueAs[Int](unhealthyConsecutiveErrorCountKey, DefaultUnhealthyConsecutiveErrorCount),
+      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      requestTimeout = config.value[FiniteDuration](CommonConfigKeys.requestTimeoutKey),
+      healthCheckTimeout = config.value[FiniteDuration](healthCheckTimeoutKey),
+      healthCheckInterval = config.value[FiniteDuration](healthCheckIntervalKey),
+      idleConnectionTimeout = config.value[FiniteDuration](idleConnectionTimeoutKey),
+      minIdleConnectionSize = config.value[Int](minIdleConnectionSizeKey),
+      writeRetries = config.value[Int](CommonConfigKeys.writeRetriesKey),
+      maxPendingConnectionsPerHost = config.value[Int](maxPendingConnectionsPerHostKey),
+      readRetries = config.value[Int](CommonConfigKeys.readRetriesKey),
+      threadKeepAlive = config.value[FiniteDuration](threadKeepAliveKey),
+      clusterUpdateInterval = config.value[FiniteDuration](clusterUpdateIntervalKey),
+      clusterUpdateThreshold = config.value[FiniteDuration](clusterUpdateThresholdKey),
+      maxRetryDelay = config.value[FiniteDuration](maxRetryDelayKey),
+      unhealthyConsecutiveErrorCount = config.value[Int](unhealthyConsecutiveErrorCountKey),
       awsCredentialsProviderProviderClassName = {
-        val className = config
-          .valueAs[String](
-            V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey,
-            V1CommonConfigKeys.DefaultAWSCredentialsProviderProviderClassName
-          )
+        val className = config.value[String](V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1CommonConfigKeys.AWSCredentialsProviderProviderClassName,
           className,

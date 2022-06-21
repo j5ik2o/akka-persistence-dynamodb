@@ -38,21 +38,12 @@ object DynamoDBClientConfig extends LoggingSupport {
   val batchGetItemLimitKey   = "batch-get-item-limit"
   val batchWriteItemLimitKey = "batch-write-item-limit"
 
-  val DefaultClientVersion: ClientVersion.Value = ClientVersion.V2
-  val DefaultClientType: ClientType.Value       = ClientType.Async
-  val DefaultBatchGetItemLimit                  = 100
-  val DefaultBatchWriteItemLimit                = 25
-
   def fromConfig(
       config: Config,
       legacyConfigFormat: Boolean
   ): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
-    val clientVersion =
-      config
-        .valueOptAs[String](clientVersionKey)
-        .map(s => ClientVersion.withName(s))
-        .getOrElse(DefaultClientVersion)
+    val clientVersion = ClientVersion.withName(config.value[String](clientVersionKey))
     val result = DynamoDBClientConfig(
       sourceConfig = config,
       accessKeyId = config.valueOptAs(accessKeyIdKeyKey),
@@ -60,10 +51,7 @@ object DynamoDBClientConfig extends LoggingSupport {
       endpoint = config.valueOptAs(endpointKey),
       region = config.valueOptAs(regionKey),
       clientVersion,
-      clientType = config
-        .valueOptAs[String](clientTypeKey)
-        .map(s => ClientType.withName(s))
-        .getOrElse(DefaultClientType),
+      clientType = ClientType.withName(config.value[String](clientTypeKey)),
       DynamoDBClientV1Config
         .fromConfig(
           config.configAs(v1Key, ConfigFactory.empty()),
@@ -102,8 +90,8 @@ object DynamoDBClientConfig extends LoggingSupport {
           config.configAs(v2DaxKey, ConfigFactory.empty()),
           clientVersion == ClientVersion.V2
         ),
-      batchGetItemLimit = config.valueAs(batchGetItemLimitKey, DefaultBatchGetItemLimit),
-      batchWriteItemLimit = config.valueAs(batchWriteItemLimitKey, DefaultBatchWriteItemLimit)
+      batchGetItemLimit = config.value[Int](batchGetItemLimitKey),
+      batchWriteItemLimit = config.value[Int](batchWriteItemLimitKey)
     )
     logger.debug("result = {}", result)
     result

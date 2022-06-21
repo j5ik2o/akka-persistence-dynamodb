@@ -13,23 +13,6 @@ object PluginConfig {
   val v2DaxAsyncClientFactoryClassNameKey = "v2-dax-async-client-factory-class-name"
   val v2DaxSyncClientFactoryClassNameKey  = "v2-dax-sync-client-factory-class-name"
 
-  val DefaultV1AsyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory$Default"
-  val DefaultV1SyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory$Default"
-  val DefaultV1DaxAsyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory$Default"
-  val DefaultV1DaxSyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxSyncClientFactory$Default"
-  val DefaultV2AsyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory$Default"
-  val DefaultV2SyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory$Default"
-  val DefaultV2DaxAsyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxAsyncClientFactory$Default"
-  val DefaultV2DaxSyncClientFactoryClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxSyncClientFactory$Default"
-
   val V1AsyncClientFactoryClassName    = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory"
   val V1SyncClientFactoryClassName     = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory"
   val V1DaxAsyncClientFactoryClassName = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory"

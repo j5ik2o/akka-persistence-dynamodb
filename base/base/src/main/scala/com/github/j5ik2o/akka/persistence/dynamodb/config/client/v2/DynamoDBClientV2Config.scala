@@ -56,11 +56,6 @@ object DynamoDBClientV2Config extends LoggingSupport {
   val ExecutionInterceptorsProviderClassName =
     "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider"
 
-  val DefaultRetryPolicyProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider$Default"
-  val DefaultExecutionInterceptorsProviderClassName =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.ExecutionInterceptorsProvider$Default"
-
   def fromConfig(config: Config, classNameValidation: Boolean, legacyConfigFormat: Boolean): DynamoDBClientV2Config = {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV2Config(
@@ -81,10 +76,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
       syncClientConfig = SyncClientConfig.fromConfig(config.configAs(syncKey, ConfigFactory.empty())),
       headers = config.mapAs[String](CommonConfigKeys.headersKey, Map.empty),
       retryPolicyProviderClassName = {
-        val className = config
-          .valueOptAs[String](retryPolicyProviderClassNameKey).orElse(
-            Some(DefaultRetryPolicyProviderClassName)
-          )
+        val className = config.value[String](retryPolicyProviderClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             RetryPolicyProviderClassName,
@@ -94,10 +86,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
       },
       retryMode = config.valueOptAs[String](CommonConfigKeys.retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
       executionInterceptorsProviderClassName = {
-        val className = config.valueAs[String](
-          executionInterceptorProviderClassNameKey,
-          DefaultExecutionInterceptorsProviderClassName
-        )
+        val className = config.value[String](executionInterceptorProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           ExecutionInterceptorsProviderClassName,
           className,
@@ -115,9 +104,8 @@ object DynamoDBClientV2Config extends LoggingSupport {
       apiCallTimeout = config.valueOptAs[FiniteDuration](apiCallTimeoutKey),
       apiCallAttemptTimeout = config.valueOptAs[FiniteDuration](apiCallAttemptTimeoutKey),
       metricPublishersProviderClassName = {
-        val className = config.valueAs[String](
-          V2CommonConfigKeys.metricPublisherProviderClassNameKey,
-          V2CommonConfigDefaultValues.DefaultMetricPublishersProviderClassName
+        val className = config.value[String](
+          V2CommonConfigKeys.metricPublisherProviderClassNameKey
         )
         ClassCheckUtils.requireClassByName(
           V2CommonConfigDefaultValues.MetricPublishersProviderClassName,
@@ -133,9 +121,8 @@ object DynamoDBClientV2Config extends LoggingSupport {
         )
       },
       awsCredentialsProviderProviderClassName = {
-        val className = config.valueAs[String](
-          V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey,
-          V2CommonConfigDefaultValues.DefaultAwsCredentialsProviderProviderClassName
+        val className = config.value[String](
+          V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey
         )
         ClassCheckUtils.requireClassByName(
           V2CommonConfigDefaultValues.AwsCredentialsProviderProviderClassName,
@@ -163,7 +150,7 @@ final case class DynamoDBClientV2Config(
     asyncClientConfig: AsyncClientConfig,
     syncClientConfig: SyncClientConfig,
     headers: scala.collection.Map[String, scala.collection.Seq[String]],
-    retryPolicyProviderClassName: Option[String],
+    retryPolicyProviderClassName: String,
     retryMode: Option[RetryMode.Value],
     executionInterceptorsProviderClassName: String,
     executionInterceptorClassNames: Seq[String],

@@ -12,8 +12,4 @@ object V1CommonConfigKeys {
   val AWSCredentialsProviderClassName =
     "com.amazonaws.auth.AWSCredentialsProvider"
 
-  val DefaultAWSCredentialsProviderProviderClassName: String =
-    "com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider$Default"
 }
-
-object V1CommonConfigDefaultValues {}

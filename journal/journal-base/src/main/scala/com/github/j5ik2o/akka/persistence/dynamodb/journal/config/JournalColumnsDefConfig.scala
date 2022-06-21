@@ -15,7 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
@@ -35,16 +34,14 @@ object JournalColumnsDefConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = JournalColumnsDefConfig(
       sourceConfig = config,
-      partitionKeyColumnName =
-        config.valueAs[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
-      sortKeyColumnName = config.valueAs[String](sortKeyColumnNameKey, DefaultColumnsDef.SortKeyColumnName),
-      persistenceIdColumnName =
-        config.valueAs[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
-      sequenceNrColumnName = config.valueAs[String](sequenceNrColumnNameKey, DefaultColumnsDef.SequenceNrColumnName),
-      deletedColumnName = config.valueAs[String](deletedColumnNameKey, DefaultColumnsDef.DeletedColumnName),
-      messageColumnName = config.valueAs[String](messageColumnNameKey, DefaultColumnsDef.MessageColumnName),
-      orderingColumnName = config.valueAs[String](orderingColumnNameKey, DefaultColumnsDef.OrderingColumnName),
-      tagsColumnName = config.valueAs[String](tagsColumnNameKey, DefaultColumnsDef.TagsColumnName)
+      partitionKeyColumnName = config.value[String](partitionKeyColumnNameKey),
+      sortKeyColumnName = config.value[String](sortKeyColumnNameKey),
+      persistenceIdColumnName = config.value[String](persistenceIdColumnNameKey),
+      sequenceNrColumnName = config.value[String](sequenceNrColumnNameKey),
+      deletedColumnName = config.value[String](deletedColumnNameKey),
+      messageColumnName = config.value[String](messageColumnNameKey),
+      orderingColumnName = config.value[String](orderingColumnNameKey),
+      tagsColumnName = config.value[String](tagsColumnNameKey)
     )
     logger.debug("result = {}", result)
     result

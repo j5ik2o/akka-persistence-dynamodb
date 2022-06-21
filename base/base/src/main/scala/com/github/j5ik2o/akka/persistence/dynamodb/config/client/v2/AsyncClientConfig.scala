@@ -15,12 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
-  CommonConfigDefaultValues,
-  CommonConfigKeys,
-  V2CommonConfigDefaultValues,
-  V2CommonConfigKeys
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V2CommonConfigKeys }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
@@ -39,16 +34,6 @@ object AsyncClientConfig extends LoggingSupport {
   val http2MaxStreamsKey            = "http2-max-streams"
   val http2InitialWindowSizeKey     = "http2-initial-window-size"
   val http2HealthCheckPingPeriodKey = "http2-health-check-ping-period"
-
-  val DefaultReadTimeout: FiniteDuration  = 30.seconds
-  val DefaultWriteTimeout: FiniteDuration = 30.seconds
-
-  val DefaultConnectionTimeToLive: FiniteDuration     = Duration.Zero
-  val DefaultMaxIdleConnectionTimeout: FiniteDuration = 60.seconds
-  val DefaultUseConnectionReaperKey: Boolean          = true
-  val DefaultUseHttp2Key: Boolean                     = false
-  val DefaultHttp2MaxStreams: Long                    = 4294967295L
-  val DefaultHttp2InitialWindowSize: Int              = 1048576
 
   private val keyNames =
     Seq(
@@ -76,30 +61,19 @@ object AsyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = AsyncClientConfig(
       sourceConfig = config,
-      maxConcurrency =
-        config.valueAs[Int](V2CommonConfigKeys.maxConcurrencyKey, V2CommonConfigDefaultValues.DefaultMaxConcurrency),
-      maxPendingConnectionAcquires = config.valueAs[Int](
-        V2CommonConfigKeys.maxPendingConnectionAcquiresKey,
-        V2CommonConfigDefaultValues.DefaultMaxPendingConnectionAcquires
-      ),
-      readTimeout = config.valueAs[FiniteDuration](readTimeoutKey, DefaultReadTimeout),
-      writeTimeout = config.valueAs[FiniteDuration](writeTimeoutKey, DefaultWriteTimeout),
-      connectionTimeout = config.valueAs[FiniteDuration](
-        CommonConfigKeys.connectionTimeoutKey,
-        CommonConfigDefaultValues.DefaultConnectionTimeout
-      ),
-      connectionAcquisitionTimeout = config.valueAs[FiniteDuration](
-        V2CommonConfigKeys.connectionAcquisitionTimeoutKey,
-        V2CommonConfigDefaultValues.DefaultConnectionAcquisitionTimeout
-      ),
-      connectionTimeToLive = config.valueAs[FiniteDuration](connectionTimeToLiveKey, DefaultConnectionTimeToLive),
-      maxIdleConnectionTimeout =
-        config.valueAs[FiniteDuration](maxIdleConnectionTimeoutKey, DefaultMaxIdleConnectionTimeout),
-      useConnectionReaper = config.valueAs[Boolean](useConnectionReaperKey, DefaultUseConnectionReaperKey),
+      maxConcurrency = config.value[Int](V2CommonConfigKeys.maxConcurrencyKey),
+      maxPendingConnectionAcquires = config.value[Int](V2CommonConfigKeys.maxPendingConnectionAcquiresKey),
+      readTimeout = config.value[FiniteDuration](readTimeoutKey),
+      writeTimeout = config.value[FiniteDuration](writeTimeoutKey),
+      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      connectionAcquisitionTimeout = config.value[FiniteDuration](V2CommonConfigKeys.connectionAcquisitionTimeoutKey),
+      connectionTimeToLive = config.value[FiniteDuration](connectionTimeToLiveKey),
+      maxIdleConnectionTimeout = config.value[FiniteDuration](maxIdleConnectionTimeoutKey),
+      useConnectionReaper = config.value[Boolean](useConnectionReaperKey),
       threadsOfEventLoopGroup = config.valueOptAs[Int](threadsOfEventLoopGroupKey),
-      useHttp2 = config.valueAs[Boolean](useHttp2Key, DefaultUseHttp2Key),
-      http2MaxStreams = config.valueAs[Long](http2MaxStreamsKey, DefaultHttp2MaxStreams),
-      http2InitialWindowSize = config.valueAs[Int](http2InitialWindowSizeKey, DefaultHttp2InitialWindowSize),
+      useHttp2 = config.value[Boolean](useHttp2Key),
+      http2MaxStreams = config.value[Long](http2MaxStreamsKey),
+      http2InitialWindowSize = config.value[Int](http2InitialWindowSizeKey),
       http2HealthCheckPingPeriod = config.valueOptAs[FiniteDuration](http2HealthCheckPingPeriodKey)
     )
     logger.debug("result = {}", result)

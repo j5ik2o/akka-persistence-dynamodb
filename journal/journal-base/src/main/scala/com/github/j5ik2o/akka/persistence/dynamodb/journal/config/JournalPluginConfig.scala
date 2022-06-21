@@ -64,32 +64,9 @@ object JournalPluginConfig extends LoggingSupport {
   val dynamoCbClientKey                        = "dynamo-db-client"
   val journalRowDriverWrapperClassNameKey      = "journal-row-driver-wrapper-class-name"
 
-  val DefaultLegacyConfigFormat: Boolean                   = false
-  val DefaultTableName: String                             = "Journal"
-  val DefaultShardCount: Int                               = 64
-  val DefaultGetJournalRowsIndexName: String               = "GetJournalRowsIndex"
-  val DefaultTagSeparator: String                          = ","
-  val DefaultPartitionKeyResolverClassName: String         = classOf[PartitionKeyResolver.Default].getName
-  val DefaultPartitionKeyResolverProviderClassName: String = classOf[PartitionKeyResolverProvider.Default].getName
-  val DefaultSortKeyResolverClassName: String              = classOf[SortKeyResolver.Default].getName
-  val DefaultSortKeyResolverProviderClassName: String      = classOf[SortKeyResolverProvider.Default].getName
-  val DefaultQueueEnable: Boolean                          = true
-  val DefaultQueueBufferSize: Int                          = 512
-  val DefaultQueueOverflowStrategy: String                 = OverflowStrategy.fail.getClass.getSimpleName
-  val DefaultQueueParallelism: Int                         = 1
-  val DefaultWriteParallelism                              = 16
-  val DefaultQueryBatchSize                                = 512
-  val DefaultScanBatchSize                                 = 512
-  val DefaultReplayBatchSize                               = 512
-  val DefaultSoftDeleted                                   = true
-  val DefaultMetricsReporterClassName: String              = classOf[MetricsReporter.None].getName
-  val DefaultMetricsReporterProviderClassName: String      = classOf[MetricsReporterProvider.Default].getName
-  val DefaultTraceReporterClassName: String                = classOf[TraceReporter.None].getName
-  val DefaultTraceReporterProviderClassName: String        = classOf[TraceReporterProvider.Default].getName
-
   def fromConfig(config: Config): JournalPluginConfig = {
     logger.debug("config = {}", config)
-    val legacyConfigFormat = config.valueAs(legacyConfigFormatKey, DefaultLegacyConfigFormat)
+    val legacyConfigFormat = config.value[Boolean](legacyConfigFormatKey)
     val clientConfig =
       DynamoDBClientConfig.fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat)
     logger.debug("legacy-config-format = {}", legacyConfigFormat)
@@ -97,17 +74,17 @@ object JournalPluginConfig extends LoggingSupport {
       legacyConfigFormat,
       sourceConfig = config,
       v1AsyncClientFactoryClassName = {
-        val className = config.valueAs(v1AsyncClientFactoryClassNameKey, DefaultV1AsyncClientFactoryClassName)
+        val className = config.value[String](v1AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1SyncClientFactoryClassName = {
-        val className = config.valueAs(v1SyncClientFactoryClassNameKey, DefaultV1SyncClientFactoryClassName)
+        val className = config.value[String](v1SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1DaxAsyncClientFactoryClassName = {
-        val className = config.valueAs(v1DaxAsyncClientFactoryClassNameKey, DefaultV1DaxAsyncClientFactoryClassName)
+        val className = config.value[String](v1DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxAsyncClientFactoryClassName,
           className,
@@ -115,7 +92,7 @@ object JournalPluginConfig extends LoggingSupport {
         )
       },
       v1DaxSyncClientFactoryClassName = {
-        val className = config.valueAs(v1DaxSyncClientFactoryClassNameKey, DefaultV1DaxSyncClientFactoryClassName)
+        val className = config.value[String](v1DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxSyncClientFactoryClassName,
           className,
@@ -123,17 +100,17 @@ object JournalPluginConfig extends LoggingSupport {
         )
       },
       v2AsyncClientFactoryClassName = {
-        val className = config.valueAs(v2AsyncClientFactoryClassNameKey, DefaultV2AsyncClientFactoryClassName)
+        val className = config.value[String](v2AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2SyncClientFactoryClassName = {
-        val className = config.valueAs(v2SyncClientFactoryClassNameKey, DefaultV2SyncClientFactoryClassName)
+        val className = config.value[String](v2SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2DaxAsyncClientFactoryClassName = {
-        val className = config.valueAs(v2DaxAsyncClientFactoryClassNameKey, DefaultV2DaxAsyncClientFactoryClassName)
+        val className = config.value[String](v2DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxAsyncClientFactoryClassName,
@@ -142,10 +119,7 @@ object JournalPluginConfig extends LoggingSupport {
           )
       },
       v2DaxSyncClientFactoryClassName = {
-        val className = config.valueAs(
-          v2DaxSyncClientFactoryClassNameKey,
-          DefaultV2DaxSyncClientFactoryClassName
-        )
+        val className = config.value[String](v2DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxSyncClientFactoryClassName,
@@ -153,41 +127,36 @@ object JournalPluginConfig extends LoggingSupport {
             clientConfig.clientVersion == ClientVersion.V2
           )
       },
-      tableName = config.valueAs(tableNameKey, DefaultTableName),
+      tableName = config.value[String](tableNameKey),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(
         config.configAs(columnsDefKey, ConfigFactory.empty())
       ),
-      getJournalRowsIndexName = config
-        .valueAs(getJournalRowsIndexNameKey, DefaultGetJournalRowsIndexName),
+      getJournalRowsIndexName = config.value[String](getJournalRowsIndexNameKey),
       // ---
-      tagSeparator = config.valueAs(tagSeparatorKey, DefaultTagSeparator),
-      shardCount = config.valueAs(shardCountKey, DefaultShardCount),
+      tagSeparator = config.value[String](tagSeparatorKey),
+      shardCount = config.value[Int](shardCountKey),
       // ---
       partitionKeyResolverClassName = {
-        val className = config.valueAs(
-          partitionKeyResolverClassNameKey,
-          DefaultPartitionKeyResolverClassName
-        )
+        val className = config.value[String](partitionKeyResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolver], className)
       },
       partitionKeyResolverProviderClassName = {
-        val className =
-          config.valueAs(partitionKeyResolverProviderClassNameKey, DefaultPartitionKeyResolverProviderClassName)
+        val className = config.value[String](partitionKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolverProvider], className)
       },
       sortKeyResolverClassName = {
-        val className = config.valueAs(sortKeyResolverClassNameKey, DefaultSortKeyResolverClassName)
+        val className = config.value[String](sortKeyResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
       },
       sortKeyResolverProviderClassName = {
-        val className = config.valueAs(sortKeyResolverProviderClassNameKey, DefaultSortKeyResolverProviderClassName)
+        val className = config.value[String](sortKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
       },
       // ---
-      queueEnable = config.valueAs(queueEnableKey, DefaultQueueEnable),
-      queueBufferSize = config.valueAs(queueBufferSizeKey, DefaultQueueBufferSize),
+      queueEnable = config.value[Boolean](queueEnableKey),
+      queueBufferSize = config.value[Int](queueBufferSizeKey),
       queueOverflowStrategy = {
-        config.valueAs(queueOverflowStrategyKey, DefaultQueueOverflowStrategy).toLowerCase match {
+        config.value[String](queueOverflowStrategyKey).toLowerCase match {
           case s if s == OverflowStrategy.dropHead.getClass.getSimpleName.toLowerCase() =>
             OverflowStrategy.dropHead
           case s if s == OverflowStrategy.dropTail.getClass.getSimpleName.toLowerCase() =>
@@ -209,29 +178,27 @@ object JournalPluginConfig extends LoggingSupport {
             )
         }
       },
-      queueParallelism = config.valueAs(queueParallelismKey, DefaultQueueParallelism),
+      queueParallelism = config.value[Int](queueParallelismKey),
       // ---
-      writeParallelism = config.valueAs(writeParallelismKey, DefaultWriteParallelism),
+      writeParallelism = config.value[Int](writeParallelismKey),
       writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
       // ---
-      queryBatchSize = config.valueAs(queryBatchSizeKey, DefaultQueryBatchSize),
-      replayBatchSize = config.valueAs(replayBatchSizeKey, DefaultReplayBatchSize),
+      queryBatchSize = config.value[Int](queryBatchSizeKey),
+      replayBatchSize = config.value[Int](replayBatchSizeKey),
       replayBatchRefreshInterval = config.valueOptAs[FiniteDuration](replayBatchRefreshIntervalKey),
       readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
       // ---
-      softDeleted = config.valueAs(softDeleteKey, DefaultSoftDeleted),
+      softDeleted = config.value[Boolean](softDeleteKey),
       metricsReporterClassName = {
         val className = config.valueOptAs[String](CommonConfigKeys.metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       metricsReporterProviderClassName = {
-        val className =
-          config.valueAs(CommonConfigKeys.metricsReporterProviderClassNameKey, DefaultMetricsReporterProviderClassName)
+        val className = config.value[String](CommonConfigKeys.metricsReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       traceReporterProviderClassName = {
-        val className =
-          config.valueAs(CommonConfigKeys.traceReporterProviderClassNameKey, DefaultTraceReporterProviderClassName)
+        val className = config.value[String](CommonConfigKeys.traceReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
       },
       traceReporterClassName = {

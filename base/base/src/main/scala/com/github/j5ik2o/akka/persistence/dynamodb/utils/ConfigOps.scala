@@ -19,6 +19,7 @@ import com.typesafe.config.{ Config, ConfigException }
 
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import scala.reflect.ClassTag
 import scala.util.Try
 
 object ConfigOps {
@@ -38,7 +39,24 @@ object ConfigOps {
       }
     }
 
-    def valueAs[A](key: String, defaultValue: A): A = {
+    def value[A](key: String)(implicit classTag: ClassTag[A]): A = {
+      classTag.runtimeClass match {
+        case clazz if classOf[Duration].isAssignableFrom(clazz) =>
+          val result = config.getDuration(key)
+          result.toMillis.milliseconds.asInstanceOf[A]
+        case clazz if clazz == classOf[Long] =>
+          val result = config.getLong(key)
+          result.asInstanceOf[A]
+        case clazz if clazz == classOf[Int] =>
+          val result = config.getInt(key)
+          result.asInstanceOf[A]
+        case _ =>
+          val result = config.getAnyRef(key)
+          result.asInstanceOf[A]
+      }
+    }
+
+    def valueAs[A](key: String, defaultValue: => A): A = {
       try {
         defaultValue match {
           case _: Duration =>

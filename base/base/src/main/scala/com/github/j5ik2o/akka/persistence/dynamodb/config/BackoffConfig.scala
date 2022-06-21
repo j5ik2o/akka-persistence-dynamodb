@@ -29,21 +29,15 @@ object BackoffConfig extends LoggingSupport {
   val randomFactorKey = "random-factor"
   val maxRestartsKey  = "max-restarts"
 
-  val DefaultEnabled                    = false
-  val DefaultMinBackoff: FiniteDuration = 3.seconds
-  val DefaultMaxBackoff: FiniteDuration = 30.seconds
-  val DefaultRandomFactor: Double       = 0.8
-  val DefaultMaxRestarts: Int           = 3
-
   def fromConfig(config: Config): BackoffConfig = {
     logger.debug("config = {}", config)
     val result = BackoffConfig(
       sourceConfig = config,
-      enabled = config.valueAs(enabledKey, DefaultEnabled),
-      minBackoff = config.valueAs[FiniteDuration](minBackoffKey, DefaultMinBackoff),
-      maxBackoff = config.valueAs[FiniteDuration](maxBackoffKey, DefaultMaxBackoff),
-      randomFactor = config.valueAs[Double](randomFactorKey, DefaultRandomFactor),
-      maxRestarts = config.valueAs[Int](maxRestartsKey, DefaultMaxRestarts)
+      enabled = config.value[Boolean](enabledKey),
+      minBackoff = config.value[FiniteDuration](minBackoffKey),
+      maxBackoff = config.value[FiniteDuration](maxBackoffKey),
+      randomFactor = config.value[Double](randomFactorKey),
+      maxRestarts = config.value[Int](maxRestartsKey)
     )
     logger.debug("result = {}", result)
     result

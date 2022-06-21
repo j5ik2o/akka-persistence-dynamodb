@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.5+29-86f9105f-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.6+1-99e70fda-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -74,13 +74,13 @@
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Customize</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#modify-plugin-dispatcher">Modify Plugin dispatcher</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#plugin-dispatcher">Plugin dispatcher</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#journal">Journal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#snapshot">Snapshot</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#state">State</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#modify-the-table-name">Modify the table name</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table-names">Table names</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#id1">Journal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id2">Snapshot</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#id3">State</a></li>
@@ -88,22 +88,32 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#modify-the-table-column-names">Modify the table column names</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table-column-names">Table column names</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#id4">Journal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id5">Snapshot</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id6">State</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#modify-the-index-name">Modify the index name</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#index-names">Index names</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#id7">Journal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id8">Snapshot</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id9">State</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#modify-write-sharding">Modify Write sharding</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#write-sharding">Write-sharding</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#id10">Journal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id11">Snapshot</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id12">State</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#aws-client">AWS Client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aws-client-factory">AWS Client Factory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#aws-client-config">AWS Client Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#aws-credentialsprovider">AWS CredentialsProvider</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsproviderprovider-by-using-aws-credentials-provider-provider-class-name">Custom AWSCredentialsProviderProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-provider-class-name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsprovider-by-using-aws-credentials-provider-class-name">Custom AWSCredentialsProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -136,8 +146,8 @@
              
   <section id="customize">
 <h1>Customize<a class="headerlink" href="#customize" title="Permalink to this heading">¶</a></h1>
-<section id="modify-plugin-dispatcher">
-<h2>Modify Plugin dispatcher<a class="headerlink" href="#modify-plugin-dispatcher" title="Permalink to this heading">¶</a></h2>
+<section id="plugin-dispatcher">
+<h2>Plugin dispatcher<a class="headerlink" href="#plugin-dispatcher" title="Permalink to this heading">¶</a></h2>
 <p>Specify the dispatcher to be used inside the plugin. The default is “akka.actor.default-dispatcher”.</p>
 <section id="journal">
 <h3>Journal<a class="headerlink" href="#journal" title="Permalink to this heading">¶</a></h3>
@@ -164,8 +174,8 @@
 </div>
 </section>
 </section>
-<section id="modify-the-table-name">
-<h2>Modify the table name<a class="headerlink" href="#modify-the-table-name" title="Permalink to this heading">¶</a></h2>
+<section id="table-names">
+<h2>Table names<a class="headerlink" href="#table-names" title="Permalink to this heading">¶</a></h2>
 <p>Specify the table name. The default is the followings.</p>
 <section id="id1">
 <h3>Journal<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h3>
@@ -192,8 +202,8 @@
 </section>
 </section>
 </section>
-<section id="modify-the-table-column-names">
-<h2>Modify the table column names<a class="headerlink" href="#modify-the-table-column-names" title="Permalink to this heading">¶</a></h2>
+<section id="table-column-names">
+<h2>Table column names<a class="headerlink" href="#table-column-names" title="Permalink to this heading">¶</a></h2>
 <section id="id4">
 <h3>Journal<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
@@ -252,8 +262,8 @@
 </div>
 </section>
 </section>
-<section id="modify-the-index-name">
-<h2>Modify the index name<a class="headerlink" href="#modify-the-index-name" title="Permalink to this heading">¶</a></h2>
+<section id="index-names">
+<h2>Index names<a class="headerlink" href="#index-names" title="Permalink to this heading">¶</a></h2>
 <section id="id7">
 <h3>Journal<a class="headerlink" href="#id7" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
@@ -275,8 +285,8 @@
 <p>The state plugin has not the secondary index.</p>
 </section>
 </section>
-<section id="modify-write-sharding">
-<h2>Modify Write sharding<a class="headerlink" href="#modify-write-sharding" title="Permalink to this heading">¶</a></h2>
+<section id="write-sharding">
+<h2>Write-sharding<a class="headerlink" href="#write-sharding" title="Permalink to this heading">¶</a></h2>
 <section id="id10">
 <h3>Journal<a class="headerlink" href="#id10" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
@@ -487,7 +497,7 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>shard-count is the logical number of shards.</p>
+<p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
 <p>There are one standard implementations as follows. You may also set up your own implementation.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased</span></code></p>
@@ -502,6 +512,172 @@
 <span class="p">}</span>
 </pre></div>
 </div>
+</section>
+</section>
+<section id="aws-client">
+<h2>AWS Client<a class="headerlink" href="#aws-client" title="Permalink to this heading">¶</a></h2>
+<section id="aws-client-factory">
+<h3>AWS Client Factory<a class="headerlink" href="#aws-client-factory" title="Permalink to this heading">¶</a></h3>
+<p>The following factories are used to create AWS Clients inside the plugins.</p>
+<table class="colwidths-auto docutils align-default">
+<thead>
+<tr class="row-odd"><th class="text-left head"><p>key</p></th>
+<th class="text-center head"><p>version</p></th>
+<th class="text-center head"><p>async/sync</p></th>
+<th class="text-left head"><p>default value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v2-async-client-factory-class-name</p></td>
+<td class="text-center"><p>v2</p></td>
+<td class="text-center"><p>async</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v2-sync-client-factory-class-name</p></td>
+<td class="text-center"><p>v2</p></td>
+<td class="text-center"><p>sync</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v2-dax-async-client-factory-class-name</p></td>
+<td class="text-center"><p>v2-dax</p></td>
+<td class="text-center"><p>async</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxAsyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v2-dax-sync-client-factory-class-name</p></td>
+<td class="text-center"><p>v2-dax</p></td>
+<td class="text-center"><p>sync</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxSyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v1-async-client-factory-class-name</p></td>
+<td class="text-center"><p>v1</p></td>
+<td class="text-center"><p>async</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v1-sync-client-factory-class-name</p></td>
+<td class="text-center"><p>v1</p></td>
+<td class="text-center"><p>sync</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v1-dax-async-client-factory-class-name</p></td>
+<td class="text-center"><p>v1-dax</p></td>
+<td class="text-center"><p>async</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory$Default</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>j5ik2o.dynamo-db-?????.v1-dax-sync-client-factory-class-name</p></td>
+<td class="text-center"><p>v1-dax</p></td>
+<td class="text-center"><p>sync</p></td>
+<td class="text-left"><p>com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxSyncClientFactory$Default</p></td>
+</tr>
+</tbody>
+</table>
+<p>The AWS Clients generation process is automatic if you specify the set values, but if you wish to apply your own generation process, please do the following.</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
+
+<span class="k">import</span><span class="w"> </span><span class="nn">akka</span><span class="p">.</span><span class="nn">actor</span><span class="p">.</span><span class="nc">DynamicAccess</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">config</span><span class="p">.</span><span class="nc">PluginConfig</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">utils</span><span class="p">.</span><span class="nc">V2AsyncClientFactory</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">software</span><span class="p">.</span><span class="nn">amazon</span><span class="p">.</span><span class="nn">awssdk</span><span class="p">.</span><span class="nn">services</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nc">DynamoDbAsyncClient</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyV2AsyncClientFactory</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">V2AsyncClientFactory</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="k">override</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="n">dynamicAccess</span><span class="p">:</span><span class="w"> </span><span class="nc">DynamicAccess</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">pluginConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">PluginConfig</span><span class="w"></span>
+<span class="w">  </span><span class="p">):</span><span class="w"> </span><span class="nc">DynamoDbAsyncClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Custom AWS Client Initialization</span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span><span class="o">.</span><span class="n">v2</span><span class="o">-</span><span class="k">async</span><span class="o">-</span><span class="n">client</span><span class="o">-</span><span class="n">factory</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;example.MyV2AsyncClientFactory&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="aws-client-config">
+<h3>AWS Client Config<a class="headerlink" href="#aws-client-config" title="Permalink to this heading">¶</a></h3>
+<p>The configurations for AWS Clients is specified in the following sections(<code class="docutils literal notranslate"><span class="pre">j5ik2o.dynamodb-db-?????.dynamo-db-client</span></code>).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
+  <span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">client</span> <span class="p">{</span>
+    <span class="n">access</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="nb">id</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+    <span class="n">secret</span><span class="o">-</span><span class="n">access</span><span class="o">-</span><span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="s2">&quot;http://localhost:8000/&quot;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">access-key-id</span></code> is Access Key ID</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">secret-access-key</span></code> is Secret Access Key</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">endpoint</span></code> is an endpoint to DynamoDB</p></li>
+</ul>
+</section>
+<section id="aws-credentialsprovider">
+<h3>AWS CredentialsProvider<a class="headerlink" href="#aws-credentialsprovider" title="Permalink to this heading">¶</a></h3>
+<p>You can specify your own <code class="docutils literal notranslate"><span class="pre">AwsCredentialsProvider</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-provider-class-name</span></code> can specify the provider that generate <code class="docutils literal notranslate"><span class="pre">AwsCredentialsProvider</span></code>.
+<code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code> can specify the implementation class name of <code class="docutils literal notranslate"><span class="pre">AwsCredentialsProvider</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
+  dynamo-db-client {
+    v2 {
+      aws-credentials-provider-provider-class-name = &quot;com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider$Default&quot;
+      aws-credentials-provider-class-name = &quot;software.amazon.awssdk.auth.credentials.AwsCredentialsProvider&quot;
+    }
+  }
+}
+</pre></div>
+</div>
+<section id="custom-awscredentialsproviderprovider-by-using-aws-credentials-provider-provider-class-name">
+<h4>Custom AWSCredentialsProviderProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-provider-class-name</span></code><a class="headerlink" href="#custom-awscredentialsproviderprovider-by-using-aws-credentials-provider-provider-class-name" title="Permalink to this heading">¶</a></h4>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
+
+<span class="k">import</span><span class="w"> </span><span class="nn">akka</span><span class="p">.</span><span class="nn">actor</span><span class="p">.</span><span class="nc">DynamicAccess</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">client</span><span class="p">.</span><span class="nn">v2</span><span class="p">.</span><span class="nc">AwsCredentialsProviderProvider</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">config</span><span class="p">.</span><span class="nc">PluginConfig</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">software</span><span class="p">.</span><span class="nn">amazon</span><span class="p">.</span><span class="nn">awssdk</span><span class="p">.</span><span class="nn">auth</span><span class="p">.</span><span class="nn">credentials</span><span class="p">.{</span><span class="w"> </span><span class="nc">AwsCredentialsProvider</span><span class="p">,</span><span class="w"> </span><span class="nc">WebIdentityTokenFileCredentialsProvider</span><span class="w"> </span><span class="p">}</span>
+
+<span class="k">final</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">MyAwsCredentialsProviderProvider</span><span class="p">(</span><span class="nd">@unused</span><span class="w"> </span><span class="n">dynamicAccess</span><span class="p">:</span><span class="w"> </span><span class="nc">DynamicAccess</span><span class="p">,</span><span class="w"> </span><span class="nd">@unused</span><span class="w"> </span><span class="n">pluginConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">PluginConfig</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">extends</span><span class="w"> </span><span class="nc">AwsCredentialsProviderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">override</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">:</span><span class="w"> </span><span class="nc">Option</span><span class="p">[</span><span class="nc">AwsCredentialsProvider</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">env</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="s">&quot;AWS_ROLE_ARN&quot;</span><span class="p">))</span><span class="w"></span>
+<span class="w">      </span><span class="nc">Some</span><span class="p">(</span><span class="nc">WebIdentityTokenFileCredentialsProvider</span><span class="p">.</span><span class="n">create</span><span class="p">())</span><span class="w"></span>
+<span class="w">    </span><span class="k">else</span><span class="w"></span>
+<span class="w">      </span><span class="nc">None</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
+  v2 {
+    aws-credentials-provider-provider-class-name = &quot;exampe.MyAwsCredentialsProviderProvider&quot;
+  }
+}
+</pre></div>
+</div>
+</section>
+<section id="custom-awscredentialsprovider-by-using-aws-credentials-provider-class-name">
+<h4>Custom AWSCredentialsProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code><a class="headerlink" href="#custom-awscredentialsprovider-by-using-aws-credentials-provider-class-name" title="Permalink to this heading">¶</a></h4>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
+
+<span class="k">import</span><span class="w"> </span><span class="nn">akka</span><span class="p">.</span><span class="nn">actor</span><span class="p">.</span><span class="nc">DynamicAccess</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">software</span><span class="p">.</span><span class="nn">amazon</span><span class="p">.</span><span class="nn">awssdk</span><span class="p">.</span><span class="nn">auth</span><span class="p">.</span><span class="nn">credentials</span><span class="p">.{</span><span class="w"> </span><span class="nc">AwsCredentialsProvider</span><span class="p">,</span><span class="w"> </span><span class="nc">AwsCredentials</span><span class="w"> </span><span class="p">}</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">config</span><span class="p">.</span><span class="nc">PluginConfig</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAwsCredentialsProvider</span><span class="p">(</span><span class="n">dynamicAccess</span><span class="p">:</span><span class="w"> </span><span class="nc">DynamicAccess</span><span class="p">,</span><span class="w"> </span><span class="n">pluginConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">PluginConfig</span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">AwsCredentialsProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="k">override</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">resolveCredentials</span><span class="p">():</span><span class="w"> </span><span class="nc">AwsCredentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Custom AWS Credentials</span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
+  v2 {
+    aws-credentials-provider-class-name = &quot;exampe.MyAwsCredentialsProvider&quot;
+  }
+}
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 </section>

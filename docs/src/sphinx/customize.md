@@ -1,6 +1,6 @@
 # Customize
 
-## Modify Plugin dispatcher
+## Plugin dispatcher
 
 Specify the dispatcher to be used inside the plugin. The default is "akka.actor.default-dispatcher".
 
@@ -28,7 +28,7 @@ j5ik2o.dynamo-db-state {
 }
 ```
 
-## Modify the table name
+## Table names
 
 Specify the table name. The default is the followings.
 
@@ -56,7 +56,7 @@ j5ik2o.dynamo-db-state {
 }
 ```
 
-## Modify the table column names
+## Table column names
 
 ### Journal
 
@@ -115,7 +115,7 @@ j5ik2o.dynamo-db-state {
 }
 ```
 
-## Modify the index name
+## Index names
 
 ### Journal
 
@@ -137,7 +137,7 @@ j5ik2o.dynamo-db-snapshot {
 
 The state plugin has not the secondary index.
 
-## Modify Write sharding
+## Write-sharding
 
 ### Journal
 
@@ -224,7 +224,7 @@ j5ik2o.dynamo-db-snapshot {
 ```{admonition} Data images
 
 | persistenceId                            | sequence-nr | pkey(SequenceNumberBased)                  | skey(SeqNr)         |
-|:-----------------------------------------|------------:|:-------------------------------------------|:--------------------|
+| :--------------------------------------- | ----------: | :----------------------------------------- | :------------------ |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           1 | counter-875e6ce0425e4d2b8203f3b44b9b531a-1 | 0000000000000000001 |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           2 | counter-875e6ce0425e4d2b8203f3b44b9b531a-2 | 0000000000000000002 |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           3 | counter-875e6ce0425e4d2b8203f3b44b9b531a-3 | 0000000000000000003 |
@@ -234,7 +234,7 @@ j5ik2o.dynamo-db-snapshot {
 #### 
 
 | persistenceId                            | sequence-nr | pkey(PersistenceIdBased)                         | skey(PersistenceIdWithSeqNr)                         |
-|:-----------------------------------------|------------:|:-------------------------------------------------|:-----------------------------------------------------|
+| :--------------------------------------- | ----------: | :----------------------------------------------- | :--------------------------------------------------- |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           1 | counter-0000000000000000000000000000000000000803 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000001 |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           2 | counter-0000000000000000000000000000000000000803 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000002 |
 | counter-875e6ce0425e4d2b8203f3b44b9b531a |           3 | counter-0000000000000000000000000000000000000803 | 875e6ce0425e4d2b8203f3b44b9b531a-0000000000000000003 |
@@ -259,7 +259,7 @@ j5ik2o.dynamo-db-state {
 }
 ```
 
-shard-count is the logical number of shards.
+`shard-count` is the logical number of shards. default value is `64`.
 
 There are one standard implementations as follows. You may also set up your own implementation.
 
@@ -273,3 +273,136 @@ j5ik2o.dynamo-db-state {
   partition-key-resolver-class-name = "your class name(fqcn)"
 }
 ```
+
+## AWS Client
+
+### AWS Client Factory
+
+The following factories are used to create AWS Clients inside the plugins.
+
+| key                                                           | version | async/sync | default value                                                                     |
+| :------------------------------------------------------------ | :-----: | :--------: | :-------------------------------------------------------------------------------- |
+| j5ik2o.dynamo-db-?????.v2-async-client-factory-class-name     |   v2    |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory$Default    |
+| j5ik2o.dynamo-db-?????.v2-sync-client-factory-class-name      |   v2    |    sync    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory$Default     |
+| j5ik2o.dynamo-db-?????.v2-dax-async-client-factory-class-name | v2-dax  |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxAsyncClientFactory$Default |
+| j5ik2o.dynamo-db-?????.v2-dax-sync-client-factory-class-name  | v2-dax  |    sync    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxSyncClientFactory$Default  |
+| j5ik2o.dynamo-db-?????.v1-async-client-factory-class-name     |   v1    |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory$Default    |
+| j5ik2o.dynamo-db-?????.v1-sync-client-factory-class-name      |   v1    |    sync    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory$Default     |
+| j5ik2o.dynamo-db-?????.v1-dax-async-client-factory-class-name | v1-dax  |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory$Default |
+| j5ik2o.dynamo-db-?????.v1-dax-sync-client-factory-class-name  | v1-dax  |    sync    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxSyncClientFactory$Default  |
+
+The AWS Clients generation process is automatic if you specify the set values, but if you wish to apply your own generation process, please do the following.
+
+```scala V2 AWS Client Factory
+package example
+
+import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
+
+class MyV2AsyncClientFactory extends V2AsyncClientFactory {
+  override def create(
+      dynamicAccess: DynamicAccess,
+      pluginConfig: PluginConfig
+  ): DynamoDbAsyncClient = {
+    // Custom AWS Client Initialization
+  }
+}
+```
+
+```
+j5ik2o.dynamo-db-journal.v2-async-client-factory-class-name = "example.MyV2AsyncClientFactory"
+```
+
+### AWS Client Config
+
+The configurations for AWS Clients is specified in the following sections(`j5ik2o.dynamodb-db-?????.dynamo-db-client`).
+
+```
+j5ik2o.dynamo-db-journal {
+  dynamo-db-client {
+    access-key-id = "x"
+    secret-access-key = "x"
+    endpoint = "http://localhost:8000/"
+  }
+}
+```
+
+- `access-key-id` is Access Key ID
+- `secret-access-key` is Secret Access Key
+- `endpoint` is an endpoint to DynamoDB
+
+### AWS CredentialsProvider
+
+You can specify your own `AwsCredentialsProvider`.
+
+`aws-credentials-provider-provider-class-name` can specify the provider that generate `AwsCredentialsProvider`.
+`aws-credentials-provider-class-name` can specify the implementation class name of `AwsCredentialsProvider`.
+
+```
+j5ik2o.dynamo-db-????? {
+  dynamo-db-client {
+    v2 {
+      aws-credentials-provider-provider-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider$Default"
+      aws-credentials-provider-class-name = "software.amazon.awssdk.auth.credentials.AwsCredentialsProvider"
+    }
+  }
+}
+```
+
+#### Custom AWSCredentialsProviderProvider by using `aws-credentials-provider-provider-class-name`
+
+```scala
+package example
+
+import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import software.amazon.awssdk.auth.credentials.{ AwsCredentialsProvider, WebIdentityTokenFileCredentialsProvider }
+
+final class MyAwsCredentialsProviderProvider(@unused dynamicAccess: DynamicAccess, @unused pluginConfig: PluginConfig)
+  extends AwsCredentialsProviderProvider {
+
+  override def create: Option[AwsCredentialsProvider] = {
+    if (sys.env.contains("AWS_ROLE_ARN"))
+      Some(WebIdentityTokenFileCredentialsProvider.create())
+    else
+      None
+  }
+
+}
+```
+
+```
+j5ik2o.dynamo-db-????? {
+  v2 {
+    aws-credentials-provider-provider-class-name = "exampe.MyAwsCredentialsProviderProvider"
+  }
+}
+```
+
+#### Custom AWSCredentialsProvider by using `aws-credentials-provider-class-name`
+
+```scala
+package example
+
+import akka.actor.DynamicAccess
+import software.amazon.awssdk.auth.credentials.{ AwsCredentialsProvider, AwsCredentials }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+
+class MyAwsCredentialsProvider(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends AwsCredentialsProvider {
+  override def resolveCredentials(): AwsCredentials = {
+    // Custom AWS Credentials
+  }
+}
+```
+
+```
+j5ik2o.dynamo-db-????? {
+  v2 {
+    aws-credentials-provider-class-name = "exampe.MyAwsCredentialsProvider"
+  }
+}
+```
+

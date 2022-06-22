@@ -22,7 +22,7 @@ object JavaFutureConverter {
 
   implicit def to[A](jf: JavaFuture[A]): to[A] = new to[A](jf)
 
-  class to[A](jf: JavaFuture[A]) extends {
+  final class to[A](jf: JavaFuture[A]) extends {
 
     def toScala(implicit ec: ExecutionContext): ScalaFuture[A] = {
       ScalaFuture(jf.get()).recoverWith { case e: ExecutionException =>

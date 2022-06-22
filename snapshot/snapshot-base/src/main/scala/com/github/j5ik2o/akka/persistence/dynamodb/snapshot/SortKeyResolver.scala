@@ -82,9 +82,7 @@ object SortKeyResolverProvider {
 
 object SortKeyResolver {
 
-  class Default(snapshotPluginConfig: SnapshotPluginConfig) extends PersistenceIdWithSeqNr(snapshotPluginConfig)
-
-  class SeqNr(snapshotPluginConfig: SnapshotPluginConfig) extends SortKeyResolver {
+  final class SeqNr(snapshotPluginConfig: SnapshotPluginConfig) extends SortKeyResolver {
 
     // ${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
@@ -93,7 +91,7 @@ object SortKeyResolver {
 
   }
 
-  class PersistenceIdWithSeqNr(snapshotPluginConfig: SnapshotPluginConfig)
+  final class PersistenceIdWithSeqNr(snapshotPluginConfig: SnapshotPluginConfig)
       extends SortKeyResolver
       with ToPersistenceIdOps {
 

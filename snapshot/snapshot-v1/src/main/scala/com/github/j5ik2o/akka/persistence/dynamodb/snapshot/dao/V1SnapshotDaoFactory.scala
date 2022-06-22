@@ -28,7 +28,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory,
 import scala.collection.immutable
 import scala.util.{ Failure, Success }
 
-class V1SnapshotDaoFactory extends SnapshotDaoFactory {
+final class V1SnapshotDaoFactory extends SnapshotDaoFactory {
   override def create(
       system: ActorSystem,
       dynamicAccess: DynamicAccess,

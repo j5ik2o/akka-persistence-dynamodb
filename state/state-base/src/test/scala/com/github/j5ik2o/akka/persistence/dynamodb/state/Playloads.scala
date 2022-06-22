@@ -19,7 +19,7 @@ import akka.serialization._
 
 final case class MyPayload(data: String)
 
-class MyPayloadSerializer extends Serializer {
+final class MyPayloadSerializer extends Serializer {
   val MyPayloadClass: Class[MyPayload] = classOf[MyPayload]
 
   def identifier: Int          = 77123

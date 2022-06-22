@@ -82,9 +82,7 @@ object SortKeyResolverProvider {
 
 object SortKeyResolver {
 
-  class Default(journalPluginConfig: JournalPluginConfig) extends PersistenceIdWithSeqNr(journalPluginConfig)
-
-  class SeqNr(journalPluginConfig: JournalPluginConfig) extends SortKeyResolver {
+  final class SeqNr(journalPluginConfig: JournalPluginConfig) extends SortKeyResolver {
 
     // ${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
@@ -93,7 +91,7 @@ object SortKeyResolver {
 
   }
 
-  class PersistenceIdWithSeqNr(journalPluginConfig: JournalPluginConfig)
+  final class PersistenceIdWithSeqNr(journalPluginConfig: JournalPluginConfig)
       extends SortKeyResolver
       with ToPersistenceIdOps {
 

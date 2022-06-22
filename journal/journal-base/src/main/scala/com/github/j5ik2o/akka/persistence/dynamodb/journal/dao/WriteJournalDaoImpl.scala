@@ -29,7 +29,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
-class WriteJournalDaoImpl(
+final class WriteJournalDaoImpl(
     pluginConfig: JournalPluginConfig,
     protected val journalRowDriver: JournalRowWriteDriver,
     val serializer: FlowPersistentReprSerializer[JournalRow],

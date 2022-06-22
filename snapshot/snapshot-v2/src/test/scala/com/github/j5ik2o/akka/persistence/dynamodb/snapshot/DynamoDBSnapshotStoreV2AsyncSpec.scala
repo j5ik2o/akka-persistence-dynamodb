@@ -28,7 +28,7 @@ object DynamoDBSnapshotStoreV2AsyncSpec {
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
-class DynamoDBSnapshotStoreV2AsyncSpec
+final class DynamoDBSnapshotStoreV2AsyncSpec
     extends SnapshotStoreSpec(
       ConfigFactory
         .parseString(

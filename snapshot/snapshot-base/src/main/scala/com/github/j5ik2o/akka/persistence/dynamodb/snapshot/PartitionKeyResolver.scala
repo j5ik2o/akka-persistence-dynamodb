@@ -85,9 +85,7 @@ object PartitionKeyResolverProvider {
 
 object PartitionKeyResolver {
 
-  class Default(snapshotPluginConfig: SnapshotPluginConfig) extends SequenceNumberBased(snapshotPluginConfig)
-
-  class SequenceNumberBased(snapshotPluginConfig: SnapshotPluginConfig) extends PartitionKeyResolver {
+  final class SequenceNumberBased(snapshotPluginConfig: SnapshotPluginConfig) extends PartitionKeyResolver {
 
     // ${persistenceId}-${sequenceNumber % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
@@ -97,7 +95,7 @@ object PartitionKeyResolver {
 
   }
 
-  class PersistenceIdBased(snapshotPluginConfig: SnapshotPluginConfig)
+  final class PersistenceIdBased(snapshotPluginConfig: SnapshotPluginConfig)
       extends PartitionKeyResolver
       with ToPersistenceIdOps {
 

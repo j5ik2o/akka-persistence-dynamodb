@@ -24,7 +24,7 @@ trait V1AsyncClientFactory {
 }
 
 object V1AsyncClientFactory {
-  class Default extends V1AsyncClientFactory {
+  final class Default extends V1AsyncClientFactory {
     override def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBAsync = {
       V1ClientUtils.createV1AsyncClient(dynamicAccess, pluginConfig)
     }

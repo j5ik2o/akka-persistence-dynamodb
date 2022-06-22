@@ -28,6 +28,7 @@ object SyncClientConfig extends LoggingSupport {
   val expectContinueEnabledKey    = "expect-continue-enabled"
   val connectionTimeToLiveKey     = "connection-time-to-live"
   val maxIdleConnectionTimeoutKey = "max-idle-connection-timeout"
+  val useTcpKeepAliveKey          = "use-tcp-keep-alive"
   val useConnectionReaperKey      = "use-connection-reaper"
 
   def fromConfig(config: Config): SyncClientConfig = {
@@ -44,6 +45,7 @@ object SyncClientConfig extends LoggingSupport {
       expectContinueEnabled = config.valueOptAs[Boolean](expectContinueEnabledKey),
       connectionTimeToLive = config.value[FiniteDuration](connectionTimeToLiveKey),
       maxIdleConnectionTimeout = config.value[FiniteDuration](maxIdleConnectionTimeoutKey),
+      useTcpKeepAlive = config.value[Boolean](useTcpKeepAliveKey),
       useConnectionReaper = config.value[Boolean](useConnectionReaperKey)
     )
     logger.debug("result = {}", result)
@@ -62,5 +64,6 @@ final case class SyncClientConfig(
     expectContinueEnabled: Option[Boolean],
     connectionTimeToLive: FiniteDuration,
     maxIdleConnectionTimeout: FiniteDuration,
+    useTcpKeepAlive: Boolean,
     useConnectionReaper: Boolean
 )

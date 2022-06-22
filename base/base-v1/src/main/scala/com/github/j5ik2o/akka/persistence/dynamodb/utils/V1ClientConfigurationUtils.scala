@@ -46,6 +46,7 @@ private[utils] object V1ClientConfigurationUtils {
     result.setMaxConnections(maxConnections)
     userAgentPrefix.foreach { v => result.setUserAgentPrefix(v) }
     userAgentSuffix.foreach { v => result.setUserAgentSuffix(v) }
+    result.setUseThrottleRetries(useThrottleRetries)
     localAddress.foreach { v =>
       result.setLocalAddress(InetAddress.getByName(v))
     }
@@ -106,7 +107,7 @@ private[utils] object V1ClientConfigurationUtils {
       result.setValidateAfterInactivityMillis(
         validateAfterInactivity.toMillis.toInt
       )
-    result.setUseTcpKeepAlive(tcpKeepAlive)
+    result.setUseTcpKeepAlive(useTcpKeepAlive)
     val dnsResolverProvider =
       DnsResolverProvider.create(dynamicAccess, pluginConfig)
     dnsResolverProvider.create.foreach { dnsResolver =>

@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 object ClientConfiguration {
   val maxErrorRetryKey                 = "max-error-retry"
   val retryPolicyProviderClassNameKey  = "retry-policy-provider-class-name"
-  val throttleRetriesKey               = "throttle-retries"
+  val useThrottleRetriesKey            = "use-throttle-retries"
   val localAddressKey                  = "local-address"
   val protocolKey                      = "protocol"
   val clientExecutionTimeoutKey        = "client-execution-timeout"
@@ -46,7 +46,7 @@ object ClientConfiguration {
   val cacheResponseMetadataKey         = "cache-response-metadata"
   val connectionMaxIdleKey             = "connection-max-idle"
   val validateAfterInactivityKey       = "validate-after-inactivity"
-  val tcpKeepAliveKey                  = "tcp-keep-alive"
+  val useTcpKeepAliveKey               = "use-tcp-keep-alive"
   val maxConsecutiveRetriesBeforeThrottlingKey =
     "max-consecutive-retries-before-throttling"
   val disableHostPrefixInjectionKey = "disable-host-prefix-injection"
@@ -84,7 +84,7 @@ object ClientConfiguration {
         val className = config.value[String](retryPolicyProviderClassNameKey)
         ClassCheckUtils.requireClassByName(RetryPolicyProviderClassName, className, classNameValidation)
       },
-      throttleRetries = config.value[Boolean](throttleRetriesKey),
+      useThrottleRetries = config.value[Boolean](useThrottleRetriesKey),
       localAddress = config.valueOptAs[String](localAddressKey),
       protocol = config
         .valueOptAs[String](protocolKey)
@@ -143,7 +143,7 @@ object ClientConfiguration {
       connectionTtl = config.valueOptAs[Duration](CommonConfigKeys.connectionTtlKey),
       connectionMaxIdle = config.value[FiniteDuration](connectionMaxIdleKey),
       validateAfterInactivity = config.value[FiniteDuration](validateAfterInactivityKey),
-      tcpKeepAlive = config.value[Boolean](tcpKeepAliveKey),
+      useTcpKeepAlive = config.value[Boolean](useTcpKeepAliveKey),
       headers = config
         .valueAs[Map[String, String]](CommonConfigKeys.headersKey, Map.empty),
       maxConsecutiveRetriesBeforeThrottling = config.value[Int](
@@ -170,7 +170,7 @@ final case class ClientConfiguration(
     maxErrorRetry: Option[Int],
     retryMode: Option[RetryMode.Value],
     retryPolicyProviderClassName: String,
-    throttleRetries: Boolean,
+    useThrottleRetries: Boolean,
     localAddress: Option[String],
     protocol: Option[Protocol.Value],
     socketTimeout: FiniteDuration,
@@ -192,7 +192,7 @@ final case class ClientConfiguration(
     connectionTtl: Option[Duration],
     connectionMaxIdle: FiniteDuration,
     validateAfterInactivity: FiniteDuration,
-    tcpKeepAlive: Boolean,
+    useTcpKeepAlive: Boolean,
     headers: Map[String, String],
     maxConsecutiveRetriesBeforeThrottling: Int,
     disableHostPrefixInjection: Option[Boolean],

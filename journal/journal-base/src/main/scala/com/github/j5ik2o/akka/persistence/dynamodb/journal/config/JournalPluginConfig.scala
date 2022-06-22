@@ -46,6 +46,7 @@ object JournalPluginConfig extends LoggingSupport {
   val getJournalRowsIndexNameKey               = "get-journal-rows-index-name"
   val tagSeparatorKey                          = "tag-separator"
   val shardCountKey                            = "shard-count"
+  val consistentReadKey                        = "consistent-read"
   val partitionKeyResolverClassNameKey         = "partition-key-resolver-class-name"
   val partitionKeyResolverProviderClassNameKey = "partition-key-resolver-provider-class-name"
   val sortKeyResolverClassNameKey              = "sort-key-resolver-class-name"
@@ -135,6 +136,7 @@ object JournalPluginConfig extends LoggingSupport {
       // ---
       tagSeparator = config.value[String](tagSeparatorKey),
       shardCount = config.value[Int](shardCountKey),
+      consistentRead = config.value[Boolean](consistentReadKey),
       // ---
       partitionKeyResolverClassName = {
         val className = config.value[String](partitionKeyResolverClassNameKey)
@@ -237,6 +239,7 @@ final case class JournalPluginConfig(
     partitionKeyResolverProviderClassName: String,
     sortKeyResolverProviderClassName: String,
     shardCount: Int,
+    consistentRead: Boolean,
     queueEnable: Boolean,
     queueBufferSize: Int,
     queueOverflowStrategy: OverflowStrategy,

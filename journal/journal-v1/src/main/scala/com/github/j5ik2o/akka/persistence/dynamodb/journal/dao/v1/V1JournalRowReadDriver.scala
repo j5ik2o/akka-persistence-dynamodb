@@ -153,6 +153,7 @@ final class V1JournalRowReadDriver(
           .map(nr => Map(":nr" -> new AttributeValue().withN(nr.asString))).getOrElse(Map.empty)).asJava
       ).withScanIndexForward(false)
       .withLimit(limit)
+      .withConsistentRead(pluginConfig.consistentRead)
   }
 
   private def createGSIRequest(
@@ -180,6 +181,7 @@ final class V1JournalRowReadDriver(
         ).asJava
       )
       .withLimit(pluginConfig.queryBatchSize)
+      .withConsistentRead(pluginConfig.consistentRead)
   }
 
   private def createGSIRequest(
@@ -209,6 +211,7 @@ final class V1JournalRowReadDriver(
           ":max" -> new AttributeValue().withN(toSequenceNr.asString)
         ) ++ deleted.map(b => Map(":flg" -> new AttributeValue().withBOOL(b))).getOrElse(Map.empty)).asJava
       ).withLimit(limit)
+      .withConsistentRead(pluginConfig.consistentRead)
   }
 
   protected def convertToJournalRow(map: Map[String, AttributeValue]): JournalRow = {

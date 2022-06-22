@@ -83,3 +83,4 @@ jobs:
           MERGE_LABELS: ""
           MERGE_METHOD: "rebase"
           MERGE_FILTER_AUTHOR: "j5ik2o-bot[bot]"
+          MERGE_DELETE_BRANCH: "true"

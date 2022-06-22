@@ -15,7 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.const.DefaultColumnsDef
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
@@ -35,19 +34,15 @@ object StateColumnsDefConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = StateColumnsDefConfig(
       sourceConfig = config,
-      partitionKeyColumnName =
-        config.valueAs[String](partitionKeyColumnNameKey, DefaultColumnsDef.PartitionKeyColumnName),
-      persistenceIdColumnName =
-        config.valueAs[String](persistenceIdColumnNameKey, DefaultColumnsDef.PersistenceIdColumnName),
-      revisionColumnName = config.valueAs[String](revisionColumnNameKey, DefaultColumnsDef.RevisionNrColumnName),
-      deletedColumnName = config.valueAs[String](deletedColumnNameKey, DefaultColumnsDef.DeletedColumnName),
-      payloadColumnName = config.valueAs[String](payloadColumnNameKey, DefaultColumnsDef.PayloadColumnName),
-      serializerIdColumnName =
-        config.valueAs[String](serializerIdColumnNameKey, DefaultColumnsDef.SerializerIdColumnName),
-      serializerManifestColumnName =
-        config.valueAs[String](serializerManifestColumnNameKey, DefaultColumnsDef.SerializerManifestColumnName),
-      orderingColumnName = config.valueAs[String](orderingColumnNameKey, DefaultColumnsDef.OrderingColumnName),
-      tagsColumnName = config.valueAs[String](tagsColumnNameKey, DefaultColumnsDef.TagsColumnName)
+      partitionKeyColumnName = config.value[String](partitionKeyColumnNameKey),
+      persistenceIdColumnName = config.value[String](persistenceIdColumnNameKey),
+      revisionColumnName = config.value[String](revisionColumnNameKey),
+      deletedColumnName = config.value[String](deletedColumnNameKey),
+      payloadColumnName = config.value[String](payloadColumnNameKey),
+      serializerIdColumnName = config.value[String](serializerIdColumnNameKey),
+      serializerManifestColumnName = config.value[String](serializerManifestColumnNameKey),
+      orderingColumnName = config.value[String](orderingColumnNameKey),
+      tagsColumnName = config.value[String](tagsColumnNameKey)
     )
     logger.debug("result = {}", result)
     result

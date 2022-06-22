@@ -158,6 +158,7 @@ final class V2JournalRowReadDriver(
         ).asJava
       )
       .limit(pluginConfig.queryBatchSize)
+      .consistentRead(pluginConfig.consistentRead)
       .build()
   }
 
@@ -190,6 +191,7 @@ final class V2JournalRowReadDriver(
         ) ++ deleted.map(b => Map(":flg" -> AttributeValue.builder().bool(b).build())).getOrElse(Map.empty)).asJava
       )
       .limit(limit)
+      .consistentRead(pluginConfig.consistentRead)
       .build()
   }
 
@@ -223,6 +225,7 @@ final class V2JournalRowReadDriver(
           .map(nr => Map(":nr" -> AttributeValue.builder().n(nr.asString).build())).getOrElse(Map.empty)).asJava
       ).scanIndexForward(false)
       .limit(limit)
+      .consistentRead(pluginConfig.consistentRead)
       .build()
   }
 

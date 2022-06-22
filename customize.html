@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.6+1-99e70fda-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+1-4c4103ce-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -297,7 +297,8 @@
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates pkey from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
+The following two implementations are available for built-in use.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased</span></code> (Default)</p>
 <ul>
@@ -313,7 +314,8 @@
 </ul>
 </li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use. You may also set up your own implementation.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
+The following two implementations are available for built-in use.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr</span></code></p>
 <ul>
@@ -347,7 +349,8 @@
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use.</p>
+<p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
+The following two implementations are available for built-in use.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased</span></code> (Default)</p>
 <ul>
@@ -363,7 +366,8 @@
 </ul>
 </li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>. The following two implementations are available for built-in use.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
+The following two implementations are available for built-in use.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr</span></code></p>
 <ul>
@@ -386,8 +390,8 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="admonition-data-images admonition">
-<p class="admonition-title">Data images</p>
+<div class="admonition-persistent-data-images admonition">
+<p class="admonition-title">Persistent data images</p>
 <table class="colwidths-auto docutils align-default">
 <thead>
 <tr class="row-odd"><th class="text-left head"><p>persistenceId</p></th>

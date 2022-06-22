@@ -80,13 +80,11 @@ object TableNameResolverProvider {
 
 object TableNameResolver {
 
-  class Default(statePluginConfig: StatePluginConfig) extends Config(statePluginConfig)
-
-  class Config(statePluginConfig: StatePluginConfig) extends TableNameResolver {
+  final class Config(statePluginConfig: StatePluginConfig) extends TableNameResolver {
     override def resolve(persistenceId: PersistenceId): TableName = TableName(statePluginConfig.tableName)
   }
 
-  class Prefix(statePluginConfig: StatePluginConfig) extends TableNameResolver with ToPersistenceIdOps {
+  final class Prefix(statePluginConfig: StatePluginConfig) extends TableNameResolver with ToPersistenceIdOps {
 
     override def separator: String =
       statePluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)

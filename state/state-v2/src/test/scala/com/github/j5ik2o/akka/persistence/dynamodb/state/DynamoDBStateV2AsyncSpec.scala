@@ -30,7 +30,7 @@ object DynamoDBStateV2AsyncSpec {
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
-class DynamoDBStateV2AsyncSpec
+final class DynamoDBStateV2AsyncSpec
     extends StateSpecBase(
       ConfigHelper
         .config(

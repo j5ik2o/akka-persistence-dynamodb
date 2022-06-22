@@ -17,7 +17,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
 import scala.concurrent.duration._
 
-class Stopwatch {
+final class Stopwatch {
   val startedAtNanos: Long = System.nanoTime()
 
   def elapsed(): Duration = {

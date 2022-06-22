@@ -31,7 +31,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1DaxAsyncClientFacto
 import scala.collection.immutable
 import scala.util.{ Failure, Success }
 
-class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
+final class V1DaxJournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
 
   override def create(
       system: ActorSystem,

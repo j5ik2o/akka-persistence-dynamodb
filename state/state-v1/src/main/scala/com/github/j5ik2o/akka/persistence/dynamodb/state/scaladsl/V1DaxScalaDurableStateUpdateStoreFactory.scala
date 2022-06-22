@@ -28,7 +28,7 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success }
 
-class V1DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
+final class V1DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
   override def create[A](
       system: ActorSystem,
       dynamicAccess: DynamicAccess,

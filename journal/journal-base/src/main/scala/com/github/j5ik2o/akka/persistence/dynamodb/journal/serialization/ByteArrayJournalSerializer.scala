@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-class ByteArrayJournalSerializer(
+final class ByteArrayJournalSerializer(
     serialization: Serialization,
     separator: String,
     metricsReporter: Option[MetricsReporter],

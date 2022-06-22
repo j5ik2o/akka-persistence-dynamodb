@@ -85,9 +85,7 @@ object PartitionKeyResolverProvider {
 
 object PartitionKeyResolver {
 
-  class Default(journalPluginConfig: JournalPluginConfig) extends SequenceNumberBased(journalPluginConfig)
-
-  class SequenceNumberBased(journalPluginConfig: JournalPluginConfig) extends PartitionKeyResolver {
+  final class SequenceNumberBased(journalPluginConfig: JournalPluginConfig) extends PartitionKeyResolver {
 
     // ${persistenceId}-${sequenceNumber % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
@@ -97,7 +95,7 @@ object PartitionKeyResolver {
 
   }
 
-  class PersistenceIdBased(journalPluginConfig: JournalPluginConfig)
+  final class PersistenceIdBased(journalPluginConfig: JournalPluginConfig)
       extends PartitionKeyResolver
       with ToPersistenceIdOps {
 

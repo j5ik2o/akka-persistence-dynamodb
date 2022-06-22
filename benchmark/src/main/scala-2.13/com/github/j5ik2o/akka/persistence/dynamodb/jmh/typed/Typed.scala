@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-class TypedV1Async extends BenchmarkHelper {
+final class TypedV1Async extends BenchmarkHelper {
   override def clientVersion: String = "v1"
   override def clientType: String    = "async"
 
@@ -53,7 +53,7 @@ class TypedV1Async extends BenchmarkHelper {
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-class TypedV1Sync extends BenchmarkHelper {
+final class TypedV1Sync extends BenchmarkHelper {
   override def clientVersion: String = "v1"
   override def clientType: String    = "sync"
 
@@ -75,7 +75,7 @@ class TypedV1Sync extends BenchmarkHelper {
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-class TypedV2Async extends BenchmarkHelper {
+final class TypedV2Async extends BenchmarkHelper {
   override def clientVersion: String = "v2"
   override def clientType: String    = "async"
 
@@ -97,7 +97,7 @@ class TypedV2Async extends BenchmarkHelper {
 @State(Scope.Benchmark)
 @BenchmarkMode(Array(Mode.SampleTime))
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-class TypedV2Sync extends BenchmarkHelper {
+final class TypedV2Sync extends BenchmarkHelper {
   override def clientVersion: String = "v2"
   override def clientType: String    = "sync"
 

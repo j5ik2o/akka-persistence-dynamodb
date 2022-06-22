@@ -30,7 +30,7 @@ object DynamoDBJournalV2AsyncSpec {
   val legacyJournalMode: Boolean = false
 }
 
-class DynamoDBJournalV2AsyncSpec
+final class DynamoDBJournalV2AsyncSpec
     extends JournalSpec(
       ConfigHelper.config(
         Some("journal-reference"),

@@ -85,9 +85,9 @@ object PartitionKeyResolverProvider {
 
 object PartitionKeyResolver {
 
-  class Default(statePluginConfig: StatePluginConfig) extends PersistenceIdBased(statePluginConfig)
-
-  class PersistenceIdBased(statePluginConfig: StatePluginConfig) extends PartitionKeyResolver with ToPersistenceIdOps {
+  final class PersistenceIdBased(statePluginConfig: StatePluginConfig)
+      extends PartitionKeyResolver
+      with ToPersistenceIdOps {
 
     override def separator: String =
       statePluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)

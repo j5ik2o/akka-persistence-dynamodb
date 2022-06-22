@@ -23,7 +23,7 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
+final class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
   override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
     PartitionKey(persistenceId.asString)
@@ -31,9 +31,9 @@ class PartitionKeyResolverImpl(config: Config) extends PartitionKeyResolver {
 
 }
 
-class MetricsReporterImpl(pluginConfig: PluginConfig) extends MetricsReporter(pluginConfig)
+final class MetricsReporterImpl(pluginConfig: PluginConfig) extends MetricsReporter(pluginConfig)
 
-class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
+final class LegacyConfigFormatSpec extends AnyFreeSpec with Matchers {
   "config" - {
     "load" ignore {
       def config(legacyConfigFormat: Boolean, partitionKeyResolverClassName: String, metricsReporterClassName: String) =

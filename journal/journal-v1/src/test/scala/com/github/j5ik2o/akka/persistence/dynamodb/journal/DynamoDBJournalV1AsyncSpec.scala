@@ -31,7 +31,7 @@ object DynamoDBJournalV1AsyncSpec {
 
 }
 
-class DynamoDBJournalV1AsyncSpec
+final class DynamoDBJournalV1AsyncSpec
     extends JournalSpec(
       ConfigHelper
         .config(

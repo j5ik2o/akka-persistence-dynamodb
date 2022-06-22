@@ -64,7 +64,7 @@ object DynamoDBJournal {
 
 }
 
-class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
+final class DynamoDBJournal(config: Config) extends AsyncWriteJournal with ActorLogging {
 
   import DynamoDBJournal._
 

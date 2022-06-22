@@ -151,7 +151,8 @@ j5ik2o.dynamo-db-journal {
 
 `shard-count` is the logical number of shards. default value is `64`.
 
-`partition-key-resolver-class-name` specifies the implementation class that generates pkey from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
+`partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`.
+The following two implementations are available for built-in use. 
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased` (Default)
   - `pkey = ${persistenceId}-${sequenceNumber % shardCount}`
@@ -161,7 +162,8 @@ j5ik2o.dynamo-db-journal {
   - e.g. `counter-875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.prefix` is `counter`.
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.
     
-`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. You may also set up your own implementation.
+`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`.
+The following two implementations are available for built-in use. 
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr`
   - `skey = $sequenceNumber`
@@ -192,7 +194,8 @@ j5ik2o.dynamo-db-snapshot {
 
 `shard-count` is the logical number of shards. default value is `64`.
 
-`partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use. 
+`partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`.
+The following two implementations are available for built-in use. 
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.SequenceNumberBased` (Default)
   - `pkey =${persistenceId}-${sequenceNumber % shardCount}`
@@ -202,7 +205,8 @@ j5ik2o.dynamo-db-snapshot {
   - e.g. `counter-875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.prefix` is `counter`.
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.
     
-`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`. The following two implementations are available for built-in use.
+`sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`.
+The following two implementations are available for built-in use.
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$SeqNr`
   - `skey = $sequenceNumber`
@@ -221,7 +225,7 @@ j5ik2o.dynamo-db-snapshot {
 }
 ```
 
-```{admonition} Data images
+```{admonition} Persistent data images
 
 | persistenceId                            | sequence-nr | pkey(SequenceNumberBased)                  | skey(SeqNr)         |
 | :--------------------------------------- | ----------: | :----------------------------------------- | :------------------ |
@@ -281,7 +285,7 @@ j5ik2o.dynamo-db-state {
 The following factories are used to create AWS Clients inside the plugins.
 
 | key                                                           | version | async/sync | default value                                                                     |
-| :------------------------------------------------------------ | :-----: | :--------: | :-------------------------------------------------------------------------------- |
+|:--------------------------------------------------------------|:-------:|:----------:|:----------------------------------------------------------------------------------|
 | j5ik2o.dynamo-db-?????.v2-async-client-factory-class-name     |   v2    |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2AsyncClientFactory$Default    |
 | j5ik2o.dynamo-db-?????.v2-sync-client-factory-class-name      |   v2    |    sync    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory$Default     |
 | j5ik2o.dynamo-db-?????.v2-dax-async-client-factory-class-name | v2-dax  |   async    | com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxAsyncClientFactory$Default |

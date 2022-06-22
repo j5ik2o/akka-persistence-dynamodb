@@ -180,3 +180,15 @@ See below for an example implementation of a persistent actor by using akka type
 - [Durable State](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate)
 
 Please also see [the official documentation](https://doc.akka.io/docs/akka/current/typed/persistence.html).
+
+## Configurations for the plugin
+
+Please refer to the following for the setting items of each plugin.
+
+- [Journal Plugin - reference.conf](https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/journal/journal-base/src/main/resources/reference.conf)
+- [Snapshot Plugin - reference.conf](https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/snapshot/snapshot-base/src/main/resources/reference.conf)  
+- [State Plugin - reference.conf](https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/state/state-base/src/main/resources/reference.conf)
+  
+Common configuration items are defined in `reference.conf` of the base project.
+ 
+[Common - reference.conf](https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/base/base/src/main/resources/reference.conf)

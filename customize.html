@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+1-4c4103ce-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+9-fab34ed9-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -71,6 +71,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="getting-started.html#persistent-actor-implementation">Persistent Actor Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#configurations-for-the-plugin">Configurations for the plugin</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Customize</a><ul>
@@ -310,7 +311,7 @@ The following two implementations are available for built-in use.</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=</span> <span class="pre">${persistenceId.prefix}-${md5(persistenceId.reverse)</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
 <li><p>e.g. <code class="docutils literal notranslate"><span class="pre">counter-875e6ce0425e4d2b8203f3b44b9b531a</span></code>, <code class="docutils literal notranslate"><span class="pre">persistenceId.prefix</span></code> is <code class="docutils literal notranslate"><span class="pre">counter</span></code>.</p></li>
-<li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.</p></li>
+<li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Streams or KDS for DynamoDB.</p></li>
 </ul>
 </li>
 </ul>
@@ -362,7 +363,7 @@ The following two implementations are available for built-in use.</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">pkey</span> <span class="pre">=</span> <span class="pre">${persistenceId.prefix}-${md5(persistenceId.reverse)</span> <span class="pre">%</span> <span class="pre">shardCount}</span></code></p></li>
 <li><p>e.g. <code class="docutils literal notranslate"><span class="pre">counter-875e6ce0425e4d2b8203f3b44b9b531a</span></code>, <code class="docutils literal notranslate"><span class="pre">persistenceId.prefix</span></code> is <code class="docutils literal notranslate"><span class="pre">counter</span></code>.</p></li>
-<li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Stream or KDS for DynamoDB.</p></li>
+<li><p>If you choose this option, the same shard will be assigned if the <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> is the same, so be sure to select this option if you are using DynamoDB Streams or KDS for DynamoDB.</p></li>
 </ul>
 </li>
 </ul>

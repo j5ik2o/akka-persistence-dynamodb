@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+1-4c4103ce-SNAPSHOT documentation</title>
+  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+9-fab34ed9-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -72,6 +72,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#persistent-actor-implementation">Persistent Actor Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configurations-for-the-plugin">Configurations for the plugin</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="customize.html">Customize</a><ul>
@@ -311,6 +312,17 @@
 <li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/example/src/main/scala/com/github/j5ik2o/akka/persistence/dynamodb/example/typed/durablestate">Durable State</a></p></li>
 </ul>
 <p>Please also see <a class="reference external" href="https://doc.akka.io/docs/akka/current/typed/persistence.html">the official documentation</a>.</p>
+</section>
+<section id="configurations-for-the-plugin">
+<h2>Configurations for the plugin<a class="headerlink" href="#configurations-for-the-plugin" title="Permalink to this heading">¶</a></h2>
+<p>Please refer to the following for the setting items of each plugin.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/journal/journal-base/src/main/resources/reference.conf">Journal Plugin - reference.conf</a></p></li>
+<li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/snapshot/snapshot-base/src/main/resources/reference.conf">Snapshot Plugin - reference.conf</a></p></li>
+<li><p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/state/state-base/src/main/resources/reference.conf">State Plugin - reference.conf</a></p></li>
+</ul>
+<p>Common configuration items are defined in <code class="docutils literal notranslate"><span class="pre">reference.conf</span></code> of the base project.</p>
+<p><a class="reference external" href="https://github.com/j5ik2o/akka-persistence-dynamodb/blob/main/base/base/src/main/resources/reference.conf">Common - reference.conf</a></p>
 </section>
 </section>
 

@@ -24,7 +24,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
 import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }
 
-case class SortKey(value: String) {
+final case class SortKey(value: String) {
   def asString: String = value
 }
 

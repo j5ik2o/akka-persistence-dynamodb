@@ -44,7 +44,7 @@ object SnapshotColumnsDefConfig extends LoggingSupport {
 
 }
 
-case class SnapshotColumnsDefConfig(
+final case class SnapshotColumnsDefConfig(
     sourceConfig: Config,
     partitionKeyColumnName: String,
     sortKeyColumnName: String,

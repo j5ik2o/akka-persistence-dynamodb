@@ -24,19 +24,19 @@ object CounterProtocol {
   final case class GetValue(replyTo: ActorRef) extends Command
   final case class GetValueReply(n: Int, seqNr: Long)
 
-  case class SaveSnapshot(replyTo: ActorRef) extends Command
-  case class SaveSnapshotReply()
+  final case class SaveSnapshot(replyTo: ActorRef) extends Command
+  final case class SaveSnapshotReply()
 
   final case class DeleteMessage(toSeqNr: Long, replyTo: ActorRef) extends Command
-  case class DeleteMessageReply()
+  final case class DeleteMessageReply()
   final case class DeleteSnapshot(seqNr: Long, replyTo: ActorRef) extends Command
-  case class DeleteSnapshotReply()
+  final case class DeleteSnapshotReply()
 
   sealed trait Event extends CborSerializable
 
-  case class ValueAdded(n: Int) extends Event
+  final case class ValueAdded(n: Int) extends Event
 
-  case class State(n: Int) extends CborSerializable
+  final case class State(n: Int) extends CborSerializable
 }
 
 object Counter {

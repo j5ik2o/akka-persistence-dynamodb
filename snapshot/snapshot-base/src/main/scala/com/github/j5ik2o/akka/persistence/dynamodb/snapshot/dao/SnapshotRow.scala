@@ -18,7 +18,7 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
-case class SnapshotRow(
+final case class SnapshotRow(
     persistenceId: PersistenceId,
     sequenceNumber: SequenceNumber,
     created: Long,

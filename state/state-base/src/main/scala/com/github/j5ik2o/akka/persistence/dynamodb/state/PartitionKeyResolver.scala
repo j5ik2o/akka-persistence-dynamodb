@@ -27,7 +27,7 @@ import java.text.DecimalFormat
 import scala.collection.immutable.Seq
 import scala.util.{ Failure, Success }
 
-case class PartitionKey(private val value: String) {
+final case class PartitionKey(private val value: String) {
   def asString: String = value
 }
 

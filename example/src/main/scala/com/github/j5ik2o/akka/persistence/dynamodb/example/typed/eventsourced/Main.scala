@@ -16,7 +16,7 @@ object Main extends App with DynamoDBContainerHelper {
 
   trait Message
 
-  case class AdaptedResponse(id: UUID, n: Try[Int]) extends Message
+  final case class AdaptedResponse(id: UUID, n: Try[Int]) extends Message
 
   def apply(): Behavior[Message] = Behaviors.setup[Message] { ctx =>
     implicit val timeout: Timeout = 3.seconds

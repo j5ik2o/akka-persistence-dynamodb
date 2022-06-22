@@ -47,6 +47,7 @@ private[utils] object V2HttpClientBuilderUtils {
     if (maxIdleConnectionTimeout != Duration.Zero)
       result.connectionMaxIdleTime(JavaDuration.ofMillis(maxIdleConnectionTimeout.toMillis))
 
+    result.tcpKeepAlive(useTcpKeepAlive)
     result.useIdleConnectionReaper(useConnectionReaper)
 
     //    Builder httpRoutePlanner(HttpRoutePlanner proxyConfiguration);

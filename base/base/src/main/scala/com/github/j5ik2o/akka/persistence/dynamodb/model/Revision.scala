@@ -20,7 +20,7 @@ object Revision {
   val MinValue: Revision = Revision(0L)
 }
 
-case class Revision(value: Long) extends Ordered[Revision] {
+final case class Revision(value: Long) extends Ordered[Revision] {
   require(value >= 0, "Invalid value")
 
   override def toString: String = s"Revision($value)"

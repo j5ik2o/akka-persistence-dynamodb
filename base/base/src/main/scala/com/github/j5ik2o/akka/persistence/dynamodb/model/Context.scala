@@ -29,7 +29,7 @@ trait Context {
 
 object Context {
 
-  case class DefaultContext(id: UUID, persistenceId: PersistenceId, data: Option[Any]) extends Context {
+  final case class DefaultContext(id: UUID, persistenceId: PersistenceId, data: Option[Any]) extends Context {
     override def withData(value: Option[Any]): Context = copy(data = value)
   }
 

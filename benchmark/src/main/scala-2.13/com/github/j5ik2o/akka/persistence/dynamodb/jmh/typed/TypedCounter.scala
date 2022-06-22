@@ -28,9 +28,9 @@ object TypedCounter {
 
   trait Reply
 
-  case class Increment(n: Int, replyTo: ActorRef[IncrementReply]) extends Command
+  final case class Increment(n: Int, replyTo: ActorRef[IncrementReply]) extends Command
 
-  case class IncrementReply() extends Reply
+  final case class IncrementReply() extends Reply
 
   def apply(id: UUID): Behavior[Command] = Behaviors.setup[Command] { _ =>
     EventSourcedBehavior[Command, Int, Int](

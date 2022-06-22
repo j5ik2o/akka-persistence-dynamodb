@@ -20,7 +20,7 @@ object SequenceNumber {
   val MinValue: SequenceNumber = SequenceNumber(0L)
 }
 
-case class SequenceNumber(value: Long) extends Ordered[SequenceNumber] {
+final case class SequenceNumber(value: Long) extends Ordered[SequenceNumber] {
   require(value >= 0, "Invalid value")
 
   override def toString: String = s"SequenceNumber($value)"

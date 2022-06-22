@@ -23,10 +23,10 @@ import java.util.UUID
 object UntypedCounter {
   sealed trait Command
   trait Reply
-  case class Increment(n: Int) extends Command
-  case class IncrementReply() extends Reply
+  final case class Increment(n: Int) extends Command
+  final case class IncrementReply() extends Reply
   sealed trait Event
-  case class Incremented(n: Int) extends Event
+  final case class Incremented(n: Int) extends Event
 }
 
 class UntypedCounter(id: UUID) extends PersistentActor {

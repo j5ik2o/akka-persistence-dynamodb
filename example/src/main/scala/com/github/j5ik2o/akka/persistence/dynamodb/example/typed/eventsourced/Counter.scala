@@ -14,9 +14,9 @@ object Counter {
 
   sealed trait Event extends CborSerializable
 
-  case class ValueAdded(n: Int) extends Event
+  final case class ValueAdded(n: Int) extends Event
 
-  case class State(n: Int)
+  final case class State(n: Int)
 
   def apply(id: UUID): Behavior[Command] = Behaviors.setup[Command] { _ =>
     EventSourcedBehavior.apply[Command, Event, State](

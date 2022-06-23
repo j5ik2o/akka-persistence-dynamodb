@@ -144,12 +144,16 @@ The state plugin has not the secondary index.
 ```
 j5ik2o.dynamo-db-journal {
   shard-count = 64
-  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$Default"
-  sort-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$Default" 
+  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$PersistenceIdBased"
+  sort-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr" 
 }
 ```
 
-`shard-count` is the logical number of shards. default value is `64`.
+#### Shard Count
+
+`shard-count` is the logical number of the shards. the default value is `64`.
+
+#### Partition Key Resolver Class Name
 
 `partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`.
 The following two implementations are available for built-in use. 
@@ -161,7 +165,9 @@ The following two implementations are available for built-in use.
   - `pkey = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
   - e.g. `counter-875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.prefix` is `counter`.
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Streams or KDS for DynamoDB.
-    
+
+#### Sort Key Resolver Class Name
+ 
 `sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`.
 The following two implementations are available for built-in use. 
 
@@ -172,6 +178,9 @@ The following two implementations are available for built-in use.
   - `skey = ${persistenceId.body}-${sequenceNumber}`
   - e.g. `875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.body` is `875e6ce0425e4d2b8203f3b44b9b531a`.
   - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
+
+
+#### Configure your own implementation
 
 If you need, set up your own implementation.
 
@@ -187,12 +196,16 @@ j5ik2o.dynamo-db-journal {
 ```
 j5ik2o.dynamo-db-snapshot {
   shard-count = 64
-  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.PartitionKeyResolver$Default"
-  sort-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SortKeyResolver$Default" 
+  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.PartitionKeyResolver$PersistenceIdBased"
+  sort-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SortKeyResolver$PersistenceIdWithSeqNr" 
 }
 ```
 
+#### Shard Count
+
 `shard-count` is the logical number of shards. default value is `64`.
+
+#### Partition Key Resolver Class Name
 
 `partition-key-resolver-class-name` specifies the implementation class that generates `pkey` from `PersistenceId` and `Sequence Number`.
 The following two implementations are available for built-in use. 
@@ -204,7 +217,9 @@ The following two implementations are available for built-in use.
   - `pkey = ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}`
   - e.g. `counter-875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.prefix` is `counter`.
   - If you choose this option, the same shard will be assigned if the `PersistenceId` is the same, so be sure to select this option if you are using DynamoDB Streams or KDS for DynamoDB.
-    
+
+#### Sort Key Resolver Class Name
+
 `sort-key-resolver-class-name` specifies the implementation class that generates `skey` from `PersistenceId` and `Sequence Number`.
 The following two implementations are available for built-in use.
 
@@ -215,6 +230,8 @@ The following two implementations are available for built-in use.
   - `skey = ${persistenceId.body}-${sequenceNumber}`
   - e.g. `875e6ce0425e4d2b8203f3b44b9b531a`, `persistenceId.body` is `875e6ce0425e4d2b8203f3b44b9b531a`.
   - Use `persistenceId.body` as the prefix since `shard-count` may cause multiple `persistenceId`s events to be stored in the same shard.
+
+#### Configure your own implementation
     
 If you need, set up your own implementation.
 
@@ -259,16 +276,22 @@ The state plugin has not the sort-key and SortKeyResolver.
 ```
 j5ik2o.dynamo-db-state {
   shard-count = 64
-  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.state.PartitionKeyResolver$Default"
+  partition-key-resolver-class-name = "com.github.j5ik2o.akka.persistence.dynamodb.state.PartitionKeyResolver$PersistenceIdBased"
 }
 ```
 
+#### Shard Count
+
 `shard-count` is the logical number of shards. default value is `64`.
 
-There are one standard implementations as follows. You may also set up your own implementation.
+#### Partition Key Resolver Class Name
+
+There are one standard implementations as follows.
 
 - `com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased`
   - This is the same implementation as Journal or Snapshot.
+
+#### Configure your own implementation
 
 If you need, set up your own implementation.
 

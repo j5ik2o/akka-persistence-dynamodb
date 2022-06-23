@@ -21,7 +21,7 @@ import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 
-private[utils] object V1DaxClientBuilderUtils {
+object V1DaxClientBuilderUtils {
 
   def setupSync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDaxClientBuilder = {
     val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)

@@ -14,7 +14,7 @@ This plugin is derived from [akka/akka-persistence-jdbc](https://github.com/akka
 
 It was impossible to change [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb) to support aws-sdk v2. Because it is a complex structure. As a simpler solution, I decided to derive from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc).
 
-## User Guide
+## User's Guide
 
 To use the plugins, please see the [User's Guide](https://akka-persistence-dynamodb.readthedocs.io/en/latest/getting-started.html)
 

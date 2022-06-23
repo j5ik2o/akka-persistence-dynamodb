@@ -6,7 +6,15 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb?ref=badge_shield)
 
-akka-persistence-dynamodb writes journal and snapshot entries to DynamoDB. It implements the full akka-persistence-query API and is therefore very useful for implementing DDD-style application models using Akka and Scala for creating reactive applications.
+`j5ik2o/akka-persistence-dynamodb` is an `akka-persistence` plugin for persist `akka-actor` to AWS DynamoDB. 
+
+The plugin features the following.
+
+- Event sourcing
+  - Journal Plugin
+  - Snapshot Store Plugin
+- Durable state
+  - Durable State Store Plugin
 
 ## Genealogy of plugins
 

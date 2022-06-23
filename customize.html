@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.11.7+9-fab34ed9-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.12.0+2-ee68dbad-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -30,7 +30,7 @@
             <a href="index.html" class="icon icon-home"> j5ik2o/akka-persistence-dynamodb
           </a>
               <div class="version">
-                1.11
+                1.12
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -102,9 +102,26 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#write-sharding">Write-sharding</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#id10">Journal</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id11">Snapshot</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id12">State</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id10">Journal</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#shard-count">Shard Count</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#partition-key-resolver-class-name">Partition Key Resolver Class Name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#sort-key-resolver-class-name">Sort Key Resolver Class Name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#configure-your-own-implementation">Configure your own implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#id11">Snapshot</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id12">Shard Count</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id13">Partition Key Resolver Class Name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14">Sort Key Resolver Class Name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id15">Configure your own implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#id16">State</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id17">Shard Count</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18">Partition Key Resolver Class Name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id19">Configure your own implementation</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#aws-client">AWS Client</a><ul>
@@ -292,12 +309,17 @@
 <h3>Journal<a class="headerlink" href="#id10" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
   <span class="n">shard</span><span class="o">-</span><span class="n">count</span> <span class="o">=</span> <span class="mi">64</span>
-  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$Default&quot;</span>
-  <span class="n">sort</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$Default&quot;</span> 
+  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver$PersistenceIdBased&quot;</span>
+  <span class="n">sort</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.journal.SortKeyResolver$PersistenceIdWithSeqNr&quot;</span> 
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
+<section id="shard-count">
+<h4>Shard Count<a class="headerlink" href="#shard-count" title="Permalink to this heading">¶</a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of the shards. the default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
+</section>
+<section id="partition-key-resolver-class-name">
+<h4>Partition Key Resolver Class Name<a class="headerlink" href="#partition-key-resolver-class-name" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
 The following two implementations are available for built-in use.</p>
 <ul class="simple">
@@ -315,6 +337,9 @@ The following two implementations are available for built-in use.</p>
 </ul>
 </li>
 </ul>
+</section>
+<section id="sort-key-resolver-class-name">
+<h4>Sort Key Resolver Class Name<a class="headerlink" href="#sort-key-resolver-class-name" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
 The following two implementations are available for built-in use.</p>
 <ul class="simple">
@@ -332,6 +357,9 @@ The following two implementations are available for built-in use.</p>
 </ul>
 </li>
 </ul>
+</section>
+<section id="configure-your-own-implementation">
+<h4>Configure your own implementation<a class="headerlink" href="#configure-your-own-implementation" title="Permalink to this heading">¶</a></h4>
 <p>If you need, set up your own implementation.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">journal</span> <span class="p">{</span>
   <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;your class name(fqcn)&quot;</span>
@@ -340,16 +368,22 @@ The following two implementations are available for built-in use.</p>
 </pre></div>
 </div>
 </section>
+</section>
 <section id="id11">
 <h3>Snapshot<a class="headerlink" href="#id11" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">snapshot</span> <span class="p">{</span>
   <span class="n">shard</span><span class="o">-</span><span class="n">count</span> <span class="o">=</span> <span class="mi">64</span>
-  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.snapshot.PartitionKeyResolver$Default&quot;</span>
-  <span class="n">sort</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SortKeyResolver$Default&quot;</span> 
+  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.snapshot.PartitionKeyResolver$PersistenceIdBased&quot;</span>
+  <span class="n">sort</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SortKeyResolver$PersistenceIdWithSeqNr&quot;</span> 
 <span class="p">}</span>
 </pre></div>
 </div>
+<section id="id12">
+<h4>Shard Count<a class="headerlink" href="#id12" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
+</section>
+<section id="id13">
+<h4>Partition Key Resolver Class Name<a class="headerlink" href="#id13" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">partition-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">pkey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
 The following two implementations are available for built-in use.</p>
 <ul class="simple">
@@ -367,6 +401,9 @@ The following two implementations are available for built-in use.</p>
 </ul>
 </li>
 </ul>
+</section>
+<section id="id14">
+<h4>Sort Key Resolver Class Name<a class="headerlink" href="#id14" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">sort-key-resolver-class-name</span></code> specifies the implementation class that generates <code class="docutils literal notranslate"><span class="pre">skey</span></code> from <code class="docutils literal notranslate"><span class="pre">PersistenceId</span></code> and <code class="docutils literal notranslate"><span class="pre">Sequence</span> <span class="pre">Number</span></code>.
 The following two implementations are available for built-in use.</p>
 <ul class="simple">
@@ -384,6 +421,9 @@ The following two implementations are available for built-in use.</p>
 </ul>
 </li>
 </ul>
+</section>
+<section id="id15">
+<h4>Configure your own implementation<a class="headerlink" href="#id15" title="Permalink to this heading">¶</a></h4>
 <p>If you need, set up your own implementation.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">snapshot</span> <span class="p">{</span>
   <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;your class name(fqcn)&quot;</span>
@@ -493,17 +533,23 @@ The following two implementations are available for built-in use.</p>
 </table>
 </div>
 </section>
-<section id="id12">
-<h3>State<a class="headerlink" href="#id12" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="id16">
+<h3>State<a class="headerlink" href="#id16" title="Permalink to this heading">¶</a></h3>
 <p>The state plugin has not the sort-key and SortKeyResolver.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">state</span> <span class="p">{</span>
   <span class="n">shard</span><span class="o">-</span><span class="n">count</span> <span class="o">=</span> <span class="mi">64</span>
-  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.state.PartitionKeyResolver$Default&quot;</span>
+  <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;com.github.j5ik2o.akka.persistence.dynamodb.state.PartitionKeyResolver$PersistenceIdBased&quot;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
+<section id="id17">
+<h4>Shard Count<a class="headerlink" href="#id17" title="Permalink to this heading">¶</a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">shard-count</span></code> is the logical number of shards. default value is <code class="docutils literal notranslate"><span class="pre">64</span></code>.</p>
-<p>There are one standard implementations as follows. You may also set up your own implementation.</p>
+</section>
+<section id="id18">
+<h4>Partition Key Resolver Class Name<a class="headerlink" href="#id18" title="Permalink to this heading">¶</a></h4>
+<p>There are one standard implementations as follows.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">com.github.j5ik2o.akka.persistence.dynamodb.journal.PartitionKeyResolver.PersistenceIdBased</span></code></p>
 <ul>
@@ -511,12 +557,16 @@ The following two implementations are available for built-in use.</p>
 </ul>
 </li>
 </ul>
+</section>
+<section id="id19">
+<h4>Configure your own implementation<a class="headerlink" href="#id19" title="Permalink to this heading">¶</a></h4>
 <p>If you need, set up your own implementation.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">j5ik2o</span><span class="o">.</span><span class="n">dynamo</span><span class="o">-</span><span class="n">db</span><span class="o">-</span><span class="n">state</span> <span class="p">{</span>
   <span class="n">partition</span><span class="o">-</span><span class="n">key</span><span class="o">-</span><span class="n">resolver</span><span class="o">-</span><span class="n">class</span><span class="o">-</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;your class name(fqcn)&quot;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
+</section>
 </section>
 </section>
 <section id="aws-client">

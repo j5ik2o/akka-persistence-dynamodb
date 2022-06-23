@@ -98,6 +98,10 @@ Create the table using the JSON file under `tools` directory.
 $ aws dynamodb create-table --cli-input-json file://./tools/snapshot-table.json
 ```
 
+```{note}
+The snapshot table format has changed since 1.9. If you want to use the old table format, set `j5ik2o.dynamo-db-snapshot.legacy-table-format` to true.
+```
+
 #### Preparing for application.conf
 
 Please add the following settings to your `application.conf`.

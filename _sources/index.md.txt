@@ -27,5 +27,6 @@ maxdepth: 2
 ---
 overview.md
 getting-started.md
+table-format.md
 customize.md
 ```

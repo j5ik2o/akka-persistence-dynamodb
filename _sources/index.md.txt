@@ -14,10 +14,10 @@ You can persist your Actor's state to `AWS DynamoDB` without having to worry abo
 The plugin features the following.
 
 - [Event sourcing](https://doc.akka.io/docs/akka/current/typed/index-persistence.html)
-  - Journal Plugin
-  - Snapshot Store Plugin
+  - [Journal Plugin](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/journal)
+  - [Snapshot Store Plugin](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/snapshot)
 - [Durable state](https://doc.akka.io/docs/akka/current/typed/index-persistence-durable-state.html)
-  - Durable State Store Plugin
+  - [Durable State Store Plugin](https://github.com/j5ik2o/akka-persistence-dynamodb/tree/main/state)
 
 ## Sitemap
 

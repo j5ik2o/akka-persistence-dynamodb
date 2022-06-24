@@ -111,7 +111,7 @@ final case class DynamoDBClientConfig(
     v1DaxClientConfig: DynamoDBClientV1DaxConfig,
     v2ClientConfig: DynamoDBClientV2Config,
     v2DaxClientConfig: DynamoDBClientV2DaxConfig,
-    batchGetItemLimit: Int, // Currently unused
+    batchGetItemLimit: Int,
     batchWriteItemLimit: Int
 ) {
   require(batchGetItemLimit >= 1 && batchGetItemLimit <= 100)

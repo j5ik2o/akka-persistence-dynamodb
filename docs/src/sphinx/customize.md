@@ -449,7 +449,6 @@ j5ik2o.dynamo-db-????? {
 
 ### MetricPublisher 
 
-
 Using the MetricPublisher in the V2 sdk, metrics at the SDK level can be sent to Datadog and Newrelic via Kamon.
 
 ```scala

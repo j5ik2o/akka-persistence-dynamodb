@@ -29,7 +29,7 @@ import java.time.{ Duration => JavaDuration }
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
-private[utils] object V2ClientOverrideConfigurationBuilderUtils {
+object V2ClientOverrideConfigurationBuilderUtils {
 
   def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientOverrideConfiguration.Builder = {
     import pluginConfig.clientConfig.v2ClientConfig._

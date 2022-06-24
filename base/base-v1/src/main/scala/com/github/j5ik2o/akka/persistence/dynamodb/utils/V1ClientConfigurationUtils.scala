@@ -29,7 +29,7 @@ import java.net.InetAddress
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
-private[utils] object V1ClientConfigurationUtils {
+object V1ClientConfigurationUtils {
 
   def setup(
       dynamicAccess: DynamicAccess,

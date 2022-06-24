@@ -320,6 +320,8 @@ The following factories are used to create AWS Clients inside the plugins.
 
 The AWS Clients generation process is automatic if you specify the set values, but if you wish to apply your own generation process, please do the following.
 
+This plugin is useful for specifying the configuration items to the client that are not supported by this plugin, or for dynamically specifying configuration items within the program.
+
 ```scala V2 AWS Client Factory
 package example
 
@@ -333,7 +335,17 @@ class MyV2AsyncClientFactory extends V2AsyncClientFactory {
       dynamicAccess: DynamicAccess,
       pluginConfig: PluginConfig
   ): DynamoDbAsyncClient = {
-    // Custom AWS Client Initialization
+    // Default Implementation is the following.
+    // V2ClientUtils.createV2AsyncClient(dynamicAccess, pluginConfig)
+    
+    // e.g. Custom AWS Client Initialization
+    V2ClientBuilderUtils
+      .setupAsync(
+        dynamicAccess,
+        pluginConfig
+      )
+      .defaultsMode(DefaultsMode.AUTO) // This is not a configuration item in the plugin.
+      .build()
   }
 }
 ```
@@ -429,6 +441,92 @@ class MyAwsCredentialsProvider(dynamicAccess: DynamicAccess, pluginConfig: Plugi
 j5ik2o.dynamo-db-????? {
   v2 {
     aws-credentials-provider-class-name = "exampe.MyAwsCredentialsProvider"
+  }
+}
+```
+
+#### Custom MetricPublisher by using `metric-publisher-class-names`
+
+Using the MetricPublisher in the V2 sdk, metrics at the SDK level can be sent to Datadog and Newrelic via Kamon.
+
+```scala
+package example
+
+import akka.actor.DynamicAccess
+import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import kamon.Kamon
+import kamon.metric.{ Counter, Histogram, MeasurementUnit }
+import software.amazon.awssdk.core.metrics.CoreMetric
+import software.amazon.awssdk.metrics.{ MetricCollection, MetricPublisher }
+
+import scala.annotation.unused
+import scala.jdk.StreamConverters.StreamHasToScala
+
+class MyMetricPublisher(
+                           @unused dynamicAccess: DynamicAccess,
+                           pluginConfig: PluginConfig
+                         ) extends MetricPublisher {
+
+  override def publish(metricCollection: MetricCollection): Unit = {
+    val metricsMap = metricCollection.stream().toScala(Vector).map { mr => (mr.metric().name(), mr) }.toMap
+    metricsMap(CoreMetric.OPERATION_NAME.name()).value() match {
+      case "PutItem" =>
+        if (metricsMap(CoreMetric.API_CALL_SUCCESSFUL.name()).value().asInstanceOf[java.lang.Boolean]) {
+          val apiCallDuration = metricsMap(CoreMetric.API_CALL_DURATION.name()).value().asInstanceOf[java.time.Duration]
+          val credentialsFetchDuration =
+            metricsMap(CoreMetric.CREDENTIALS_FETCH_DURATION.name()).value().asInstanceOf[java.time.Duration]
+          val marshallingDuration =
+            metricsMap(CoreMetric.MARSHALLING_DURATION.name()).value().asInstanceOf[java.time.Duration]
+          val retryCount = metricsMap(CoreMetric.RETRY_COUNT.name()).value().asInstanceOf[java.lang.Integer]
+          putItemApiCallDurationHistogram.record(apiCallDuration.toMillis)
+          putItemCredentialsFetchDurationHistogram.record(credentialsFetchDuration.toMillis)
+          putItemMarshallingDurationHistogram.record(marshallingDuration.toMillis)
+          putItemRetryCounter.increment(retryCount.toLong)
+        } else {
+          putItemErrorCounter.increment()
+        }
+      case _ =>
+    }
+
+  }
+
+  override def close(): Unit = {}
+
+  private val prefix                            = "app"
+  private val apiCallDurationHistogram          = histogram(s"$prefix.aws.api-call-duration")
+  private val credentialsFetchDurationHistogram = histogram(s"$prefix.aws.credentials-fetch-duration")
+  private val marshallingDurationHistogram      = histogram(s"$prefix.aws.marshalling-duration")
+  private val retryCounter                      = counter(s"$prefix.aws.retry-count")
+  private val errorCounter                      = counter(s"$prefix.error-count")
+
+  private val putItemApiCallDurationHistogram = apiCallDurationHistogram.withTag("Operation", "PutItem")
+  private val putItemCredentialsFetchDurationHistogram = credentialsFetchDurationHistogram
+    .withTag("Operation", "PutItem")
+  private val putItemMarshallingDurationHistogram = marshallingDurationHistogram
+    .withTag("Operation", "PutItem")
+  private val putItemRetryCounter = retryCounter
+    .withTag("Operation", "PutItem")
+  private val putItemErrorCounter = errorCounter
+    .withTag("Operation", "PutItem")
+
+  private def histogram(metricName: String): Histogram =
+    Kamon
+      .histogram(metricName, MeasurementUnit.time.milliseconds)
+      .withTag("TableName", pluginConfig.tableName)
+      .withTag("sdk", s"java-${pluginConfig.clientConfig.clientVersion}")
+
+  private def counter(metricName: String): Counter =
+    Kamon
+      .counter(metricName)
+      .withTag("TableName", pluginConfig.tableName)
+      .withTag("sdk", s"java-${pluginConfig.clientConfig.clientVersion}")
+}
+```
+
+```
+j5ik2o.dynamo-db-????? {
+  v2 {
+    metric-publisher-class-names = ["exampe.MyMetricPublisher"]
   }
 }
 ```

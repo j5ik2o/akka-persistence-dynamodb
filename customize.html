@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.12.0+4-fbac8a23-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.12.1+1-d1529cc5-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -131,6 +131,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#aws-credentialsprovider">AWS CredentialsProvider</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsproviderprovider-by-using-aws-credentials-provider-provider-class-name">Custom AWSCredentialsProviderProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-provider-class-name</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsprovider-by-using-aws-credentials-provider-class-name">Custom AWSCredentialsProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#custom-metricpublisher-by-using-metric-publisher-class-names">Custom MetricPublisher by using <code class="docutils literal notranslate"><span class="pre">metric-publisher-class-names</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -627,6 +628,7 @@ The following two implementations are available for built-in use.</p>
 </tbody>
 </table>
 <p>The AWS Clients generation process is automatic if you specify the set values, but if you wish to apply your own generation process, please do the following.</p>
+<p>This plugin is useful for specifying the configuration items to the client that are not supported by this plugin, or for dynamically specifying configuration items within the program.</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
 
 <span class="k">import</span><span class="w"> </span><span class="nn">akka</span><span class="p">.</span><span class="nn">actor</span><span class="p">.</span><span class="nc">DynamicAccess</span>
@@ -639,7 +641,17 @@ The following two implementations are available for built-in use.</p>
 <span class="w">      </span><span class="n">dynamicAccess</span><span class="p">:</span><span class="w"> </span><span class="nc">DynamicAccess</span><span class="p">,</span><span class="w"></span>
 <span class="w">      </span><span class="n">pluginConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">PluginConfig</span><span class="w"></span>
 <span class="w">  </span><span class="p">):</span><span class="w"> </span><span class="nc">DynamoDbAsyncClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="c1">// Custom AWS Client Initialization</span>
+<span class="w">    </span><span class="c1">// Default Implementation is the following.</span>
+<span class="w">    </span><span class="c1">// V2ClientUtils.createV2AsyncClient(dynamicAccess, pluginConfig)</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="c1">// e.g. Custom AWS Client Initialization</span>
+<span class="w">    </span><span class="nc">V2ClientBuilderUtils</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">setupAsync</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="n">dynamicAccess</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="n">pluginConfig</span><span class="w"></span>
+<span class="w">      </span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">defaultsMode</span><span class="p">(</span><span class="nc">DefaultsMode</span><span class="p">.</span><span class="nc">AUTO</span><span class="p">)</span><span class="w"> </span><span class="c1">// This is not a configuration item in the plugin.</span>
+<span class="w">      </span><span class="p">.</span><span class="n">build</span><span class="p">()</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
@@ -729,6 +741,90 @@ The following two implementations are available for built-in use.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
   v2 {
     aws-credentials-provider-class-name = &quot;exampe.MyAwsCredentialsProvider&quot;
+  }
+}
+</pre></div>
+</div>
+</section>
+<section id="custom-metricpublisher-by-using-metric-publisher-class-names">
+<h4>Custom MetricPublisher by using <code class="docutils literal notranslate"><span class="pre">metric-publisher-class-names</span></code><a class="headerlink" href="#custom-metricpublisher-by-using-metric-publisher-class-names" title="Permalink to this heading">¶</a></h4>
+<p>Using the MetricPublisher in the V2 sdk, metrics at the SDK level can be sent to Datadog and Newrelic via Kamon.</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
+
+<span class="k">import</span><span class="w"> </span><span class="nn">akka</span><span class="p">.</span><span class="nn">actor</span><span class="p">.</span><span class="nc">DynamicAccess</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com</span><span class="p">.</span><span class="nn">github</span><span class="p">.</span><span class="nn">j5ik2o</span><span class="p">.</span><span class="nn">akka</span><span class="p">.</span><span class="nn">persistence</span><span class="p">.</span><span class="nn">dynamodb</span><span class="p">.</span><span class="nn">config</span><span class="p">.</span><span class="nc">PluginConfig</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">kamon</span><span class="p">.</span><span class="nc">Kamon</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">kamon</span><span class="p">.</span><span class="nn">metric</span><span class="p">.{</span><span class="w"> </span><span class="nc">Counter</span><span class="p">,</span><span class="w"> </span><span class="nc">Histogram</span><span class="p">,</span><span class="w"> </span><span class="nc">MeasurementUnit</span><span class="w"> </span><span class="p">}</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">software</span><span class="p">.</span><span class="nn">amazon</span><span class="p">.</span><span class="nn">awssdk</span><span class="p">.</span><span class="nn">core</span><span class="p">.</span><span class="nn">metrics</span><span class="p">.</span><span class="nc">CoreMetric</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">software</span><span class="p">.</span><span class="nn">amazon</span><span class="p">.</span><span class="nn">awssdk</span><span class="p">.</span><span class="nn">metrics</span><span class="p">.{</span><span class="w"> </span><span class="nc">MetricCollection</span><span class="p">,</span><span class="w"> </span><span class="nc">MetricPublisher</span><span class="w"> </span><span class="p">}</span>
+
+<span class="k">import</span><span class="w"> </span><span class="nn">scala</span><span class="p">.</span><span class="nn">annotation</span><span class="p">.</span><span class="n">unused</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">scala</span><span class="p">.</span><span class="nn">jdk</span><span class="p">.</span><span class="nc">StreamConverters</span><span class="p">.</span><span class="nc">StreamHasToScala</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyMetricPublisher</span><span class="p">(</span><span class="w"></span>
+<span class="w">                           </span><span class="nd">@unused</span><span class="w"> </span><span class="n">dynamicAccess</span><span class="p">:</span><span class="w"> </span><span class="nc">DynamicAccess</span><span class="p">,</span><span class="w"></span>
+<span class="w">                           </span><span class="n">pluginConfig</span><span class="p">:</span><span class="w"> </span><span class="nc">PluginConfig</span><span class="w"></span>
+<span class="w">                         </span><span class="p">)</span><span class="w"> </span><span class="k">extends</span><span class="w"> </span><span class="nc">MetricPublisher</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">override</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">publish</span><span class="p">(</span><span class="n">metricCollection</span><span class="p">:</span><span class="w"> </span><span class="nc">MetricCollection</span><span class="p">):</span><span class="w"> </span><span class="nc">Unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="n">metricsMap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">metricCollection</span><span class="p">.</span><span class="n">stream</span><span class="p">().</span><span class="n">toScala</span><span class="p">(</span><span class="nc">Vector</span><span class="p">).</span><span class="n">map</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">mr</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="n">mr</span><span class="p">.</span><span class="n">metric</span><span class="p">().</span><span class="n">name</span><span class="p">(),</span><span class="w"> </span><span class="n">mr</span><span class="p">)</span><span class="w"> </span><span class="p">}.</span><span class="n">toMap</span><span class="w"></span>
+<span class="w">    </span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">OPERATION_NAME</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">()</span><span class="w"> </span><span class="k">match</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"></span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">API_CALL_SUCCESSFUL</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">().</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="nc">Boolean</span><span class="p">])</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="kd">val</span><span class="w"> </span><span class="n">apiCallDuration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">API_CALL_DURATION</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">().</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="n">java</span><span class="p">.</span><span class="n">time</span><span class="p">.</span><span class="nc">Duration</span><span class="p">]</span><span class="w"></span>
+<span class="w">          </span><span class="kd">val</span><span class="w"> </span><span class="n">credentialsFetchDuration</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">            </span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">CREDENTIALS_FETCH_DURATION</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">().</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="n">java</span><span class="p">.</span><span class="n">time</span><span class="p">.</span><span class="nc">Duration</span><span class="p">]</span><span class="w"></span>
+<span class="w">          </span><span class="kd">val</span><span class="w"> </span><span class="n">marshallingDuration</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">            </span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">MARSHALLING_DURATION</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">().</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="n">java</span><span class="p">.</span><span class="n">time</span><span class="p">.</span><span class="nc">Duration</span><span class="p">]</span><span class="w"></span>
+<span class="w">          </span><span class="kd">val</span><span class="w"> </span><span class="n">retryCount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">metricsMap</span><span class="p">(</span><span class="nc">CoreMetric</span><span class="p">.</span><span class="nc">RETRY_COUNT</span><span class="p">.</span><span class="n">name</span><span class="p">()).</span><span class="n">value</span><span class="p">().</span><span class="k">asInstanceOf</span><span class="p">[</span><span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="nc">Integer</span><span class="p">]</span><span class="w"></span>
+<span class="w">          </span><span class="n">putItemApiCallDurationHistogram</span><span class="p">.</span><span class="n">record</span><span class="p">(</span><span class="n">apiCallDuration</span><span class="p">.</span><span class="n">toMillis</span><span class="p">)</span><span class="w"></span>
+<span class="w">          </span><span class="n">putItemCredentialsFetchDurationHistogram</span><span class="p">.</span><span class="n">record</span><span class="p">(</span><span class="n">credentialsFetchDuration</span><span class="p">.</span><span class="n">toMillis</span><span class="p">)</span><span class="w"></span>
+<span class="w">          </span><span class="n">putItemMarshallingDurationHistogram</span><span class="p">.</span><span class="n">record</span><span class="p">(</span><span class="n">marshallingDuration</span><span class="p">.</span><span class="n">toMillis</span><span class="p">)</span><span class="w"></span>
+<span class="w">          </span><span class="n">putItemRetryCounter</span><span class="p">.</span><span class="n">increment</span><span class="p">(</span><span class="n">retryCount</span><span class="p">.</span><span class="n">toLong</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="n">putItemErrorCounter</span><span class="p">.</span><span class="n">increment</span><span class="p">()</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">override</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">():</span><span class="w"> </span><span class="nc">Unit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">prefix</span><span class="w">                            </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;app&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">apiCallDurationHistogram</span><span class="w">          </span><span class="o">=</span><span class="w"> </span><span class="n">histogram</span><span class="p">(</span><span class="s">s&quot;</span><span class="si">$</span><span class="n">prefix</span><span class="s">.aws.api-call-duration&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">credentialsFetchDurationHistogram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">histogram</span><span class="p">(</span><span class="s">s&quot;</span><span class="si">$</span><span class="n">prefix</span><span class="s">.aws.credentials-fetch-duration&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">marshallingDurationHistogram</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="n">histogram</span><span class="p">(</span><span class="s">s&quot;</span><span class="si">$</span><span class="n">prefix</span><span class="s">.aws.marshalling-duration&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">retryCounter</span><span class="w">                      </span><span class="o">=</span><span class="w"> </span><span class="n">counter</span><span class="p">(</span><span class="s">s&quot;</span><span class="si">$</span><span class="n">prefix</span><span class="s">.aws.retry-count&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">errorCounter</span><span class="w">                      </span><span class="o">=</span><span class="w"> </span><span class="n">counter</span><span class="p">(</span><span class="s">s&quot;</span><span class="si">$</span><span class="n">prefix</span><span class="s">.error-count&quot;</span><span class="p">)</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">putItemApiCallDurationHistogram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">apiCallDurationHistogram</span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">putItemCredentialsFetchDurationHistogram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">credentialsFetchDurationHistogram</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">putItemMarshallingDurationHistogram</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">marshallingDurationHistogram</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">putItemRetryCounter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">retryCounter</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="n">putItemErrorCounter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">errorCounter</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;PutItem&quot;</span><span class="p">)</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">histogram</span><span class="p">(</span><span class="n">metricName</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">Histogram</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="nc">Kamon</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">metricName</span><span class="p">,</span><span class="w"> </span><span class="nc">MeasurementUnit</span><span class="p">.</span><span class="n">time</span><span class="p">.</span><span class="n">milliseconds</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;TableName&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">pluginConfig</span><span class="p">.</span><span class="n">tableName</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;sdk&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">s&quot;java-</span><span class="si">${</span><span class="n">pluginConfig</span><span class="p">.</span><span class="n">clientConfig</span><span class="p">.</span><span class="n">clientVersion</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span><span class="w"></span>
+
+<span class="w">  </span><span class="k">private</span><span class="w"> </span><span class="k">def</span><span class="w"> </span><span class="nf">counter</span><span class="p">(</span><span class="n">metricName</span><span class="p">:</span><span class="w"> </span><span class="nc">String</span><span class="p">):</span><span class="w"> </span><span class="nc">Counter</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">    </span><span class="nc">Kamon</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">counter</span><span class="p">(</span><span class="n">metricName</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;TableName&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">pluginConfig</span><span class="p">.</span><span class="n">tableName</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="n">withTag</span><span class="p">(</span><span class="s">&quot;sdk&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">s&quot;java-</span><span class="si">${</span><span class="n">pluginConfig</span><span class="p">.</span><span class="n">clientConfig</span><span class="p">.</span><span class="n">clientVersion</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
+  v2 {
+    metric-publisher-class-names = [&quot;exampe.MyMetricPublisher&quot;]
   }
 }
 </pre></div>

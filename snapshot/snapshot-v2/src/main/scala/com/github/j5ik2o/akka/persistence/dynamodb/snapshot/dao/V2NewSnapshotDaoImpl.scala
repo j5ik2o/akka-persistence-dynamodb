@@ -17,17 +17,13 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.persistence.SnapshotMetadata
 import akka.serialization.Serialization
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ StreamReadClient, StreamWriteClient }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolver, SortKeyResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SnapshotPluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.serialization.ByteArraySnapshotSerializer
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{
@@ -41,15 +37,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.jdk.CollectionConverters._
 
 private[dao] final class V2NewSnapshotDaoImpl(
-    system: ActorSystem,
+    pluginContext: SnapshotPluginContext,
     asyncClient: Option[JavaDynamoDbAsyncClient],
     syncClient: Option[JavaDynamoDbSyncClient],
-    serialization: Serialization,
-    pluginConfig: SnapshotPluginConfig,
-    partitionKeyResolver: PartitionKeyResolver,
-    sortKeyResolver: SortKeyResolver,
-    metricsReporter: Option[MetricsReporter],
-    traceReporter: Option[TraceReporter]
+    serialization: Serialization
 ) extends SnapshotDao {
   (asyncClient, syncClient) match {
     case (None, None) =>
@@ -57,13 +48,14 @@ private[dao] final class V2NewSnapshotDaoImpl(
     case _ =>
   }
 
+  import pluginContext._
   import pluginConfig._
 
   private val streamReadClient =
-    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
+    new StreamReadClient(pluginContext, asyncClient, syncClient, pluginConfig.readBackoffConfig)
 
   private val streamWriteClient =
-    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
+    new StreamWriteClient(pluginContext, asyncClient, syncClient, pluginConfig.writeBackoffConfig)
 
   private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 

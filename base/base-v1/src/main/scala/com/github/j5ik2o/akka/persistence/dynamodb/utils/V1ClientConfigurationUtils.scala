@@ -15,7 +15,6 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.amazonaws.retry.RetryMode
 import com.amazonaws.{ ClientConfiguration, Protocol, ProxyAuthenticationMethod }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
@@ -23,7 +22,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{
   RetryPolicyProvider,
   SecureRandomProvider
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 
 import java.net.InetAddress
 import scala.concurrent.duration.Duration
@@ -32,10 +31,10 @@ import scala.jdk.CollectionConverters._
 object V1ClientConfigurationUtils {
 
   def setup(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext
   ): ClientConfiguration = {
     val result = new ClientConfiguration()
+    import pluginContext._
     import pluginConfig.clientConfig.v1ClientConfig.clientConfiguration._
     protocol.foreach {
       case com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.Protocol.HTTP =>
@@ -64,7 +63,7 @@ object V1ClientConfigurationUtils {
         proxyAuthenticationMethods.map(ProxyAuthenticationMethod.valueOf)
       result.setProxyAuthenticationMethods(seq.asJava)
     }
-    val p = RetryPolicyProvider.create(dynamicAccess, pluginConfig)
+    val p = RetryPolicyProvider.create(pluginContext)
     result.setRetryPolicy(p.create)
     maxErrorRetry.foreach { v => result.setMaxErrorRetry(v) }
     retryMode.foreach {
@@ -108,8 +107,7 @@ object V1ClientConfigurationUtils {
         validateAfterInactivity.toMillis.toInt
       )
     result.setUseTcpKeepAlive(useTcpKeepAlive)
-    val dnsResolverProvider =
-      DnsResolverProvider.create(dynamicAccess, pluginConfig)
+    val dnsResolverProvider = DnsResolverProvider.create(pluginContext)
     dnsResolverProvider.create.foreach { dnsResolver =>
       result.setDnsResolver(dnsResolver)
     }
@@ -117,7 +115,7 @@ object V1ClientConfigurationUtils {
     result.setResponseMetadataCacheSize(responseMetadataCacheSize)
     if (useSecureRandom) {
       val secureRandomProvider =
-        SecureRandomProvider.create(dynamicAccess, pluginConfig)
+        SecureRandomProvider.create(pluginContext)
       result.setSecureRandom(secureRandomProvider.create)
     }
     result.setUseExpectContinue(useExpectContinue)

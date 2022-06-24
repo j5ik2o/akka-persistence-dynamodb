@@ -16,7 +16,42 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import akka.actor.ActorSystem
+import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 
-final case class StatePluginContext(system: ActorSystem, pluginConfig: StatePluginConfig) extends PluginContext
+import scala.concurrent.ExecutionContext
+
+final case class StatePluginContext(system: ActorSystem, pluginConfig: StatePluginConfig) extends PluginContext {
+
+  val metricsReporter: Option[MetricsReporter] = {
+    val metricsReporterProvider = MetricsReporterProvider.create(this)
+    metricsReporterProvider.create
+  }
+
+  val traceReporter: Option[TraceReporter] = {
+    val traceReporterProvider = TraceReporterProvider.create(this)
+    traceReporterProvider.create
+  }
+
+  val pluginExecutor: ExecutionContext =
+    pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V1 =>
+        DispatcherUtils.newV1Executor(this)
+      case ClientVersion.V2 =>
+        DispatcherUtils.newV2Executor(this)
+    }
+
+  val partitionKeyResolver: PartitionKeyResolver = {
+    val provider = PartitionKeyResolverProvider.create(this)
+    provider.create
+  }
+
+  val tableNameResolver: TableNameResolver = {
+    val provider = TableNameResolverProvider.create(this)
+    provider.create
+  }
+}

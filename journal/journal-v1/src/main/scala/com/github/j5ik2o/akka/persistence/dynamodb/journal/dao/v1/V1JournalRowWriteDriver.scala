@@ -22,9 +22,7 @@ import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamWriteClient
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalRowWriteDriver, PersistenceIdWithSeqNr }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.slf4j.LoggerFactory
 
@@ -33,14 +31,15 @@ import java.nio.ByteBuffer
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowWriteDriver(
-    val system: ActorSystem,
+    val pluginContext: JournalPluginContext,
     val asyncClient: Option[AmazonDynamoDBAsync],
-    val syncClient: Option[AmazonDynamoDB],
-    val pluginConfig: JournalPluginConfig,
-    val partitionKeyResolver: PartitionKeyResolver,
-    val sortKeyResolver: SortKeyResolver,
-    val metricsReporter: Option[MetricsReporter]
+    val syncClient: Option[AmazonDynamoDB]
 ) extends JournalRowWriteDriver {
+
+  override def system: ActorSystem = pluginContext.system
+
+  import pluginContext._
+
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -50,14 +49,17 @@ final class V1JournalRowWriteDriver(
   private val logger = LoggerFactory.getLogger(getClass)
 
   private val streamClient =
-    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
+    new StreamWriteClient(
+      pluginContext,
+      asyncClient,
+      syncClient,
+      pluginConfig.writeBackoffConfig
+    )
 
   private val readDriver = new V1JournalRowReadDriver(
-    system,
+    pluginContext,
     asyncClient,
-    syncClient,
-    pluginConfig,
-    metricsReporter
+    syncClient
   )
 
   override def dispose(): Unit = {

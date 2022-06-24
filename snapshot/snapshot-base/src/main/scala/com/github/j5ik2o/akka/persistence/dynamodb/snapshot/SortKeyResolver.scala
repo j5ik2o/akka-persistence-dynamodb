@@ -15,14 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 final case class SortKey(value: String) {
   def asString: String = value
@@ -40,40 +35,26 @@ trait SortKeyResolverProvider {
 
 object SortKeyResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, snapshotPluginConfig: SnapshotPluginConfig): SortKeyResolverProvider = {
-    val className = snapshotPluginConfig.sortKeyResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[SortKeyResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess]        -> dynamicAccess,
-          classOf[SnapshotPluginConfig] -> snapshotPluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize SortKeyResolverProvider", Some(ex))
-    }
+  def create(pluginContext: SnapshotPluginContext): SortKeyResolverProvider = {
+    val className = pluginContext.pluginConfig.sortKeyResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolverProvider, SnapshotPluginContext](
+      className,
+      pluginContext,
+      classOf[SnapshotPluginContext]
+    )
   }
 
   final class Default(
-      dynamicAccess: DynamicAccess,
-      snapshotPluginConfig: SnapshotPluginConfig
+      pluginContext: SnapshotPluginContext
   ) extends SortKeyResolverProvider {
 
     override def create: SortKeyResolver = {
-      val className = snapshotPluginConfig.sortKeyResolverClassName
-      val args =
-        Seq(classOf[SnapshotPluginConfig] -> snapshotPluginConfig)
-      dynamicAccess
-        .createInstanceFor[SortKeyResolver](
-          className,
-          args
-        ) match {
-        case Success(value) => value
-        case Failure(ex) =>
-          throw new PluginException("Failed to initialize SortKeyResolver", Some(ex))
-      }
+      val className = pluginContext.pluginConfig.sortKeyResolverClassName
+      DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolver, SnapshotPluginContext](
+        className,
+        pluginContext,
+        classOf[SnapshotPluginContext]
+      )
     }
 
   }
@@ -82,7 +63,7 @@ object SortKeyResolverProvider {
 
 object SortKeyResolver {
 
-  final class SeqNr(snapshotPluginConfig: SnapshotPluginConfig) extends SortKeyResolver {
+  final class SeqNr extends SortKeyResolver {
 
     // ${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
@@ -91,12 +72,14 @@ object SortKeyResolver {
 
   }
 
-  final class PersistenceIdWithSeqNr(snapshotPluginConfig: SnapshotPluginConfig)
+  final class PersistenceIdWithSeqNr(pluginContext: SnapshotPluginContext)
       extends SortKeyResolver
       with ToPersistenceIdOps {
 
+    import pluginContext._
+
     override def separator: String =
-      snapshotPluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.body}-${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {

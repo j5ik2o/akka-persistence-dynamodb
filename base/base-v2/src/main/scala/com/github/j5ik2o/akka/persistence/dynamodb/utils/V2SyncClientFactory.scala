@@ -15,19 +15,21 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbClient => JavaDynamoDbSyncClient }
 
 trait V2SyncClientFactory {
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): JavaDynamoDbSyncClient
+  def create: JavaDynamoDbSyncClient
 }
 
 object V2SyncClientFactory {
 
-  class Default extends V2SyncClientFactory {
-    override def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): JavaDynamoDbSyncClient = {
-      V2ClientUtils.createV2SyncClient(dynamicAccess, pluginConfig.configRootPath, pluginConfig)
+  class Default(pluginContext: PluginContext) extends V2SyncClientFactory {
+    override def create: JavaDynamoDbSyncClient = {
+      V2ClientUtils.createV2SyncClient(
+        pluginContext,
+        pluginContext.pluginConfig.configRootPath
+      )
     }
   }
 

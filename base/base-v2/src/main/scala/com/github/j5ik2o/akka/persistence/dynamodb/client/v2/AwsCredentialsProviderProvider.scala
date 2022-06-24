@@ -15,21 +15,18 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
-
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
 
 trait AwsCredentialsProviderProvider {
   def create: Option[AwsCredentialsProvider]
 }
 
 object AwsCredentialsProviderProvider {
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AwsCredentialsProviderProvider = {
+  def create(pluginContext: PluginContext): AwsCredentialsProviderProvider = {
+    import pluginContext._
     val className =
       pluginConfig.clientConfig.clientVersion match {
         case ClientVersion.V2 =>
@@ -37,19 +34,15 @@ object AwsCredentialsProviderProvider {
         case ClientVersion.V2Dax =>
           pluginConfig.clientConfig.v2DaxClientConfig.awsCredentialsProviderProviderClassName
       }
-    dynamicAccess
-      .createInstanceFor[AwsCredentialsProviderProvider](
-        className,
-        Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize AwsCredentialsProviderProvider", Some(ex))
-    }
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[AwsCredentialsProviderProvider, PluginContext](
+      className,
+      pluginContext
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends AwsCredentialsProviderProvider {
+  final class Default(pluginContext: PluginContext) extends AwsCredentialsProviderProvider {
     override def create: Option[AwsCredentialsProvider] = {
+      import pluginContext._
       val classNameOpt = pluginConfig.clientConfig.clientVersion match {
         case ClientVersion.V2 =>
           pluginConfig.clientConfig.v2ClientConfig.awsCredentialsProviderClassName
@@ -57,18 +50,7 @@ object AwsCredentialsProviderProvider {
           pluginConfig.clientConfig.v2DaxClientConfig.awsCredentialsProviderClassName
       }
       classNameOpt.map { className =>
-        dynamicAccess
-          .createInstanceFor[AwsCredentialsProvider](
-            className,
-            Seq(
-              classOf[DynamicAccess] -> dynamicAccess,
-              classOf[PluginConfig]  -> pluginConfig
-            )
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize AWSCredentialsProvider", Some(ex))
-        }
+        DynamicAccessUtils.createInstanceFor_CTX_Throw[AwsCredentialsProvider, PluginContext](className, pluginContext)
       }
     }
   }

@@ -21,7 +21,6 @@ import akka.stream._
 import akka.stream.scaladsl.{ Flow, Keep, Sink, Source, SourceQueueWithComplete }
 import akka.{ Done, NotUsed }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.FlowPersistentReprSerializer
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
@@ -30,16 +29,19 @@ import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 final class WriteJournalDaoImpl(
-    pluginConfig: JournalPluginConfig,
+    pluginContext: JournalPluginContext,
     protected val journalRowDriver: JournalRowWriteDriver,
-    val serializer: FlowPersistentReprSerializer[JournalRow],
-    protected val metricsReporter: Option[MetricsReporter]
+    val serializer: FlowPersistentReprSerializer[JournalRow]
 )(implicit
     val ec: ExecutionContext,
     system: ActorSystem
 ) extends JournalDaoWithUpdates
     with DaoSupport
     with LoggingSupport {
+
+  override protected def metricsReporter: Option[MetricsReporter] = pluginContext.metricsReporter
+
+  import pluginContext._
 
   implicit val mat: Materializer = SystemMaterializer(system).materializer
 

@@ -33,7 +33,7 @@ object JournalDynamicAccessUtils {
     dynamicAccess
       .createInstanceFor[A](
         className,
-        Seq(
+        Vector(
           classOf[DynamicAccess]       -> dynamicAccess,
           classOf[JournalPluginConfig] -> pluginConfig
         )
@@ -41,7 +41,7 @@ object JournalDynamicAccessUtils {
         dynamicAccess
           .createInstanceFor[A](
             className,
-            Seq(
+            Vector(
               classOf[JournalPluginContext] -> pluginContext
             )
           )
@@ -61,7 +61,7 @@ object JournalDynamicAccessUtils {
     dynamicAccess
       .createInstanceFor[JournalRowWriteDriver](
         className,
-        Seq(
+        Vector(
           classOf[JournalPluginConfig]   -> pluginConfig,
           classOf[JournalRowWriteDriver] -> journalRowWriteDriver
         )
@@ -69,7 +69,7 @@ object JournalDynamicAccessUtils {
         dynamicAccess
           .createInstanceFor[JournalRowWriteDriver](
             className,
-            Seq(
+            Vector(
               classOf[JournalPluginContext]  -> pluginContext,
               classOf[JournalRowWriteDriver] -> journalRowWriteDriver
             )

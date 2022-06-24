@@ -15,64 +15,39 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
-import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory, V1SyncClientFactory }
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.state.StatePluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  DynamicAccessUtils,
+  V1AsyncClientFactory,
+  V1SyncClientFactory
+}
 
-import scala.collection.immutable
-import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success }
-
-final class V1ScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
-  override def create[A](
-      system: ActorSystem,
-      dynamicAccess: DynamicAccess,
-      pluginExecutor: ExecutionContext,
-      partitionKeyResolver: PartitionKeyResolver,
-      tableNameResolver: TableNameResolver,
-      metricsReporter: Option[MetricsReporter],
-      traceReporter: Option[TraceReporter],
-      pluginConfig: StatePluginConfig
-  ): ScalaDurableStateUpdateStore[A] = {
+final class V1ScalaDurableStateUpdateStoreFactory(pluginContext: StatePluginContext)
+    extends ScalaDurableStateUpdateStoreFactory {
+  override def create[A]: ScalaDurableStateUpdateStore[A] = {
+    import pluginContext._
     val (maybeV1SyncClient, maybeV1AsyncClient) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val f = dynamicAccess
-          .createInstanceFor[V1SyncClientFactory](
-            pluginConfig.v1SyncClientFactoryClassName,
-            immutable.Seq.empty
-          ) match {
-          case Success(value) => value
-          case Failure(ex)    => throw new PluginException("Failed to initialize V1SyncClientFactory", Some(ex))
-        }
-        val client = f.create(dynamicAccess, pluginConfig)
+        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1SyncClientFactory, PluginContext](
+          pluginConfig.v1SyncClientFactoryClassName,
+          pluginContext
+        )
+        val client = f.create
         (Some(client), None)
       case ClientType.Async =>
-        val f = dynamicAccess
-          .createInstanceFor[V1AsyncClientFactory](
-            pluginConfig.v1AsyncClientFactoryClassName,
-            immutable.Seq.empty
-          ) match {
-          case Success(value) => value
-          case Failure(ex)    => throw new PluginException("Failed to initialize V1AsyncClientFactory", Some(ex))
-        }
-        val client = f.create(dynamicAccess, pluginConfig)
+        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1AsyncClientFactory, PluginContext](
+          pluginConfig.v1AsyncClientFactoryClassName,
+          pluginContext
+        )
+        val client = f.create
         (None, Some(client))
     }
     new DynamoDBDurableStateStoreV1(
-      system,
-      pluginExecutor,
+      pluginContext,
       maybeV1AsyncClient,
-      maybeV1SyncClient,
-      partitionKeyResolver,
-      tableNameResolver,
-      metricsReporter,
-      traceReporter,
-      pluginConfig
+      maybeV1SyncClient
     )
   }
 }

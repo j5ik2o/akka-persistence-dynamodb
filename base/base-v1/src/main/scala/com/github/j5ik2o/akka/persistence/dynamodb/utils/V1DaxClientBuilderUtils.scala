@@ -15,15 +15,15 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.amazon.dax.client.dynamodbv2.{ AmazonDaxAsyncClientBuilder, AmazonDaxClientBuilder }
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.AWSCredentialsProviderProvider
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 
 object V1DaxClientBuilderUtils {
 
-  def setupSync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDaxClientBuilder = {
+  def setupSync(pluginContext: PluginContext): AmazonDaxClientBuilder = {
+    import pluginContext._
     val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
     val builder = AmazonDaxClientBuilder.standard().withClientConfiguration(cc)
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
@@ -32,7 +32,7 @@ object V1DaxClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
-        val credentialsProviderProvider = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val credentialsProviderProvider = AWSCredentialsProviderProvider.create(pluginContext)
         credentialsProviderProvider.create.foreach { cp =>
           builder.setCredentials(cp)
         }
@@ -44,7 +44,8 @@ object V1DaxClientBuilderUtils {
     builder
   }
 
-  def setupAsync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDaxAsyncClientBuilder = {
+  def setupAsync(pluginContext: PluginContext): AmazonDaxAsyncClientBuilder = {
+    import pluginContext._
     val cc      = V1DaxClientConfigUtils.setup(pluginConfig.clientConfig)
     val builder = AmazonDaxAsyncClientBuilder.standard().withClientConfiguration(cc)
 
@@ -54,8 +55,7 @@ object V1DaxClientBuilderUtils {
           new AWSStaticCredentialsProvider(new BasicAWSCredentials(a, s))
         )
       case _ =>
-        val credentialsProviderProvider =
-          AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val credentialsProviderProvider = AWSCredentialsProviderProvider.create(pluginContext)
         credentialsProviderProvider.create.foreach { cp =>
           builder.setCredentials(cp)
         }

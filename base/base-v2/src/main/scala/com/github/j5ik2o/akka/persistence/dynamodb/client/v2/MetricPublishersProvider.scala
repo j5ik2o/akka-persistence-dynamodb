@@ -15,14 +15,10 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import software.amazon.awssdk.metrics.MetricPublisher
-
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
 
 trait MetricPublishersProvider {
   def create: scala.collection.Seq[MetricPublisher]
@@ -30,30 +26,24 @@ trait MetricPublishersProvider {
 
 object MetricPublishersProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): MetricPublishersProvider = {
+  def create(pluginContext: PluginContext): MetricPublishersProvider = {
+    import pluginContext._
     val className = pluginConfig.clientConfig.clientVersion match {
       case ClientVersion.V2 =>
         pluginConfig.clientConfig.v2ClientConfig.metricPublishersProviderClassName
       case ClientVersion.V2Dax =>
         pluginConfig.clientConfig.v2DaxClientConfig.metricPublishersProviderClassName
     }
-    dynamicAccess
-      .createInstanceFor[MetricPublishersProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess] -> dynamicAccess,
-          classOf[PluginConfig]  -> pluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize CsmConfigurationProviderProvider", Some(ex))
-    }
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[MetricPublishersProvider, PluginContext](
+      className,
+      pluginContext
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MetricPublishersProvider {
+  final class Default(pluginContext: PluginContext) extends MetricPublishersProvider {
 
     override def create: scala.collection.Seq[MetricPublisher] = {
+      import pluginContext._
       val classNames = pluginConfig.clientConfig.clientVersion match {
         case ClientVersion.V2 =>
           pluginConfig.clientConfig.v2ClientConfig.metricPublisherClassNames
@@ -61,18 +51,10 @@ object MetricPublishersProvider {
           pluginConfig.clientConfig.v2DaxClientConfig.metricPublisherClassNames
       }
       classNames.map { className =>
-        dynamicAccess
-          .createInstanceFor[MetricPublisher](
-            className,
-            Seq(
-              classOf[DynamicAccess] -> dynamicAccess,
-              classOf[PluginConfig]  -> pluginConfig
-            )
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize MetricPublisher", Some(ex))
-        }
+        DynamicAccessUtils.createInstanceFor_CTX_Throw[MetricPublisher, PluginContext](
+          className,
+          pluginContext
+        )
       }
     }
   }

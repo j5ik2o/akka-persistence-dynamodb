@@ -16,13 +16,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginBaseConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalPluginContext, JournalRow }
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import software.amazon.awssdk.services.dynamodb.model.{ AttributeValue, QueryRequest }
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
@@ -33,12 +30,15 @@ import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 final class V2JournalRowReadDriver(
-    val system: ActorSystem,
+    val pluginContext: JournalPluginContext,
     val asyncClient: Option[DynamoDbAsyncClient],
-    val syncClient: Option[DynamoDbClient],
-    val pluginConfig: JournalPluginBaseConfig,
-    val metricsReporter: Option[MetricsReporter]
+    val syncClient: Option[DynamoDbClient]
 ) extends JournalRowReadDriver {
+
+  override val system = pluginContext.system
+
+  import pluginContext._
+
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -46,7 +46,7 @@ final class V2JournalRowReadDriver(
   }
 
   private val streamClient =
-    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
+    new StreamReadClient(pluginContext, asyncClient, syncClient, pluginConfig.readBackoffConfig)
 
   override def dispose(): Unit = {
     (asyncClient, syncClient) match {

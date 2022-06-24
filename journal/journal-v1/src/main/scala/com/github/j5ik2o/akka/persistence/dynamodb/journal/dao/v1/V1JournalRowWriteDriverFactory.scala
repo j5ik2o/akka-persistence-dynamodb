@@ -15,65 +15,40 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1
 
-import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.{
-  JournalRowWriteDriverFactory,
-  PartitionKeyResolver,
-  SortKeyResolver
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalPluginContext, JournalRowWriteDriverFactory }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  DynamicAccessUtils,
+  V1AsyncClientFactory,
+  V1SyncClientFactory
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory, V1SyncClientFactory }
 
-import scala.collection.immutable
-import scala.util.{ Failure, Success }
+final class V1JournalRowWriteDriverFactory(pluginContext: JournalPluginContext) extends JournalRowWriteDriverFactory {
 
-final class V1JournalRowWriteDriverFactory extends JournalRowWriteDriverFactory {
-
-  override def create(
-      system: ActorSystem,
-      dynamicAccess: DynamicAccess,
-      journalPluginConfig: JournalPluginConfig,
-      partitionKeyResolver: PartitionKeyResolver,
-      sortKeyResolver: SortKeyResolver,
-      metricsReporter: Option[MetricsReporter]
-  ): JournalRowWriteDriver = {
+  override def create: JournalRowWriteDriver = {
     val (maybeSyncClient, maybeAsyncClient) =
-      journalPluginConfig.clientConfig.clientType match {
+      pluginContext.pluginConfig.clientConfig.clientType match {
         case ClientType.Sync =>
-          val f = dynamicAccess
-            .createInstanceFor[V1SyncClientFactory](
-              journalPluginConfig.v1SyncClientFactoryClassName,
-              immutable.Seq.empty
-            ) match {
-            case Success(value) => value
-            case Failure(ex)    => throw new PluginException("Failed to initialize V1SyncClientFactory", Some(ex))
-          }
-          val client = f.create(dynamicAccess, journalPluginConfig)
+          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1SyncClientFactory, PluginContext](
+            pluginContext.pluginConfig.v1SyncClientFactoryClassName,
+            pluginContext
+          )
+          val client = f.create
           (Some(client), None)
         case ClientType.Async =>
-          val f = dynamicAccess
-            .createInstanceFor[V1AsyncClientFactory](
-              journalPluginConfig.v1AsyncClientFactoryClassName,
-              immutable.Seq.empty
-            ) match {
-            case Success(value) => value
-            case Failure(ex)    => throw new PluginException("Failed to initialize V1AsyncClientFactory", Some(ex))
-          }
-          val client = f.create(dynamicAccess, journalPluginConfig)
+          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1AsyncClientFactory, PluginContext](
+            pluginContext.pluginConfig.v1AsyncClientFactoryClassName,
+            pluginContext
+          )
+          val client = f.create
           (None, Some(client))
       }
     new V1JournalRowWriteDriver(
-      system,
+      pluginContext,
       maybeAsyncClient,
-      maybeSyncClient,
-      journalPluginConfig,
-      partitionKeyResolver,
-      sortKeyResolver,
-      metricsReporter
+      maybeSyncClient
     )
   }
 }

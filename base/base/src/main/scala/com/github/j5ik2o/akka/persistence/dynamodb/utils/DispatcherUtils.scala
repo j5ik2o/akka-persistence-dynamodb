@@ -16,30 +16,33 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.stream.ActorAttributes
 import akka.stream.scaladsl.Flow
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 
 import scala.concurrent.ExecutionContextExecutorService
 
 object DispatcherUtils extends LoggingSupport {
 
-  def newV1Executor(pluginConfig: PluginConfig, system: ActorSystem): ExecutionContextExecutorService =
+  def newV1Executor(pluginContext: PluginContext): ExecutionContextExecutorService = {
+    import pluginContext._
     DispatcherUtils
       .getV1DispatcherName(pluginConfig).map { dn =>
         val ec = system.dispatchers.lookup(dn)
         ExecutorServiceUtils.fromExecutionContext(ec)
       }.getOrElse(ExecutorServiceUtils.fromExecutionContext(system.dispatcher))
+  }
 
-  def newV2Executor(pluginConfig: PluginConfig, system: ActorSystem): ExecutionContextExecutorService =
+  def newV2Executor(pluginContext: PluginContext): ExecutionContextExecutorService = {
+    import pluginContext._
     DispatcherUtils
       .getV2DispatcherName(pluginConfig).map { dn =>
         val ec = system.dispatchers.lookup(dn)
         ExecutorServiceUtils.fromExecutionContext(ec)
       }.getOrElse(ExecutorServiceUtils.fromExecutionContext(system.dispatcher))
-
+  }
   implicit class ApplyV1DispatcherOps[A, B](private val flow: Flow[A, B, NotUsed]) extends AnyVal {
 
     def withV1Dispatcher(pluginConfig: PluginConfig): Flow[A, B, NotUsed] =

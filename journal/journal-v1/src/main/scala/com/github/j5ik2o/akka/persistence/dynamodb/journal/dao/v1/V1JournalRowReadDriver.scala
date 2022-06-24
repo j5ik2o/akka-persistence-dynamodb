@@ -21,10 +21,8 @@ import akka.stream.scaladsl.Source
 import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, QueryRequest }
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.StreamReadClient
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRow
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginBaseConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowReadDriver
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalPluginContext, JournalRow }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 
 import java.io.IOException
@@ -32,12 +30,15 @@ import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
 final class V1JournalRowReadDriver(
-    val system: ActorSystem,
+    val pluginContext: JournalPluginContext,
     val asyncClient: Option[AmazonDynamoDBAsync],
-    val syncClient: Option[AmazonDynamoDB],
-    val pluginConfig: JournalPluginBaseConfig,
-    val metricsReporter: Option[MetricsReporter]
+    val syncClient: Option[AmazonDynamoDB]
 ) extends JournalRowReadDriver {
+
+  override def system: ActorSystem = pluginContext.system
+
+  import pluginContext._
+
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -53,7 +54,7 @@ final class V1JournalRowReadDriver(
   }
 
   private val streamClient =
-    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.readBackoffConfig)
+    new StreamReadClient(pluginContext, asyncClient, syncClient, pluginConfig.readBackoffConfig)
 
   override def getJournalRows(
       persistenceId: PersistenceId,

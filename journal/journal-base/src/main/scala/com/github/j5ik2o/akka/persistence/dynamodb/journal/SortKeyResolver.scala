@@ -15,14 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 final case class SortKey(value: String) {
   def asString: String = value
@@ -40,40 +35,26 @@ trait SortKeyResolverProvider {
 
 object SortKeyResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, journalPluginConfig: JournalPluginConfig): SortKeyResolverProvider = {
-    val className = journalPluginConfig.sortKeyResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[SortKeyResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess]       -> dynamicAccess,
-          classOf[JournalPluginConfig] -> journalPluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize SortKeyResolverProvider", Some(ex))
-    }
+  def create(pluginContext: JournalPluginContext): SortKeyResolverProvider = {
+    val className = pluginContext.pluginConfig.sortKeyResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolverProvider, JournalPluginContext](
+      className,
+      pluginContext,
+      classOf[JournalPluginContext]
+    )
   }
 
   final class Default(
-      dynamicAccess: DynamicAccess,
-      journalPluginConfig: JournalPluginConfig
+      pluginContext: JournalPluginContext
   ) extends SortKeyResolverProvider {
 
     override def create: SortKeyResolver = {
-      val className = journalPluginConfig.sortKeyResolverClassName
-      val args =
-        Seq(classOf[JournalPluginConfig] -> journalPluginConfig)
-      dynamicAccess
-        .createInstanceFor[SortKeyResolver](
-          className,
-          args
-        ) match {
-        case Success(value) => value
-        case Failure(ex) =>
-          throw new PluginException("Failed to initialize SortKeyResolver", Some(ex))
-      }
+      val className = pluginContext.pluginConfig.sortKeyResolverClassName
+      DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolver, JournalPluginContext](
+        className,
+        pluginContext,
+        classOf[JournalPluginContext]
+      )
     }
 
   }
@@ -82,7 +63,7 @@ object SortKeyResolverProvider {
 
 object SortKeyResolver {
 
-  final class SeqNr(journalPluginConfig: JournalPluginConfig) extends SortKeyResolver {
+  final class SeqNr extends SortKeyResolver {
 
     // ${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {
@@ -91,12 +72,12 @@ object SortKeyResolver {
 
   }
 
-  final class PersistenceIdWithSeqNr(journalPluginConfig: JournalPluginConfig)
+  final class PersistenceIdWithSeqNr(pluginContext: JournalPluginContext)
       extends SortKeyResolver
       with ToPersistenceIdOps {
 
     override def separator: String =
-      journalPluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginContext.pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.body}-${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {

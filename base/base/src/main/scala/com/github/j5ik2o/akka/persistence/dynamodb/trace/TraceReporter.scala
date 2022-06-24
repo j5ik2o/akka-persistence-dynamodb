@@ -15,19 +15,14 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.trace
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import scala.annotation.unused
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
-/** TraceReporter.
-  */
-abstract class TraceReporter(val pluginConfig: PluginConfig) {
+trait TraceReporter {
 
   def traceJournalAsyncWriteMessages[T](@unused context: Context)(f: => Future[T]): Future[T] = f
 
@@ -69,7 +64,7 @@ abstract class TraceReporter(val pluginConfig: PluginConfig) {
 
 object TraceReporter {
 
-  final class None(pluginConfig: PluginConfig) extends TraceReporter(pluginConfig)
+  final class None extends TraceReporter
 
 }
 
@@ -81,32 +76,22 @@ trait TraceReporterProvider {
 
 object TraceReporterProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): TraceReporterProvider = {
-    val className = pluginConfig.traceReporterProviderClassName
-    dynamicAccess
-      .createInstanceFor[TraceReporterProvider](
-        className,
-        Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize TraceReporterProvider", Some(ex))
-    }
+  def create(pluginContext: PluginContext): TraceReporterProvider = {
+    val className = pluginContext.pluginConfig.traceReporterProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[TraceReporterProvider, PluginContext](
+      className,
+      pluginContext
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends TraceReporterProvider {
+  final class Default(pluginContext: PluginContext) extends TraceReporterProvider {
 
     def create: Option[TraceReporter] = {
-      pluginConfig.traceReporterClassName.map { className =>
-        dynamicAccess
-          .createInstanceFor[TraceReporter](
-            className,
-            Seq(classOf[PluginConfig] -> pluginConfig)
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize TraceReporter", Some(ex))
-        }
+      pluginContext.pluginConfig.traceReporterClassName.map { className =>
+        DynamicAccessUtils.createInstanceFor_CTX_Throw[TraceReporter, PluginContext](
+          className,
+          pluginContext
+        )
       }
     }
 

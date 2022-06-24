@@ -15,8 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import software.amazon.awssdk.services.dynamodb.{
   DynamoDbAsyncClient => JavaDynamoDbAsyncClient,
   DynamoDbClient => JavaDynamoDbSyncClient
@@ -25,63 +24,49 @@ import software.amazon.awssdk.services.dynamodb.{
 object V2ClientUtils extends LoggingSupport {
 
   def createV2SyncClient(
-      dynamicAccess: DynamicAccess,
-      configRootPath: String,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext,
+      configRootPath: String
   ): JavaDynamoDbSyncClient = {
-    if (pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
+    if (pluginContext.pluginConfig.clientConfig.v2ClientConfig.dispatcherName.isEmpty)
       logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
     val javaSyncClientV2 = V2ClientBuilderUtils
-      .setupSync(
-        dynamicAccess,
-        pluginConfig
-      )
+      .setupSync(pluginContext)
       .build()
     javaSyncClientV2
   }
 
   def createV2AsyncClient(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext
   ): JavaDynamoDbAsyncClient = {
     val javaAsyncClientV2 = V2ClientBuilderUtils
-      .setupAsync(
-        dynamicAccess,
-        pluginConfig
-      )
+      .setupAsync(pluginContext)
       .build()
     javaAsyncClientV2
   }
 
   def createV2DaxSyncClient(
-      dynamicAccess: DynamicAccess,
-      configRootPath: String,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext,
+      configRootPath: String
   ): JavaDynamoDbSyncClient = {
-    if (pluginConfig.clientConfig.v2DaxClientConfig.dispatcherName.isEmpty)
+    if (pluginContext.pluginConfig.clientConfig.v2DaxClientConfig.dispatcherName.isEmpty)
       logger.warn(
         s"Please set a dispatcher name defined by you to `${configRootPath}.dynamo-db-client.v2-dax.dispatcher-name` if you are using the AWS-SDK API for blocking I/O"
       )
     val javaSyncClientV2 = V2DaxClientBuilderUtils
       .setupSync(
-        dynamicAccess,
-        pluginConfig
+        pluginContext
       )
       .build()
     javaSyncClientV2
   }
 
   def createV2DaxAsyncClient(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext
   ): JavaDynamoDbAsyncClient = {
     val javaAsyncClientV2 = V2DaxClientBuilderUtils
-      .setupAsync(
-        dynamicAccess,
-        pluginConfig
-      )
+      .setupAsync(pluginContext)
       .build()
     javaAsyncClientV2
   }

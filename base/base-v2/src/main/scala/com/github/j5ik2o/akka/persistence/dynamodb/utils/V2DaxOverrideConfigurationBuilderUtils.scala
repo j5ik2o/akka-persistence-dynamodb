@@ -1,11 +1,10 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
   AwsCredentialsProviderProvider,
   MetricPublishersProvider
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.regions.Region
 import software.amazon.dax.Configuration
@@ -14,7 +13,8 @@ import scala.concurrent.duration.Duration
 
 object V2DaxOverrideConfigurationBuilderUtils {
 
-  def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): Configuration.Builder = {
+  def setup(pluginContext: PluginContext): Configuration.Builder = {
+    import pluginContext._
     import pluginConfig.clientConfig.v2DaxClientConfig._
     var builder = Configuration.builder()
 
@@ -45,8 +45,7 @@ object V2DaxOverrideConfigurationBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
-        val awsCredentialsProviderProvider =
-          AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(pluginContext)
         awsCredentialsProviderProvider.create.foreach { cp =>
           builder.credentialsProvider(cp)
         }
@@ -57,7 +56,7 @@ object V2DaxOverrideConfigurationBuilderUtils {
     }
     urlOpt.foreach(url => builder.url(url))
 
-    val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
+    val metricPublishersProvider = MetricPublishersProvider.create(pluginContext)
     val metricPublishers         = metricPublishersProvider.create
     metricPublishers.foreach { m =>
       builder.addMetricPublisher(m)

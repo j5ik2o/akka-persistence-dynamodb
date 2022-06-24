@@ -15,17 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.DecimalFormat
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
 
 final case class PartitionKey(private val value: String) {
   def asString: String = value
@@ -45,39 +41,24 @@ trait PartitionKeyResolverProvider {
 
 object PartitionKeyResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, statePluginConfig: StatePluginConfig): PartitionKeyResolverProvider = {
-    val className = statePluginConfig.partitionKeyResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[PartitionKeyResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess]     -> dynamicAccess,
-          classOf[StatePluginConfig] -> statePluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize PartitionKeyResolverProvider", Some(ex))
-    }
-
+  def create(pluginContext: StatePluginContext): PartitionKeyResolverProvider = {
+    val className = pluginContext.pluginConfig.partitionKeyResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolverProvider, StatePluginContext](
+      className,
+      pluginContext,
+      classOf[StatePluginContext]
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, statePluginConfig: StatePluginConfig)
-      extends PartitionKeyResolverProvider {
+  final class Default(pluginContext: StatePluginContext) extends PartitionKeyResolverProvider {
 
     override def create: PartitionKeyResolver = {
-      val className = statePluginConfig.partitionKeyResolverClassName
-      val args =
-        Seq(classOf[StatePluginConfig] -> statePluginConfig)
-      dynamicAccess
-        .createInstanceFor[PartitionKeyResolver](
-          className,
-          args
-        ) match {
-        case Success(value) => value
-        case Failure(ex) =>
-          throw new PluginException("Failed to initialize PartitionKeyResolver", Some(ex))
-      }
+      val className = pluginContext.pluginConfig.partitionKeyResolverClassName
+      DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolver, StatePluginContext](
+        className,
+        pluginContext,
+        classOf[StatePluginContext]
+      )
     }
 
   }
@@ -85,12 +66,14 @@ object PartitionKeyResolverProvider {
 
 object PartitionKeyResolver {
 
-  final class PersistenceIdBased(statePluginConfig: StatePluginConfig)
+  final class PersistenceIdBased(pluginContext: StatePluginContext)
       extends PartitionKeyResolver
       with ToPersistenceIdOps {
 
+    import pluginContext._
+
     override def separator: String =
-      statePluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId): PartitionKey = {
@@ -98,7 +81,7 @@ object PartitionKeyResolver {
       val df           = new DecimalFormat("0000000000000000000000000000000000000000")
       val bytes        = persistenceId.asString.reverse.getBytes(StandardCharsets.UTF_8)
       val hash         = BigInt(md5.digest(bytes))
-      val mod          = (hash.abs % statePluginConfig.shardCount) + 1
+      val mod          = (hash.abs % pluginConfig.shardCount) + 1
       val modelNameOpt = persistenceId.prefix
       val pkey = modelNameOpt match {
         case Some(modelName) =>

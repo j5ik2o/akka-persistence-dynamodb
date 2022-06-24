@@ -437,6 +437,8 @@ class MyAwsCredentialsProvider(dynamicAccess: DynamicAccess, pluginConfig: Plugi
 }
 ```
 
+Specify your custom implementation class to `aws-credentials-provider-class-name`.
+
 ```
 j5ik2o.dynamo-db-????? {
   v2 {
@@ -445,7 +447,7 @@ j5ik2o.dynamo-db-????? {
 }
 ```
 
-#### Custom MetricPublisher by using `metric-publisher-class-names`
+### MetricPublisher 
 
 Using the MetricPublisher in the V2 sdk, metrics at the SDK level can be sent to Datadog and Newrelic via Kamon.
 
@@ -522,6 +524,8 @@ class MyMetricPublisher(
       .withTag("sdk", s"java-${pluginConfig.clientConfig.clientVersion}")
 }
 ```
+
+Specify your custom implementation classes to `metric-publisher-class-names`.
 
 ```
 j5ik2o.dynamo-db-????? {

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.12.1+1-d1529cc5-SNAPSHOT documentation</title>
+  <title>Customize &mdash; j5ik2o/akka-persistence-dynamodb 1.12.1+6-c454d4c4-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -131,9 +131,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#aws-credentialsprovider">AWS CredentialsProvider</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsproviderprovider-by-using-aws-credentials-provider-provider-class-name">Custom AWSCredentialsProviderProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-provider-class-name</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#custom-awscredentialsprovider-by-using-aws-credentials-provider-class-name">Custom AWSCredentialsProvider by using <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#custom-metricpublisher-by-using-metric-publisher-class-names">Custom MetricPublisher by using <code class="docutils literal notranslate"><span class="pre">metric-publisher-class-names</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#metricpublisher">MetricPublisher</a></li>
 </ul>
 </li>
 </ul>
@@ -738,6 +738,7 @@ The following two implementations are available for built-in use.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>Specify your custom implementation class to <code class="docutils literal notranslate"><span class="pre">aws-credentials-provider-class-name</span></code>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
   v2 {
     aws-credentials-provider-class-name = &quot;exampe.MyAwsCredentialsProvider&quot;
@@ -746,8 +747,9 @@ The following two implementations are available for built-in use.</p>
 </pre></div>
 </div>
 </section>
-<section id="custom-metricpublisher-by-using-metric-publisher-class-names">
-<h4>Custom MetricPublisher by using <code class="docutils literal notranslate"><span class="pre">metric-publisher-class-names</span></code><a class="headerlink" href="#custom-metricpublisher-by-using-metric-publisher-class-names" title="Permalink to this heading">¶</a></h4>
+</section>
+<section id="metricpublisher">
+<h3>MetricPublisher<a class="headerlink" href="#metricpublisher" title="Permalink to this heading">¶</a></h3>
 <p>Using the MetricPublisher in the V2 sdk, metrics at the SDK level can be sent to Datadog and Newrelic via Kamon.</p>
 <div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">package</span><span class="w"> </span><span class="n">example</span>
 
@@ -822,6 +824,7 @@ The following two implementations are available for built-in use.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>Specify your custom implementation classes to <code class="docutils literal notranslate"><span class="pre">metric-publisher-class-names</span></code>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>j5ik2o.dynamo-db-????? {
   v2 {
     metric-publisher-class-names = [&quot;exampe.MyMetricPublisher&quot;]
@@ -829,7 +832,6 @@ The following two implementations are available for built-in use.</p>
 }
 </pre></div>
 </div>
-</section>
 </section>
 </section>
 </section>

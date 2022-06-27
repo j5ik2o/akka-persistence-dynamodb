@@ -15,17 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.DecimalFormat
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
 
 final case class PartitionKey(private val value: String) {
   def asString: String = value
@@ -45,39 +41,24 @@ trait PartitionKeyResolverProvider {
 
 object PartitionKeyResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, snapshotPluginConfig: SnapshotPluginConfig): PartitionKeyResolverProvider = {
-    val className = snapshotPluginConfig.partitionKeyResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[PartitionKeyResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess]        -> dynamicAccess,
-          classOf[SnapshotPluginConfig] -> snapshotPluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize PartitionKeyResolverProvider", Some(ex))
-    }
-
+  def create(pluginContext: SnapshotPluginContext): PartitionKeyResolverProvider = {
+    val className = pluginContext.pluginConfig.partitionKeyResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolverProvider, SnapshotPluginContext](
+      className,
+      pluginContext,
+      classOf[SnapshotPluginContext]
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, snapshotPluginConfig: SnapshotPluginConfig)
-      extends PartitionKeyResolverProvider {
+  final class Default(pluginContext: SnapshotPluginContext) extends PartitionKeyResolverProvider {
 
     override def create: PartitionKeyResolver = {
-      val className = snapshotPluginConfig.partitionKeyResolverClassName
-      val args =
-        Seq(classOf[SnapshotPluginConfig] -> snapshotPluginConfig)
-      dynamicAccess
-        .createInstanceFor[PartitionKeyResolver](
-          className,
-          args
-        ) match {
-        case Success(value) => value
-        case Failure(ex) =>
-          throw new PluginException("Failed to initialize PartitionKeyResolver", Some(ex))
-      }
+      val className = pluginContext.pluginConfig.partitionKeyResolverClassName
+      DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolver, SnapshotPluginContext](
+        className,
+        pluginContext,
+        classOf[SnapshotPluginContext]
+      )
     }
 
   }
@@ -85,22 +66,25 @@ object PartitionKeyResolverProvider {
 
 object PartitionKeyResolver {
 
-  final class SequenceNumberBased(snapshotPluginConfig: SnapshotPluginConfig) extends PartitionKeyResolver {
+  final class SequenceNumberBased(pluginContext: SnapshotPluginContext) extends PartitionKeyResolver {
+    import pluginContext._
 
     // ${persistenceId}-${sequenceNumber % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
-      val pkey = s"${persistenceId.asString}-${sequenceNumber.value % snapshotPluginConfig.shardCount}"
+      val pkey = s"${persistenceId.asString}-${sequenceNumber.value % pluginConfig.shardCount}"
       PartitionKey(pkey)
     }
 
   }
 
-  final class PersistenceIdBased(snapshotPluginConfig: SnapshotPluginConfig)
+  final class PersistenceIdBased(pluginContext: SnapshotPluginContext)
       extends PartitionKeyResolver
       with ToPersistenceIdOps {
 
+    import pluginContext._
+
     override def separator: String =
-      snapshotPluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {
@@ -108,7 +92,7 @@ object PartitionKeyResolver {
       val df           = new DecimalFormat("0000000000000000000000000000000000000000")
       val bytes        = persistenceId.asString.reverse.getBytes(StandardCharsets.UTF_8)
       val hash         = BigInt(md5.digest(bytes))
-      val mod          = (hash.abs % snapshotPluginConfig.shardCount) + 1
+      val mod          = (hash.abs % pluginConfig.shardCount) + 1
       val modelNameOpt = persistenceId.prefix
       val pkey = modelNameOpt match {
         case Some(modelName) =>

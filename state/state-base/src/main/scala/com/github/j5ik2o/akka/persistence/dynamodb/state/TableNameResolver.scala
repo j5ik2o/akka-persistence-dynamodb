@@ -15,14 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-
-import scala.collection.immutable.Seq
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 final case class TableName(private val value: String) {
   def asString: String = value
@@ -40,39 +35,24 @@ trait TableNameResolverProvider {
 
 object TableNameResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, statePluginConfig: StatePluginConfig): TableNameResolverProvider = {
-    val className = statePluginConfig.tableNameResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[TableNameResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess]     -> dynamicAccess,
-          classOf[StatePluginConfig] -> statePluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize PartitionKeyResolverProvider", Some(ex))
-    }
-
+  def create(pluginContext: StatePluginContext): TableNameResolverProvider = {
+    val className = pluginContext.pluginConfig.tableNameResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[TableNameResolverProvider, StatePluginContext](
+      className,
+      pluginContext,
+      classOf[StatePluginContext]
+    )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, statePluginConfig: StatePluginConfig)
-      extends TableNameResolverProvider {
+  final class Default(pluginContext: StatePluginContext) extends TableNameResolverProvider {
 
     override def create: TableNameResolver = {
-      val className = statePluginConfig.tableNameResolverClassName
-      val args =
-        Seq(classOf[StatePluginConfig] -> statePluginConfig)
-      dynamicAccess
-        .createInstanceFor[TableNameResolver](
-          className,
-          args
-        ) match {
-        case Success(value) => value
-        case Failure(ex) =>
-          throw new PluginException("Failed to initialize PartitionKeyResolver", Some(ex))
-      }
+      val className = pluginContext.pluginConfig.tableNameResolverClassName
+      DynamicAccessUtils.createInstanceFor_CTX_Throw[TableNameResolver, StatePluginContext](
+        className,
+        pluginContext,
+        classOf[StatePluginContext]
+      )
     }
 
   }
@@ -80,17 +60,18 @@ object TableNameResolverProvider {
 
 object TableNameResolver {
 
-  final class Config(statePluginConfig: StatePluginConfig) extends TableNameResolver {
-    override def resolve(persistenceId: PersistenceId): TableName = TableName(statePluginConfig.tableName)
+  final class Config(pluginContext: StatePluginContext) extends TableNameResolver {
+    override def resolve(persistenceId: PersistenceId): TableName = TableName(pluginContext.pluginConfig.tableName)
   }
 
-  final class Prefix(statePluginConfig: StatePluginConfig) extends TableNameResolver with ToPersistenceIdOps {
+  final class Prefix(pluginContext: StatePluginContext) extends TableNameResolver with ToPersistenceIdOps {
+    import pluginContext._
 
     override def separator: String =
-      statePluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
 
     override def resolve(persistenceId: PersistenceId): TableName = {
-      TableName(persistenceId.prefix.getOrElse(statePluginConfig.tableName))
+      TableName(persistenceId.prefix.getOrElse(pluginConfig.tableName))
     }
 
   }

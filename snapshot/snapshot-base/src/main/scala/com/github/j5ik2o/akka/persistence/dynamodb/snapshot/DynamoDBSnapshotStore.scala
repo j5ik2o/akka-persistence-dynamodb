@@ -24,17 +24,13 @@ import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.stream.{ Materializer, SystemMaterializer }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoFactory }
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import com.typesafe.config.Config
 
 import java.util.UUID
-import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
@@ -54,40 +50,16 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   implicit val mat: Materializer           = SystemMaterializer(system).materializer
   implicit val _log: LoggingAdapter        = log
 
-  private val dynamicAccess = system.dynamicAccess
+  system.dynamicAccess
 
-  private val serialization                        = SerializationExtension(system)
+  private val serialization = SerializationExtension(system)
+
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
+  private val pluginContext                        = SnapshotPluginContext(system, pluginConfig)
 
-  private val pluginExecutor: ExecutionContext =
-    pluginConfig.clientConfig.clientVersion match {
-      case ClientVersion.V1 =>
-        DispatcherUtils.newV1Executor(pluginConfig, system)
-      case ClientVersion.V2 =>
-        DispatcherUtils.newV2Executor(pluginConfig, system)
-    }
+  import pluginContext._
 
   private implicit val ec: ExecutionContext = pluginExecutor
-
-  private val partitionKeyResolver: PartitionKeyResolver = {
-    val provider = PartitionKeyResolverProvider.create(dynamicAccess, pluginConfig)
-    provider.create
-  }
-
-  private val sortKeyResolver: SortKeyResolver = {
-    val provider = SortKeyResolverProvider.create(dynamicAccess, pluginConfig)
-    provider.create
-  }
-
-  private val metricsReporter: Option[MetricsReporter] = {
-    val metricsReporterProvider = MetricsReporterProvider.create(dynamicAccess, pluginConfig)
-    metricsReporterProvider.create
-  }
-
-  private val traceReporter: Option[TraceReporter] = {
-    val traceReporterProvider = TraceReporterProvider.create(dynamicAccess, pluginConfig)
-    traceReporterProvider.create
-  }
 
   private val snapshotDao: SnapshotDao = {
     val className = pluginConfig.clientConfig.clientVersion match {
@@ -100,19 +72,13 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V1DaxSnapshotDaoFactory"
     }
-    val f = dynamicAccess.createInstanceFor[SnapshotDaoFactory](className, immutable.Seq.empty) match {
-      case Success(value) => value
-      case Failure(ex)    => throw new PluginException("Failed to initialize SnapshotDaoFactory", Some(ex))
-    }
+    val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[SnapshotDaoFactory, SnapshotPluginContext](
+      className,
+      pluginContext,
+      classOf[SnapshotPluginContext]
+    )
     f.create(
-      system,
-      dynamicAccess,
-      serialization,
-      pluginConfig,
-      partitionKeyResolver,
-      sortKeyResolver,
-      metricsReporter,
-      traceReporter
+      serialization
     )
   }
 

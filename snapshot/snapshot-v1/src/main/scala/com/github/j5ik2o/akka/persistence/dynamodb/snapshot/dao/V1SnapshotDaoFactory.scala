@@ -15,67 +15,45 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
-import akka.actor.{ ActorSystem, DynamicAccess }
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ PartitionKeyResolver, SortKeyResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory, V1SyncClientFactory }
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SnapshotPluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  DynamicAccessUtils,
+  V1AsyncClientFactory,
+  V1SyncClientFactory
+}
 
-import scala.collection.immutable
-import scala.util.{ Failure, Success }
-
-final class V1SnapshotDaoFactory extends SnapshotDaoFactory {
+final class V1SnapshotDaoFactory(pluginContext: SnapshotPluginContext) extends SnapshotDaoFactory {
   override def create(
-      system: ActorSystem,
-      dynamicAccess: DynamicAccess,
-      serialization: Serialization,
-      pluginConfig: SnapshotPluginConfig,
-      partitionKeyResolver: PartitionKeyResolver,
-      sortKeyResolver: SortKeyResolver,
-      metricsReporter: Option[MetricsReporter],
-      traceReporter: Option[TraceReporter]
+      serialization: Serialization
   ): SnapshotDao = {
+    import pluginContext._
     val (async, sync) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val f = dynamicAccess
-          .createInstanceFor[V1SyncClientFactory](
-            pluginConfig.v1SyncClientFactoryClassName,
-            immutable.Seq.empty
-          ) match {
-          case Success(value) => value
-          case Failure(ex)    => throw new PluginException("Failed to initialize V1SyncClientFactory", Some(ex))
-        }
-        val v1JavaSyncClient = f.create(dynamicAccess, pluginConfig)
+        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1SyncClientFactory, PluginContext](
+          pluginConfig.v1SyncClientFactoryClassName,
+          pluginContext
+        )
+        val v1JavaSyncClient = f.create
         (None, Some(v1JavaSyncClient))
       case ClientType.Async =>
-        val f = dynamicAccess
-          .createInstanceFor[V1AsyncClientFactory](
-            pluginConfig.v1AsyncClientFactoryClassName,
-            immutable.Seq.empty
-          ) match {
-          case Success(value) => value
-          case Failure(ex)    => throw new PluginException("Failed to initialize V1AsyncClientFactory", Some(ex))
-        }
-        val v1JavaAsyncClient = f.create(dynamicAccess, pluginConfig)
+        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1AsyncClientFactory, PluginContext](
+          pluginConfig.v1AsyncClientFactoryClassName,
+          pluginContext
+        )
+        val v1JavaAsyncClient = f.create
         (Some(v1JavaAsyncClient), None)
     }
     if (pluginConfig.legacyTableFormat)
-      new V1LegacySnapshotDaoImpl(system, async, sync, serialization, pluginConfig, metricsReporter, traceReporter)
+      new V1LegacySnapshotDaoImpl(pluginContext, async, sync, serialization)
     else
       new V1NewSnapshotDaoImpl(
-        system,
+        pluginContext,
         async,
         sync,
-        serialization,
-        pluginConfig,
-        partitionKeyResolver,
-        sortKeyResolver,
-        metricsReporter,
-        traceReporter
+        serialization
       )
   }
 }

@@ -15,18 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
-import akka.actor.DynamicAccess
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import scala.annotation.unused
-import scala.collection.immutable._
-import scala.util.{ Failure, Success }
 
-/** MetricsReporter.
-  */
-abstract class MetricsReporter(val pluginConfig: PluginConfig) {
+trait MetricsReporter {
 
   def beforeJournalAsyncWriteMessages(context: Context): Context                            = { context }
   def afterJournalAsyncWriteMessages(@unused context: Context): Unit                        = {}
@@ -103,7 +98,7 @@ abstract class MetricsReporter(val pluginConfig: PluginConfig) {
 
 object MetricsReporter {
 
-  final class None(pluginConfig: PluginConfig) extends MetricsReporter(pluginConfig)
+  final class None() extends MetricsReporter
 
 }
 
@@ -115,32 +110,22 @@ trait MetricsReporterProvider {
 
 object MetricsReporterProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): MetricsReporterProvider = {
-    val className = pluginConfig.metricsReporterProviderClassName
-    dynamicAccess
-      .createInstanceFor[MetricsReporterProvider](
+  def create(pluginContext: PluginContext): MetricsReporterProvider = {
+    val className = pluginContext.pluginConfig.metricsReporterProviderClassName
+    DynamicAccessUtils
+      .createInstanceFor_CTX_Throw[MetricsReporterProvider, PluginContext](
         className,
-        Seq(classOf[DynamicAccess] -> dynamicAccess, classOf[PluginConfig] -> pluginConfig)
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize MetricsReporterProvider", Some(ex))
-    }
+        pluginContext
+      )
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MetricsReporterProvider {
+  final class Default(pluginContext: PluginContext) extends MetricsReporterProvider {
 
     def create: Option[MetricsReporter] = {
+      import pluginContext._
       pluginConfig.metricsReporterClassName.map { className =>
-        dynamicAccess
-          .createInstanceFor[MetricsReporter](
-            className,
-            Seq(classOf[PluginConfig] -> pluginConfig)
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize MetricsReporter", Some(ex))
-        }
+        DynamicAccessUtils
+          .createInstanceFor_CTX_Throw[MetricsReporter, PluginContext](className, pluginContext)
       }
     }
 

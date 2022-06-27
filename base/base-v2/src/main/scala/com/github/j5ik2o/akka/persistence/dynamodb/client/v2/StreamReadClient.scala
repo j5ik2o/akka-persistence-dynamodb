@@ -16,12 +16,12 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.StreamSupport
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
 import software.amazon.awssdk.services.dynamodb.model._
 import software.amazon.awssdk.services.dynamodb.{ DynamoDbAsyncClient, DynamoDbClient }
@@ -32,12 +32,13 @@ import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 final class StreamReadClient(
-    val system: ActorSystem,
+    val pluginContext: PluginContext,
     val asyncClient: Option[DynamoDbAsyncClient],
     val syncClient: Option[DynamoDbClient],
-    val pluginConfig: PluginConfig,
     val readBackoffConfig: BackoffConfig
 ) extends StreamSupport {
+
+  import pluginContext._
 
   private val log = system.log
 

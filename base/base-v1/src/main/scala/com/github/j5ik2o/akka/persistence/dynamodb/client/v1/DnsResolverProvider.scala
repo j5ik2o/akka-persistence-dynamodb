@@ -15,13 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
-import akka.actor.DynamicAccess
 import com.amazonaws.DnsResolver
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-
-import scala.collection.immutable._
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait DnsResolverProvider {
   def create: Option[DnsResolver]
@@ -29,38 +25,18 @@ trait DnsResolverProvider {
 
 object DnsResolverProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): DnsResolverProvider = {
-    val className = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverProviderClassName
-    dynamicAccess
-      .createInstanceFor[DnsResolverProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess] -> dynamicAccess,
-          classOf[PluginConfig]  -> pluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize DnsResolverProvider", Some(ex))
-    }
+  def create(pluginContext: PluginContext): DnsResolverProvider = {
+    val className =
+      pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[DnsResolverProvider, PluginContext](className, pluginContext)
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends DnsResolverProvider {
+  final class Default(pluginContext: PluginContext) extends DnsResolverProvider {
 
     override def create: Option[DnsResolver] = {
-      val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverClassName
+      val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverClassName
       classNameOpt.map { className =>
-        dynamicAccess
-          .createInstanceFor[DnsResolver](
-            className,
-            Seq(
-              classOf[PluginConfig] -> pluginConfig
-            )
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize DnsResolver", Some(ex))
-        }
+        DynamicAccessUtils.createInstanceFor_CTX_Throw[DnsResolver, PluginContext](className, pluginContext)
       }
     }
   }

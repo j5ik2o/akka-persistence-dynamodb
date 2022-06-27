@@ -15,13 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
-import akka.actor.DynamicAccess
 import com.amazonaws.monitoring.MonitoringListener
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-
-import scala.collection.immutable._
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait MonitoringListenerProvider {
   def create: Option[MonitoringListener]
@@ -29,39 +25,17 @@ trait MonitoringListenerProvider {
 
 object MonitoringListenerProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): MonitoringListenerProvider = {
-    val className = pluginConfig.clientConfig.v1ClientConfig.monitoringListenerProviderClassName
-    dynamicAccess
-      .createInstanceFor[MonitoringListenerProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess] -> dynamicAccess,
-          classOf[PluginConfig]  -> pluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize MonitoringListenerProvider", Some(ex))
-    }
+  def create(pluginContext: PluginContext): MonitoringListenerProvider = {
+    val className = pluginContext.pluginConfig.clientConfig.v1ClientConfig.monitoringListenerProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[MonitoringListenerProvider, PluginContext](className, pluginContext)
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends MonitoringListenerProvider {
+  final class Default(pluginContext: PluginContext) extends MonitoringListenerProvider {
 
     override def create: Option[MonitoringListener] = {
-      val classNameOpt = pluginConfig.clientConfig.v1ClientConfig.monitoringListenerClassName
+      val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.monitoringListenerClassName
       classNameOpt.map { className =>
-        dynamicAccess
-          .createInstanceFor[MonitoringListener](
-            className,
-            Seq(
-              classOf[DynamicAccess] -> dynamicAccess,
-              classOf[PluginConfig]  -> pluginConfig
-            )
-          ) match {
-          case Success(value) => value
-          case Failure(ex) =>
-            throw new PluginException("Failed to initialize MonitoringListener", Some(ex))
-        }
+        DynamicAccessUtils.createInstanceFor_CTX_Throw[MonitoringListener, PluginContext](className, pluginContext)
       }
     }
   }

@@ -15,9 +15,8 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.AwsCredentialsProviderProvider
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.http.SdkHttpClient
@@ -35,12 +34,12 @@ import java.net.URI
 object V2ClientBuilderUtils {
 
   def setupSync(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext
   ): DynamoDbClientBuilder = {
+    import pluginContext._
     val httpClient: SdkHttpClient = V2HttpClientBuilderUtils.setupSync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration =
-      V2ClientOverrideConfigurationBuilderUtils.setup(dynamicAccess, pluginConfig).build()
+      V2ClientOverrideConfigurationBuilderUtils.setup(pluginContext).build()
 
     var builder = DynamoDbClient.builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
 
@@ -50,7 +49,7 @@ object V2ClientBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
-        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(pluginContext)
         awsCredentialsProviderProvider.create.foreach { cp =>
           builder = builder.credentialsProvider(cp)
         }
@@ -64,10 +63,11 @@ object V2ClientBuilderUtils {
     builder
   }
 
-  def setupAsync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): DynamoDbAsyncClientBuilder = {
+  def setupAsync(pluginContext: PluginContext): DynamoDbAsyncClientBuilder = {
+    import pluginContext._
     val httpClient: SdkAsyncHttpClient = V2HttpClientBuilderUtils.setupAsync(pluginConfig).build()
     val clientOverrideConfiguration: ClientOverrideConfiguration = V2ClientOverrideConfigurationBuilderUtils
-      .setup(dynamicAccess, pluginConfig)
+      .setup(pluginContext)
       .build()
 
     var builder =
@@ -79,7 +79,7 @@ object V2ClientBuilderUtils {
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
-        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+        val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(pluginContext)
         awsCredentialsProviderProvider.create.foreach { cp =>
           builder = builder.credentialsProvider(cp)
         }

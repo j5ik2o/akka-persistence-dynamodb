@@ -15,23 +15,23 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDBAsyncClientBuilder, AmazonDynamoDBClientBuilder }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1._
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 
 object V1ClientBuilderUtils {
 
-  def setupSync(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): AmazonDynamoDBClientBuilder = {
-    val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
+  def setupSync(pluginContext: PluginContext): AmazonDynamoDBClientBuilder = {
+    import pluginContext._
+    val cc = V1ClientConfigurationUtils.setup(pluginContext)
 
-    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
-    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
-    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
-    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
-    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(pluginContext)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(pluginContext)
+    val requestHandlersProvider          = RequestHandlersProvider.create(pluginContext)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(pluginContext)
+    val credentialsProviderProvider      = AWSCredentialsProviderProvider.create(pluginContext)
 
     val builder = AmazonDynamoDBClientBuilder.standard().withClientConfiguration(cc)
 
@@ -67,15 +67,15 @@ object V1ClientBuilderUtils {
   }
 
   def setupAsync(
-      dynamicAccess: DynamicAccess,
-      pluginConfig: PluginConfig
+      pluginContext: PluginContext
   ): AmazonDynamoDBAsyncClientBuilder = {
-    val cc = V1ClientConfigurationUtils.setup(dynamicAccess, pluginConfig)
+    import pluginContext._
+    val cc = V1ClientConfigurationUtils.setup(pluginContext)
 
-    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(dynamicAccess, pluginConfig)
-    val monitoringListenerProvider       = MonitoringListenerProvider.create(dynamicAccess, pluginConfig)
-    val requestHandlersProvider          = RequestHandlersProvider.create(dynamicAccess, pluginConfig)
-    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(dynamicAccess, pluginConfig)
+    val csmConfigurationProviderProvider = CsmConfigurationProviderProvider.create(pluginContext)
+    val monitoringListenerProvider       = MonitoringListenerProvider.create(pluginContext)
+    val requestHandlersProvider          = RequestHandlersProvider.create(pluginContext)
+    val requestMetricCollectorProvider   = RequestMetricCollectorProvider.create(pluginContext)
 
     val builder = AmazonDynamoDBAsyncClientBuilder.standard().withClientConfiguration(cc)
 
@@ -97,7 +97,7 @@ object V1ClientBuilderUtils {
         )
       case _ =>
         val credentialsProviderProvider =
-          AWSCredentialsProviderProvider.create(dynamicAccess, pluginConfig)
+          AWSCredentialsProviderProvider.create(pluginContext)
         credentialsProviderProvider.create.foreach { cp =>
           builder.setCredentials(cp)
         }

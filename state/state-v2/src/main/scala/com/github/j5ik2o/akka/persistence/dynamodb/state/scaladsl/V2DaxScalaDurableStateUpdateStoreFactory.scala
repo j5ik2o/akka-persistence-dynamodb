@@ -15,30 +15,18 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
-import akka.actor.{ ActorSystem, DynamicAccess }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
 import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.state.{ PartitionKeyResolver, TableNameResolver }
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
+import com.github.j5ik2o.akka.persistence.dynamodb.state.StatePluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2DaxAsyncClientFactory, V2DaxSyncClientFactory }
 
 import scala.collection.immutable
-import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success }
 
-final class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUpdateStoreFactory {
-  override def create[A](
-      system: ActorSystem,
-      dynamicAccess: DynamicAccess,
-      pluginExecutor: ExecutionContext,
-      partitionKeyResolver: PartitionKeyResolver,
-      tableNameResolver: TableNameResolver,
-      metricsReporter: Option[MetricsReporter],
-      traceReporter: Option[TraceReporter],
-      pluginConfig: StatePluginConfig
-  ): ScalaDurableStateUpdateStore[A] = {
+final class V2DaxScalaDurableStateUpdateStoreFactory(pluginContext: StatePluginContext)
+    extends ScalaDurableStateUpdateStoreFactory {
+  override def create[A]: ScalaDurableStateUpdateStore[A] = {
+    import pluginContext._
     val (maybeV2SyncClient, maybeV2AsyncClient) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
         val f = dynamicAccess
@@ -49,7 +37,7 @@ final class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUp
           case Success(value) => value
           case Failure(ex)    => throw new PluginException("Failed to initialize V2DaxSyncClientFactory", Some(ex))
         }
-        val client = f.create(dynamicAccess, pluginConfig)
+        val client = f.create
         (Some(client), None)
       case ClientType.Async =>
         val f = dynamicAccess
@@ -60,19 +48,13 @@ final class V2DaxScalaDurableStateUpdateStoreFactory extends ScalaDurableStateUp
           case Success(value) => value
           case Failure(ex)    => throw new PluginException("Failed to initialize V2DaxAsyncClientFactory", Some(ex))
         }
-        val client = f.create(dynamicAccess, pluginConfig)
+        val client = f.create
         (None, Some(client))
     }
     new DynamoDBDurableStateStoreV2(
-      system,
-      pluginExecutor,
+      pluginContext,
       maybeV2AsyncClient,
-      maybeV2SyncClient,
-      partitionKeyResolver,
-      tableNameResolver,
-      metricsReporter,
-      traceReporter,
-      pluginConfig
+      maybeV2SyncClient
     )
   }
 }

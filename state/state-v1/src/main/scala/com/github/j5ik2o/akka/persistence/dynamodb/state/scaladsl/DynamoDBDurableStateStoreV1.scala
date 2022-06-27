@@ -24,12 +24,9 @@ import com.amazonaws.services.dynamodbv2.model.{ AttributeValue, DeleteItemReque
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{ StreamReadClient, StreamWriteClient }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state._
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 
 import java.io.IOException
@@ -40,17 +37,15 @@ import scala.jdk.CollectionConverters._
 import scala.util.{ Failure, Success }
 
 final class DynamoDBDurableStateStoreV1[A](
-    val system: ActorSystem,
-    val pluginExecutor: ExecutionContext,
+    val pluginContext: StatePluginContext,
     val asyncClient: Option[AmazonDynamoDBAsync],
-    val syncClient: Option[AmazonDynamoDB],
-    val partitionKeyResolver: PartitionKeyResolver,
-    val tableNameResolver: TableNameResolver,
-    val metricsReporter: Option[MetricsReporter],
-    val traceReporter: Option[TraceReporter],
-    val pluginConfig: StatePluginConfig
+    val syncClient: Option[AmazonDynamoDB]
 ) extends ScalaDurableStateUpdateStore[A]
     with LoggingSupport {
+
+  val system: ActorSystem = pluginContext.system
+
+  import pluginContext._
 
   implicit val mat: ActorSystem     = system
   implicit val ec: ExecutionContext = pluginExecutor
@@ -71,9 +66,9 @@ final class DynamoDBDurableStateStoreV1[A](
   private val readBackoffConfig: BackoffConfig  = pluginConfig.readBackoffConfig
 
   private val streamWriteClient: StreamWriteClient =
-    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, writeBackoffConfig)
+    new StreamWriteClient(pluginContext, asyncClient, syncClient, writeBackoffConfig)
   private val streamReadClient: StreamReadClient =
-    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
+    new StreamReadClient(pluginContext, asyncClient, syncClient, readBackoffConfig)
 
   protected val serialization: Serialization = SerializationExtension(system)
   private val akkaSerialization              = new StateSerializer(serialization, metricsReporter, traceReporter)

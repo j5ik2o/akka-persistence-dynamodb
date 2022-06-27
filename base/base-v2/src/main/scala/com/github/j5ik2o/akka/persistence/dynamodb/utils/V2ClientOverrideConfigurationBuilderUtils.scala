@@ -15,13 +15,12 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{
   ExecutionInterceptorsProvider,
   MetricPublishersProvider,
   RetryPolicyProvider
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.retry.RetryMode
 
@@ -31,7 +30,8 @@ import scala.jdk.CollectionConverters._
 
 object V2ClientOverrideConfigurationBuilderUtils {
 
-  def setup(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): ClientOverrideConfiguration.Builder = {
+  def setup(pluginContext: PluginContext): ClientOverrideConfiguration.Builder = {
+    import pluginContext._
     import pluginConfig.clientConfig.v2ClientConfig._
     var clientOverrideConfigurationBuilder = ClientOverrideConfiguration.builder()
     headers.foreach { case (k, v) =>
@@ -48,9 +48,9 @@ object V2ClientOverrideConfigurationBuilderUtils {
       }
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(r)
     }
-    val rp = RetryPolicyProvider.create(dynamicAccess, pluginConfig)
+    val rp = RetryPolicyProvider.create(pluginContext)
     clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(rp.create)
-    val provider = ExecutionInterceptorsProvider.create(dynamicAccess, pluginConfig)
+    val provider = ExecutionInterceptorsProvider.create(pluginContext)
     provider.create.foreach { ei =>
       clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.addExecutionInterceptor(ei)
     }
@@ -69,7 +69,7 @@ object V2ClientOverrideConfigurationBuilderUtils {
     }
     // defaultProfileFile
     // defaultProfileName
-    val metricPublishersProvider = MetricPublishersProvider.create(dynamicAccess, pluginConfig)
+    val metricPublishersProvider = MetricPublishersProvider.create(pluginContext)
     val metricPublishers         = metricPublishersProvider.create
     clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(
       metricPublishers.asJava

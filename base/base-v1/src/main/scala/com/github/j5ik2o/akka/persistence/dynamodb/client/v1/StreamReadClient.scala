@@ -16,14 +16,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.japi.function
 import akka.stream.javadsl.{ Flow => JavaFlow }
 import akka.stream.scaladsl.{ Concat, Flow, Source }
 import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBAsync }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.StreamSupport
-import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, PluginConfig }
+import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.CompletableFutureUtils._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils._
@@ -33,12 +33,15 @@ import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters._
 
 final class StreamReadClient(
-    val system: ActorSystem,
+    val pluginContext: PluginContext,
     val asyncClient: Option[AmazonDynamoDBAsync],
     val syncClient: Option[AmazonDynamoDB],
-    val pluginConfig: PluginConfig,
     val readBackoffConfig: BackoffConfig
 ) extends StreamSupport {
+
+  private val system = pluginContext.system
+
+  import pluginContext._
 
   private val log = system.log
 
@@ -46,7 +49,7 @@ final class StreamReadClient(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginContext)
           JavaFlow
             .create[GetItemRequest]().mapAsync(
               1,
@@ -67,7 +70,7 @@ final class StreamReadClient(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginContext)
           JavaFlow
             .create[QueryRequest]().mapAsync(
               1,
@@ -128,7 +131,7 @@ final class StreamReadClient(
     val flow =
       ((asyncClient, syncClient) match {
         case (Some(c), None) =>
-          implicit val executor = DispatcherUtils.newV1Executor(pluginConfig, system)
+          implicit val executor = DispatcherUtils.newV1Executor(pluginContext)
           JavaFlow
             .create[ScanRequest]().mapAsync(
               1,

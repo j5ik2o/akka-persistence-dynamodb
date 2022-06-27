@@ -20,9 +20,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.StreamWriteClient
 import com.github.j5ik2o.akka.persistence.dynamodb.journal._
-import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.{ JournalRowWriteDriver, PersistenceIdWithSeqNr }
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.core.SdkBytes
@@ -37,15 +35,13 @@ import scala.compat.java8.OptionConverters._
 import scala.jdk.CollectionConverters._
 
 final class V2JournalRowWriteDriver(
-    val system: ActorSystem,
+    val pluginContext: JournalPluginContext,
     val asyncClient: Option[JavaDynamoDbAsyncClient],
-    val syncClient: Option[JavaDynamoDbSyncClient],
-    val pluginConfig: JournalPluginConfig,
-    val partitionKeyResolver: PartitionKeyResolver,
-    val sortKeyResolver: SortKeyResolver,
-    val metricsReporter: Option[MetricsReporter]
+    val syncClient: Option[JavaDynamoDbSyncClient]
 ) extends JournalRowWriteDriver {
+  override def system: ActorSystem = pluginContext.system
 
+  import pluginContext._
   (asyncClient, syncClient) match {
     case (None, None) =>
       throw new IllegalArgumentException("aws clients is both None")
@@ -55,14 +51,12 @@ final class V2JournalRowWriteDriver(
   private val logger = LoggerFactory.getLogger(getClass)
 
   private val streamClient =
-    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, pluginConfig.writeBackoffConfig)
+    new StreamWriteClient(pluginContext, asyncClient, syncClient, pluginConfig.writeBackoffConfig)
 
   private val readDriver: V2JournalRowReadDriver = new V2JournalRowReadDriver(
-    system,
+    pluginContext,
     asyncClient,
-    syncClient,
-    pluginConfig,
-    metricsReporter
+    syncClient
   )
 
   override def dispose(): Unit = {

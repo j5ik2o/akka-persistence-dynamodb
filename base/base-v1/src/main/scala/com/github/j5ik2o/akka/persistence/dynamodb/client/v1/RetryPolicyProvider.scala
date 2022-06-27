@@ -15,13 +15,9 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
-import akka.actor.DynamicAccess
 import com.amazonaws.retry.{ PredefinedRetryPolicies, RetryPolicy }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
-
-import scala.collection.immutable._
-import scala.util.{ Failure, Success }
+import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait RetryPolicyProvider {
   def create: RetryPolicy
@@ -29,26 +25,16 @@ trait RetryPolicyProvider {
 
 object RetryPolicyProvider {
 
-  def create(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig): RetryPolicyProvider = {
-    val className = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.retryPolicyProviderClassName
-    dynamicAccess
-      .createInstanceFor[RetryPolicyProvider](
-        className,
-        Seq(
-          classOf[DynamicAccess] -> dynamicAccess,
-          classOf[PluginConfig]  -> pluginConfig
-        )
-      ) match {
-      case Success(value) => value
-      case Failure(ex) =>
-        throw new PluginException("Failed to initialize RetryPolicyProvider", Some(ex))
-    }
+  def create(pluginContext: PluginContext): RetryPolicyProvider = {
+    val className =
+      pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.retryPolicyProviderClassName
+    DynamicAccessUtils.createInstanceFor_CTX_Throw[RetryPolicyProvider, PluginContext](className, pluginContext)
   }
 
-  final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends RetryPolicyProvider {
+  final class Default(pluginContext: PluginContext) extends RetryPolicyProvider {
 
     override def create: RetryPolicy = {
-      pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.maxErrorRetry
+      pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.maxErrorRetry
         .fold(PredefinedRetryPolicies.getDynamoDBDefaultRetryPolicy) { maxErrorRetry =>
           PredefinedRetryPolicies.getDynamoDBDefaultRetryPolicyWithCustomMaxRetries(maxErrorRetry)
         }

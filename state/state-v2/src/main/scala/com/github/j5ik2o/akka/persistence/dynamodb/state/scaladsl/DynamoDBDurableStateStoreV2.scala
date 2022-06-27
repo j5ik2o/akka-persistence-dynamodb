@@ -23,12 +23,9 @@ import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.{ Sink, Source }
 import com.github.j5ik2o.akka.persistence.dynamodb.client.v2.{ StreamReadClient, StreamWriteClient }
 import com.github.j5ik2o.akka.persistence.dynamodb.config.BackoffConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.DynamoDBDurableStateStoreProvider.Identifier
 import com.github.j5ik2o.akka.persistence.dynamodb.state._
-import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporter
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.dynamodb.model.{
@@ -47,22 +44,22 @@ import scala.util.{ Failure, Success }
 
 @ApiMayChange
 final class DynamoDBDurableStateStoreV2[A](
-    val system: ActorSystem,
-    val pluginExecutor: ExecutionContext,
+    val pluginContext: StatePluginContext,
     val asyncClient: Option[DynamoDbAsyncClient],
-    val syncClient: Option[DynamoDbClient],
-    val partitionKeyResolver: PartitionKeyResolver,
-    val tableNameResolver: TableNameResolver,
-    val metricsReporter: Option[MetricsReporter],
-    val traceReporter: Option[TraceReporter],
-    val pluginConfig: StatePluginConfig
+    val syncClient: Option[DynamoDbClient]
 ) extends ScalaDurableStateUpdateStore[A]
     with LoggingSupport {
 
-  implicit val mat: ActorSystem     = system
+  val system = pluginContext.system
+
+  import pluginContext._
+
+  implicit val mat: ActorSystem     = pluginContext.system
   implicit val ec: ExecutionContext = pluginExecutor
 
   private val id: UUID = UUID.randomUUID()
+
+  import pluginContext._
 
   CoordinatedShutdown(system).addTask(
     CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
@@ -78,9 +75,9 @@ final class DynamoDBDurableStateStoreV2[A](
   private val readBackoffConfig: BackoffConfig  = pluginConfig.readBackoffConfig
 
   private val streamWriteClient: StreamWriteClient =
-    new StreamWriteClient(system, asyncClient, syncClient, pluginConfig, writeBackoffConfig)
+    new StreamWriteClient(pluginContext, asyncClient, syncClient, writeBackoffConfig)
   private val streamReadClient: StreamReadClient =
-    new StreamReadClient(system, asyncClient, syncClient, pluginConfig, readBackoffConfig)
+    new StreamReadClient(pluginContext, asyncClient, syncClient, readBackoffConfig)
 
   private val serialization: Serialization = SerializationExtension(system)
   private val akkaSerialization            = new StateSerializer(serialization, metricsReporter, traceReporter)

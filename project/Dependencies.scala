@@ -88,7 +88,7 @@ object Dependencies {
   }
 
   object javaDevJnv {
-    val jna = "net.java.dev.jna" % "jna" % "5.12.0"
+    val jna = "net.java.dev.jna" % "jna" % "5.12.1"
   }
 
   object scalaLangModules {

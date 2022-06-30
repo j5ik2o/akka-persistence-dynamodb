@@ -13,19 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.j5ik2o.akka.persistence.dynamodb.context
+package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
-import akka.actor.{ ActorSystem, DynamicAccess, ExtendedActorSystem }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessor
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 
-import scala.reflect.ClassTag
-
-trait PluginContext {
-  type This <: PluginContext
-  val pluginConfig: PluginConfig
-  def system: ActorSystem
-  def dynamicAccess: DynamicAccess = system.asInstanceOf[ExtendedActorSystem].dynamicAccess
-
-  def newDynamicAccessor[A: ClassTag](): DynamicAccessor[A, This]
+trait JournalRowWriteDriverFactory {
+  def create: JournalRowWriteDriver
 }

@@ -18,7 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait AWSCredentialsProviderProvider {
   def create: Option[AWSCredentialsProvider]
@@ -33,17 +32,14 @@ object AWSCredentialsProviderProvider {
       case ClientVersion.V1Dax =>
         pluginConfig.clientConfig.v1DaxClientConfig.awsCredentialsProviderProviderClassName
     }
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[AWSCredentialsProviderProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    pluginContext.newDynamicAccessor[AWSCredentialsProviderProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends AWSCredentialsProviderProvider {
     override def create: Option[AWSCredentialsProvider] = {
       val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.awsCredentialsProviderClassName
       classNameOpt.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[AWSCredentialsProvider, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[AWSCredentialsProvider]().createThrow(className)
       }
     }
   }

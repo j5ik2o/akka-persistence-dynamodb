@@ -26,7 +26,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
 import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStoreFactory
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -69,12 +68,7 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.V1DaxScalaDurableStateUpdateStoreFactory"
     }
-    val f =
-      DynamicAccessUtils.createInstanceFor_CTX_Throw[ScalaDurableStateUpdateStoreFactory, StatePluginContext](
-        className,
-        statePluginContext,
-        classOf[StatePluginContext]
-      )
+    val f = StateDynamicAccessor[ScalaDurableStateUpdateStoreFactory](statePluginContext).createThrow(className)
     f.create
   }
 

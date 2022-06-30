@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.trace
 
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import scala.annotation.unused
 import scala.concurrent.Future
@@ -76,22 +75,17 @@ trait TraceReporterProvider {
 
 object TraceReporterProvider {
 
-  def create(pluginContext: PluginContext): TraceReporterProvider = {
-    val className = pluginContext.pluginConfig.traceReporterProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[TraceReporterProvider, PluginContext](
-      className,
-      pluginContext
-    )
+  def create[A <: PluginContext](pluginContext: A): TraceReporterProvider = {
+    val dynamicAccessor = pluginContext.newDynamicAccessor[TraceReporterProvider]()
+    val className       = dynamicAccessor.pluginContext.pluginConfig.traceReporterProviderClassName
+    dynamicAccessor.createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends TraceReporterProvider {
 
     def create: Option[TraceReporter] = {
       pluginContext.pluginConfig.traceReporterClassName.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[TraceReporter, PluginContext](
-          className,
-          pluginContext
-        )
+        pluginContext.newDynamicAccessor[TraceReporter]().createThrow(className)
       }
     }
 

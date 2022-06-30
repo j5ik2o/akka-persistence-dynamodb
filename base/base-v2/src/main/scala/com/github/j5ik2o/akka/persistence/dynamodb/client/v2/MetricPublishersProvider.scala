@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import software.amazon.awssdk.metrics.MetricPublisher
 
 trait MetricPublishersProvider {
@@ -34,10 +33,7 @@ object MetricPublishersProvider {
       case ClientVersion.V2Dax =>
         pluginConfig.clientConfig.v2DaxClientConfig.metricPublishersProviderClassName
     }
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[MetricPublishersProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    pluginContext.newDynamicAccessor[MetricPublishersProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends MetricPublishersProvider {
@@ -50,11 +46,9 @@ object MetricPublishersProvider {
         case ClientVersion.V2Dax =>
           pluginConfig.clientConfig.v2DaxClientConfig.metricPublisherClassNames
       }
+      val da = pluginContext.newDynamicAccessor[MetricPublisher]()
       classNames.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[MetricPublisher, PluginContext](
-          className,
-          pluginContext
-        )
+        da.createThrow(className)
       }
     }
   }

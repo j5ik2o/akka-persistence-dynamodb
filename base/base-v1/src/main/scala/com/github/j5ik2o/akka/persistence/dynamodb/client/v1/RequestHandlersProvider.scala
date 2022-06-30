@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.handlers.RequestHandler2
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import scala.collection.immutable._
 
@@ -29,7 +28,7 @@ object RequestHandlersProvider {
 
   def create(pluginContext: PluginContext): RequestHandlersProvider = {
     val className = pluginContext.pluginConfig.clientConfig.v1ClientConfig.requestHandlersProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[RequestHandlersProvider, PluginContext](className, pluginContext)
+    pluginContext.newDynamicAccessor[RequestHandlersProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends RequestHandlersProvider {
@@ -37,7 +36,7 @@ object RequestHandlersProvider {
     override def create: Seq[RequestHandler2] = {
       val classNames = pluginContext.pluginConfig.clientConfig.v1ClientConfig.requestHandlerClassNames
       classNames.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[RequestHandler2, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[RequestHandler2]().createThrow(className)
       }
     }
   }

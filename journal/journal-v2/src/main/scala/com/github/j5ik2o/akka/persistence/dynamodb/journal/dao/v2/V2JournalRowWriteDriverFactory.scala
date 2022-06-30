@@ -16,14 +16,9 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalPluginContext, JournalRowWriteDriverFactory }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  DynamicAccessUtils,
-  V2AsyncClientFactory,
-  V2SyncClientFactory
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2AsyncClientFactory, V2SyncClientFactory }
 
 final class V2JournalRowWriteDriverFactory(pluginContext: JournalPluginContext) extends JournalRowWriteDriverFactory {
 
@@ -31,17 +26,17 @@ final class V2JournalRowWriteDriverFactory(pluginContext: JournalPluginContext) 
     val (maybeSyncClient, maybeAsyncClient) =
       pluginContext.pluginConfig.clientConfig.clientType match {
         case ClientType.Sync =>
-          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V2SyncClientFactory, PluginContext](
-            pluginContext.pluginConfig.v2SyncClientFactoryClassName,
-            pluginContext
-          )
+          val f = pluginContext
+            .newDynamicAccessor[V2SyncClientFactory]().createThrow(
+              pluginContext.pluginConfig.v2SyncClientFactoryClassName
+            )
           val client = f.create
           (Some(client), None)
         case ClientType.Async =>
-          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V2AsyncClientFactory, PluginContext](
-            pluginContext.pluginConfig.v2AsyncClientFactoryClassName,
-            pluginContext
-          )
+          val f = pluginContext
+            .newDynamicAccessor[V2AsyncClientFactory]().createThrow(
+              pluginContext.pluginConfig.v2AsyncClientFactoryClassName
+            )
           val client = f.create
           (None, Some(client))
       }

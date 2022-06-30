@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.monitoring.CsmConfigurationProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait CsmConfigurationProviderProvider {
   def create: Option[CsmConfigurationProvider]
@@ -27,10 +26,7 @@ object CsmConfigurationProviderProvider {
 
   def create(pluginContext: PluginContext): CsmConfigurationProviderProvider = {
     val className = pluginContext.pluginConfig.clientConfig.v1ClientConfig.csmConfigurationProviderProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[CsmConfigurationProviderProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    pluginContext.newDynamicAccessor[CsmConfigurationProviderProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends CsmConfigurationProviderProvider {
@@ -38,10 +34,7 @@ object CsmConfigurationProviderProvider {
     override def create: Option[CsmConfigurationProvider] = {
       val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.csmConfigurationProviderClassName
       classNameOpt.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[CsmConfigurationProvider, PluginContext](
-          className,
-          pluginContext
-        )
+        pluginContext.newDynamicAccessor[CsmConfigurationProvider]().createThrow(className)
       }
     }
   }

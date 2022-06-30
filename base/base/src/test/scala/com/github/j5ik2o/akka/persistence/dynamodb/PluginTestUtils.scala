@@ -21,30 +21,80 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.DynamoDBClientC
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.MetricsReporterProvider
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.TraceReporterProvider
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessor
+
+import scala.reflect.ClassTag
+import scala.util.Try
 
 object PluginTestUtils {
   def newPluginContext(
-      _system: ActorSystem,
+      system: ActorSystem,
       metricsReporterClass: Option[Class[_]],
       traceReporterClass: Option[Class[_]]
-  ): PluginContext =
-    new PluginContext {
-      override val pluginConfig: PluginConfig = new PluginConfig {
-        override val configRootPath: String                   = null
-        override val v1AsyncClientFactoryClassName: String    = null
-        override val v1SyncClientFactoryClassName: String     = null
-        override val v1DaxAsyncClientFactoryClassName: String = null
-        override val v1DaxSyncClientFactoryClassName: String  = null
-        override val v2AsyncClientFactoryClassName: String    = null
-        override val v2SyncClientFactoryClassName: String     = null
-        override val tableName: String                        = null
-        override val metricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
-        override val metricsReporterClassName: Option[String] = metricsReporterClass.map(_.getName)
-        override val traceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
-        override val traceReporterClassName: Option[String]   = traceReporterClass.map(_.getName)
-        override val clientConfig: DynamoDBClientConfig       = null
-      }
+  ): PluginContext = BasePluginContext(
+    system,
+    metricsReporterClass,
+    traceReporterClass
+  )
 
-      override def system: ActorSystem = _system
+  class BaseDynamicAccessor[A: ClassTag, B <: PluginContext](
+      pluginContext: B
+  )(implicit bClassTag: ClassTag[B])
+      extends DynamicAccessor[A, B](pluginContext) {
+    override def create(className: String): Try[A] = {
+      createInstanceFor_None(className, pluginContext.dynamicAccess)
+        .recoverWith { case _ =>
+          createInstanceFor_DA(className, pluginContext.dynamicAccess)
+            .recoverWith { case _ =>
+              createInstanceFor_PC[PluginConfig](
+                className,
+                pluginContext.dynamicAccess,
+                pluginContext.pluginConfig,
+                Vector(classOf[PluginConfig], bClassTag.runtimeClass)
+              ).recoverWith { case _ =>
+                createInstanceFor_DA_PC[PluginConfig](
+                  className,
+                  pluginContext.dynamicAccess,
+                  pluginContext.pluginConfig,
+                  Vector(classOf[PluginConfig], bClassTag.runtimeClass)
+                ).recoverWith { case _ =>
+                  createInstanceFor_CTX(
+                    className,
+                    pluginContext.dynamicAccess,
+                    pluginContext,
+                    Vector(
+                      classOf[PluginContext],
+                      bClassTag.runtimeClass
+                    )
+                  )
+                }
+              }
+            }
+        }
     }
+  }
+
+  final case class BasePluginContext(
+      system: ActorSystem,
+      metricsReporterClass: Option[Class[_]],
+      traceReporterClass: Option[Class[_]]
+  ) extends PluginContext {
+    override type This = BasePluginContext
+    override val pluginConfig: PluginConfig = new PluginConfig {
+      override val configRootPath: String                   = null
+      override val v1AsyncClientFactoryClassName: String    = null
+      override val v1SyncClientFactoryClassName: String     = null
+      override val v1DaxAsyncClientFactoryClassName: String = null
+      override val v1DaxSyncClientFactoryClassName: String  = null
+      override val v2AsyncClientFactoryClassName: String    = null
+      override val v2SyncClientFactoryClassName: String     = null
+      override val tableName: String                        = null
+      override val metricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
+      override val metricsReporterClassName: Option[String] = metricsReporterClass.map(_.getName)
+      override val traceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
+      override val traceReporterClassName: Option[String]   = traceReporterClass.map(_.getName)
+      override val clientConfig: DynamoDBClientConfig       = null
+    }
+    override def newDynamicAccessor[A: ClassTag](): DynamicAccessor[A, This] = new BaseDynamicAccessor[A, This](this)
+  }
 }

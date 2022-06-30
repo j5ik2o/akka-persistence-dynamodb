@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 final case class TableName(private val value: String) {
   def asString: String = value
@@ -37,22 +36,14 @@ object TableNameResolverProvider {
 
   def create(pluginContext: StatePluginContext): TableNameResolverProvider = {
     val className = pluginContext.pluginConfig.tableNameResolverProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[TableNameResolverProvider, StatePluginContext](
-      className,
-      pluginContext,
-      classOf[StatePluginContext]
-    )
+    StateDynamicAccessor[TableNameResolverProvider](pluginContext).createThrow(className)
   }
 
   final class Default(pluginContext: StatePluginContext) extends TableNameResolverProvider {
 
     override def create: TableNameResolver = {
       val className = pluginContext.pluginConfig.tableNameResolverClassName
-      DynamicAccessUtils.createInstanceFor_CTX_Throw[TableNameResolver, StatePluginContext](
-        className,
-        pluginContext,
-        classOf[StatePluginContext]
-      )
+      StateDynamicAccessor[TableNameResolver](pluginContext).createThrow(className)
     }
 
   }

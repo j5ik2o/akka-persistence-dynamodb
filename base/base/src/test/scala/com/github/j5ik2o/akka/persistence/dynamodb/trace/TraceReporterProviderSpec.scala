@@ -31,28 +31,33 @@ class TR_CTX(pluginContext: PluginContext) extends TraceReporter
 class TraceReporterProviderSpec extends TestKit(ActorSystem("TraceReporterProvider")) with AnyFreeSpecLike {
   "TraceReporterProvider" - {
     "create None" in {
-      val p = TraceReporterProvider.create(PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_None])))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_None]))
+      val p   = TraceReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create PC" in {
-      val p = TraceReporterProvider.create(PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_PC])))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_PC]))
+      val p   = TraceReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create DA" in {
-      val p = TraceReporterProvider.create(PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_DA])))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_DA]))
+      val p   = TraceReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create DA PC" in {
-      val p = TraceReporterProvider.create(PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_DA_PC])))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_DA_PC]))
+      val p   = TraceReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create CTX" in {
-      val p = TraceReporterProvider.create(PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_CTX])))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, None, Some(classOf[TR_CTX]))
+      val p   = TraceReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
   }

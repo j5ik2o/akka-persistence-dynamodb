@@ -25,8 +25,6 @@ import akka.persistence.{ AtomicWrite, PersistentRepr }
 import akka.serialization.{ Serialization, SerializationExtension }
 import akka.stream.scaladsl.Sink
 import akka.stream.{ Materializer, SystemMaterializer }
-import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
-import com.github.j5ik2o.akka.persistence.dynamodb.exception.PluginException
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao._
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
@@ -34,7 +32,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -42,10 +39,6 @@ import scala.collection.immutable._
 import scala.collection.{ immutable, mutable }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
-
-trait JournalRowWriteDriverFactory {
-  def create: JournalRowWriteDriver
-}
 
 object DynamoDBJournal {
 
@@ -77,39 +70,10 @@ final class DynamoDBJournal(config: Config) extends AsyncWriteJournal with Actor
   protected val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator, metricsReporter, traceReporter)
 
-  private val journalRowWriteDriver: JournalRowWriteDriver = {
-    val className = journalPluginConfig.clientConfig.clientVersion match {
-      case ClientVersion.V2 =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriverFactory"
-      case ClientVersion.V2Dax =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2DaxJournalRowWriteDriverFactory"
-      case ClientVersion.V1 =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriverFactory"
-      case ClientVersion.V1Dax =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1DaxJournalRowWriteDriverFactory"
-    }
-    val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[JournalRowWriteDriverFactory, JournalPluginContext](
-      className,
-      pluginContext,
-      classOf[JournalPluginContext]
-    )
-    f.create
-  }
-
   protected val journalDao: JournalDaoWithUpdates =
     journalPluginConfig.journalRowDriverWrapperClassName match {
       case Some(className) =>
-        val wrapper = dynamicAccess
-          .createInstanceFor[JournalRowWriteDriver](
-            className,
-            Seq(
-              classOf[JournalPluginConfig]   -> journalPluginConfig,
-              classOf[JournalRowWriteDriver] -> journalRowWriteDriver
-            )
-          ) match {
-          case Success(value) => value
-          case Failure(ex)    => throw new PluginException("Failed to initialize JournalRowDriverWrapper", Some(ex))
-        }
+        val wrapper = pluginContext.newDynamicAccessor[JournalRowWriteDriver]().createThrow(className)
         new WriteJournalDaoImpl(
           pluginContext,
           wrapper,

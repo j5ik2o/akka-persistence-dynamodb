@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.monitoring.MonitoringListener
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait MonitoringListenerProvider {
   def create: Option[MonitoringListener]
@@ -27,7 +26,7 @@ object MonitoringListenerProvider {
 
   def create(pluginContext: PluginContext): MonitoringListenerProvider = {
     val className = pluginContext.pluginConfig.clientConfig.v1ClientConfig.monitoringListenerProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[MonitoringListenerProvider, PluginContext](className, pluginContext)
+    pluginContext.newDynamicAccessor[MonitoringListenerProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends MonitoringListenerProvider {
@@ -35,7 +34,7 @@ object MonitoringListenerProvider {
     override def create: Option[MonitoringListener] = {
       val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.monitoringListenerClassName
       classNameOpt.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[MonitoringListener, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[MonitoringListener]().createThrow(className)
       }
     }
   }

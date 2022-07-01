@@ -32,28 +32,33 @@ class MetricsReporterProviderSpec extends TestKit(ActorSystem("MetricsReporterPr
 
   "MetricsReporterProvider" - {
     "create None" in {
-      val p = MetricsReporterProvider.create(PluginTestUtils.newPluginContext(system, Some(classOf[MR_None]), None))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, Some(classOf[MR_None]), None)
+      val p   = MetricsReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create PC" in {
-      val p = MetricsReporterProvider.create(PluginTestUtils.newPluginContext(system, Some(classOf[MR_PC]), None))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, Some(classOf[MR_PC]), None)
+      val p   = MetricsReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create DA" in {
-      val p = MetricsReporterProvider.create(PluginTestUtils.newPluginContext(system, Some(classOf[MR_DA]), None))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, Some(classOf[MR_DA]), None)
+      val p   = MetricsReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create DA PC" in {
-      val p = MetricsReporterProvider.create(PluginTestUtils.newPluginContext(system, Some(classOf[MR_DA_PC]), None))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, Some(classOf[MR_DA_PC]), None)
+      val p   = MetricsReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
     "create CTX" in {
-      val p = MetricsReporterProvider.create(PluginTestUtils.newPluginContext(system, Some(classOf[MR_CTX]), None))
-      val r = p.create
+      val ctx = PluginTestUtils.newPluginContext(system, Some(classOf[MR_CTX]), None)
+      val p   = MetricsReporterProvider.create(ctx)
+      val r   = p.create
       assert(r.isDefined)
     }
   }

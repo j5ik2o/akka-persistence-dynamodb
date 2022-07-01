@@ -19,13 +19,21 @@ import akka.actor.ActorSystem
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.config.JournalPluginConfig
+import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 final case class JournalPluginContext(system: ActorSystem, pluginConfig: JournalPluginConfig) extends PluginContext {
+  override type This = JournalPluginContext
+
+  override def newDynamicAccessor[A: ClassTag](): JournalDynamicAccessor[A] = {
+    JournalDynamicAccessor[A](this)
+  }
+
   val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(this)
     metricsReporterProvider.create
@@ -51,4 +59,20 @@ final case class JournalPluginContext(system: ActorSystem, pluginConfig: Journal
     val provider = SortKeyResolverProvider.create(this)
     provider.create
   }
+
+  val journalRowWriteDriver: JournalRowWriteDriver = {
+    val className = pluginConfig.clientConfig.clientVersion match {
+      case ClientVersion.V2 =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriverFactory"
+      case ClientVersion.V2Dax =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2DaxJournalRowWriteDriverFactory"
+      case ClientVersion.V1 =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriverFactory"
+      case ClientVersion.V1Dax =>
+        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1DaxJournalRowWriteDriverFactory"
+    }
+    val f = newDynamicAccessor[JournalRowWriteDriverFactory]().createThrow(className)
+    f.create
+  }
+
 }

@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 final case class SortKey(value: String) {
   def asString: String = value
@@ -37,11 +36,7 @@ object SortKeyResolverProvider {
 
   def create(pluginContext: JournalPluginContext): SortKeyResolverProvider = {
     val className = pluginContext.pluginConfig.sortKeyResolverProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolverProvider, JournalPluginContext](
-      className,
-      pluginContext,
-      classOf[JournalPluginContext]
-    )
+    pluginContext.newDynamicAccessor[SortKeyResolverProvider]().createThrow(className)
   }
 
   final class Default(
@@ -50,11 +45,7 @@ object SortKeyResolverProvider {
 
     override def create: SortKeyResolver = {
       val className = pluginContext.pluginConfig.sortKeyResolverClassName
-      DynamicAccessUtils.createInstanceFor_CTX_Throw[SortKeyResolver, JournalPluginContext](
-        className,
-        pluginContext,
-        classOf[JournalPluginContext]
-      )
+      pluginContext.newDynamicAccessor[SortKeyResolver]().createThrow(className)
     }
 
   }

@@ -16,14 +16,9 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.JournalRowWriteDriver
 import com.github.j5ik2o.akka.persistence.dynamodb.journal.{ JournalPluginContext, JournalRowWriteDriverFactory }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  DynamicAccessUtils,
-  V2DaxAsyncClientFactory,
-  V2DaxSyncClientFactory
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V2DaxAsyncClientFactory, V2DaxSyncClientFactory }
 
 final class V2DaxJournalRowWriteDriverFactory(pluginContext: JournalPluginContext)
     extends JournalRowWriteDriverFactory {
@@ -32,17 +27,17 @@ final class V2DaxJournalRowWriteDriverFactory(pluginContext: JournalPluginContex
     val (maybeSyncClient, maybeAsyncClient) =
       pluginContext.pluginConfig.clientConfig.clientType match {
         case ClientType.Sync =>
-          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V2DaxSyncClientFactory, PluginContext](
-            pluginContext.pluginConfig.v2DaxSyncClientFactoryClassName,
-            pluginContext
-          )
+          val f = pluginContext
+            .newDynamicAccessor[V2DaxSyncClientFactory]().createThrow(
+              pluginContext.pluginConfig.v2DaxSyncClientFactoryClassName
+            )
           val client = f.create
           (Some(client), None)
         case ClientType.Async =>
-          val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V2DaxAsyncClientFactory, PluginContext](
-            pluginContext.pluginConfig.v2DaxAsyncClientFactoryClassName,
-            pluginContext
-          )
+          val f = pluginContext
+            .newDynamicAccessor[V2DaxAsyncClientFactory]().createThrow(
+              pluginContext.pluginConfig.v2DaxAsyncClientFactoryClassName
+            )
           val client = f.create
           (None, Some(client))
       }

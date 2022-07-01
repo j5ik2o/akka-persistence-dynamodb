@@ -18,7 +18,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 import akka.actor.DynamicAccess
 import com.github.j5ik2o.akka.persistence.dynamodb.config.PluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import java.security.SecureRandom
 
@@ -29,12 +28,9 @@ trait SecureRandomProvider {
 object SecureRandomProvider {
 
   def create(pluginContext: PluginContext): SecureRandomProvider = {
-    import pluginContext._
-    val className = pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.secureRandomProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[SecureRandomProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    val className =
+      pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.secureRandomProviderClassName
+    pluginContext.newDynamicAccessor[SecureRandomProvider]().createThrow(className)
   }
 
   final class Default(dynamicAccess: DynamicAccess, pluginConfig: PluginConfig) extends SecureRandomProvider {

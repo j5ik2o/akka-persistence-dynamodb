@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.retry.{ PredefinedRetryPolicies, RetryPolicy }
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait RetryPolicyProvider {
   def create: RetryPolicy
@@ -28,7 +27,7 @@ object RetryPolicyProvider {
   def create(pluginContext: PluginContext): RetryPolicyProvider = {
     val className =
       pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.retryPolicyProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[RetryPolicyProvider, PluginContext](className, pluginContext)
+    pluginContext.newDynamicAccessor[RetryPolicyProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends RetryPolicyProvider {

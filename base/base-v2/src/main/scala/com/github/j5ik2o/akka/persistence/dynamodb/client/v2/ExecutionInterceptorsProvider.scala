@@ -16,7 +16,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.client.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor
 
 trait ExecutionInterceptorsProvider {
@@ -27,18 +26,16 @@ object ExecutionInterceptorsProvider {
 
   def create(pluginContext: PluginContext): ExecutionInterceptorsProvider = {
     val className = pluginContext.pluginConfig.clientConfig.v2ClientConfig.executionInterceptorsProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[ExecutionInterceptorsProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    pluginContext.newDynamicAccessor[ExecutionInterceptorsProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends ExecutionInterceptorsProvider {
 
     override def create: Seq[ExecutionInterceptor] = {
       val classNames = pluginContext.pluginConfig.clientConfig.v2ClientConfig.executionInterceptorClassNames
+      val da         = pluginContext.newDynamicAccessor[ExecutionInterceptor]()
       classNames.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[ExecutionInterceptor, PluginContext](className, pluginContext)
+        da.createThrow(className)
       }
     }
   }

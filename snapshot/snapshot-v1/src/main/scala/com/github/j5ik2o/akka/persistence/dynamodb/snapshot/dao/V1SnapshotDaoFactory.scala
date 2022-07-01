@@ -17,13 +17,8 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao
 
 import akka.serialization.Serialization
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SnapshotPluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  DynamicAccessUtils,
-  V1AsyncClientFactory,
-  V1SyncClientFactory
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.{ SnapshotDynamicAccessor, SnapshotPluginContext }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory, V1SyncClientFactory }
 
 final class V1SnapshotDaoFactory(pluginContext: SnapshotPluginContext) extends SnapshotDaoFactory {
   override def create(
@@ -32,16 +27,14 @@ final class V1SnapshotDaoFactory(pluginContext: SnapshotPluginContext) extends S
     import pluginContext._
     val (async, sync) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1SyncClientFactory, PluginContext](
-          pluginConfig.v1SyncClientFactoryClassName,
-          pluginContext
+        val f = SnapshotDynamicAccessor[V1SyncClientFactory](pluginContext).createThrow(
+          pluginConfig.v1SyncClientFactoryClassName
         )
         val v1JavaSyncClient = f.create
         (None, Some(v1JavaSyncClient))
       case ClientType.Async =>
-        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1AsyncClientFactory, PluginContext](
-          pluginConfig.v1AsyncClientFactoryClassName,
-          pluginContext
+        val f = SnapshotDynamicAccessor[V1AsyncClientFactory](pluginContext).createThrow(
+          pluginConfig.v1AsyncClientFactoryClassName
         )
         val v1JavaAsyncClient = f.create
         (Some(v1JavaAsyncClient), None)

@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.metrics.RequestMetricCollector
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait RequestMetricCollectorProvider {
   def create: Option[RequestMetricCollector]
@@ -27,10 +26,7 @@ object RequestMetricCollectorProvider {
 
   def create(pluginContext: PluginContext): RequestMetricCollectorProvider = {
     val className = pluginContext.pluginConfig.clientConfig.v1ClientConfig.requestMetricCollectorProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[RequestMetricCollectorProvider, PluginContext](
-      className,
-      pluginContext
-    )
+    pluginContext.newDynamicAccessor[RequestMetricCollectorProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends RequestMetricCollectorProvider {
@@ -38,7 +34,7 @@ object RequestMetricCollectorProvider {
     override def create: Option[RequestMetricCollector] = {
       val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.requestMetricCollectorClassName
       classNameOpt.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[RequestMetricCollector, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[RequestMetricCollector]().createThrow(className)
       }
     }
   }

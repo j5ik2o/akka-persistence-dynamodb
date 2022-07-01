@@ -27,7 +27,6 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoFactory }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -72,11 +71,7 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
       case ClientVersion.V1Dax =>
         "com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.V1DaxSnapshotDaoFactory"
     }
-    val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[SnapshotDaoFactory, SnapshotPluginContext](
-      className,
-      pluginContext,
-      classOf[SnapshotPluginContext]
-    )
+    val f = SnapshotDynamicAccessor[SnapshotDaoFactory](pluginContext).createThrow(className)
     f.create(
       serialization
     )

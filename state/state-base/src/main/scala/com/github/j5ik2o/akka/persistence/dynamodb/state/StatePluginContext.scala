@@ -24,8 +24,15 @@ import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceR
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 final case class StatePluginContext(system: ActorSystem, pluginConfig: StatePluginConfig) extends PluginContext {
+
+  override type This = StatePluginContext
+
+  override def newDynamicAccessor[A: ClassTag](): StateDynamicAccessor[A] = {
+    StateDynamicAccessor[A](this)
+  }
 
   val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(this)

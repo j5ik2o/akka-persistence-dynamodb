@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -43,22 +42,14 @@ object PartitionKeyResolverProvider {
 
   def create(pluginContext: SnapshotPluginContext): PartitionKeyResolverProvider = {
     val className = pluginContext.pluginConfig.partitionKeyResolverProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolverProvider, SnapshotPluginContext](
-      className,
-      pluginContext,
-      classOf[SnapshotPluginContext]
-    )
+    pluginContext.newDynamicAccessor[PartitionKeyResolverProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: SnapshotPluginContext) extends PartitionKeyResolverProvider {
 
     override def create: PartitionKeyResolver = {
       val className = pluginContext.pluginConfig.partitionKeyResolverClassName
-      DynamicAccessUtils.createInstanceFor_CTX_Throw[PartitionKeyResolver, SnapshotPluginContext](
-        className,
-        pluginContext,
-        classOf[SnapshotPluginContext]
-      )
+      pluginContext.newDynamicAccessor[PartitionKeyResolver]().createThrow(className)
     }
 
   }

@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.client.v1
 
 import com.amazonaws.DnsResolver
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 trait DnsResolverProvider {
   def create: Option[DnsResolver]
@@ -28,7 +27,7 @@ object DnsResolverProvider {
   def create(pluginContext: PluginContext): DnsResolverProvider = {
     val className =
       pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverProviderClassName
-    DynamicAccessUtils.createInstanceFor_CTX_Throw[DnsResolverProvider, PluginContext](className, pluginContext)
+    pluginContext.newDynamicAccessor[DnsResolverProvider]().createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends DnsResolverProvider {
@@ -36,7 +35,7 @@ object DnsResolverProvider {
     override def create: Option[DnsResolver] = {
       val classNameOpt = pluginContext.pluginConfig.clientConfig.v1ClientConfig.clientConfiguration.dnsResolverClassName
       classNameOpt.map { className =>
-        DynamicAccessUtils.createInstanceFor_CTX_Throw[DnsResolver, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[DnsResolver]().createThrow(className)
       }
     }
   }

@@ -24,8 +24,14 @@ import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceR
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.DispatcherUtils
 
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 final case class SnapshotPluginContext(system: ActorSystem, pluginConfig: SnapshotPluginConfig) extends PluginContext {
+  override type This = SnapshotPluginContext
+
+  override def newDynamicAccessor[A: ClassTag](): SnapshotDynamicAccessor[A] = {
+    SnapshotDynamicAccessor[A](this)
+  }
 
   val metricsReporter: Option[MetricsReporter] = {
     val metricsReporterProvider = MetricsReporterProvider.create(this)
@@ -38,10 +44,8 @@ final case class SnapshotPluginContext(system: ActorSystem, pluginConfig: Snapsh
   }
 
   val pluginExecutor: ExecutionContext = pluginConfig.clientConfig.clientVersion match {
-    case ClientVersion.V1 =>
-      DispatcherUtils.newV1Executor(this)
-    case ClientVersion.V2 =>
-      DispatcherUtils.newV2Executor(this)
+    case ClientVersion.V1 => DispatcherUtils.newV1Executor(this)
+    case ClientVersion.V2 => DispatcherUtils.newV2Executor(this)
   }
 
   val partitionKeyResolver: PartitionKeyResolver = {

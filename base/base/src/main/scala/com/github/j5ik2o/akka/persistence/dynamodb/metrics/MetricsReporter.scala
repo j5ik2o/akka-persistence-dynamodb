@@ -17,7 +17,6 @@ package com.github.j5ik2o.akka.persistence.dynamodb.metrics
 
 import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.model.Context
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.DynamicAccessUtils
 
 import scala.annotation.unused
 
@@ -110,13 +109,12 @@ trait MetricsReporterProvider {
 
 object MetricsReporterProvider {
 
-  def create(pluginContext: PluginContext): MetricsReporterProvider = {
-    val className = pluginContext.pluginConfig.metricsReporterProviderClassName
-    DynamicAccessUtils
-      .createInstanceFor_CTX_Throw[MetricsReporterProvider, PluginContext](
-        className,
-        pluginContext
-      )
+  def create[A <: PluginContext](
+      pluginContext: A
+  ): MetricsReporterProvider = {
+    val dynamicAccessor = pluginContext.newDynamicAccessor[MetricsReporterProvider]()
+    val className       = dynamicAccessor.pluginContext.pluginConfig.metricsReporterProviderClassName
+    dynamicAccessor.createThrow(className)
   }
 
   final class Default(pluginContext: PluginContext) extends MetricsReporterProvider {
@@ -124,8 +122,7 @@ object MetricsReporterProvider {
     def create: Option[MetricsReporter] = {
       import pluginContext._
       pluginConfig.metricsReporterClassName.map { className =>
-        DynamicAccessUtils
-          .createInstanceFor_CTX_Throw[MetricsReporter, PluginContext](className, pluginContext)
+        pluginContext.newDynamicAccessor[MetricsReporter]().createThrow(className)
       }
     }
 

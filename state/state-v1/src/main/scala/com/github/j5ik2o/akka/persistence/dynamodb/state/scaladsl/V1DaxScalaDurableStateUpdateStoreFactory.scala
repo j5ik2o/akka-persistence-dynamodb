@@ -16,13 +16,8 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientType
-import com.github.j5ik2o.akka.persistence.dynamodb.context.PluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.state.StatePluginContext
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  DynamicAccessUtils,
-  V1AsyncClientFactory,
-  V1SyncClientFactory
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.state.{ StateDynamicAccessor, StatePluginContext }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ V1AsyncClientFactory, V1SyncClientFactory }
 
 final class V1DaxScalaDurableStateUpdateStoreFactory(pluginContext: StatePluginContext)
     extends ScalaDurableStateUpdateStoreFactory {
@@ -30,16 +25,14 @@ final class V1DaxScalaDurableStateUpdateStoreFactory(pluginContext: StatePluginC
     import pluginContext._
     val (maybeV1SyncClient, maybeV1AsyncClient) = pluginConfig.clientConfig.clientType match {
       case ClientType.Sync =>
-        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1SyncClientFactory, PluginContext](
-          pluginConfig.v1SyncClientFactoryClassName,
-          pluginContext
+        val f = StateDynamicAccessor[V1SyncClientFactory](pluginContext).createThrow(
+          pluginConfig.v1SyncClientFactoryClassName
         )
         val client = f.create
         (Some(client), None)
       case ClientType.Async =>
-        val f = DynamicAccessUtils.createInstanceFor_CTX_Throw[V1AsyncClientFactory, PluginContext](
-          pluginConfig.v1AsyncClientFactoryClassName,
-          pluginContext
+        val f = StateDynamicAccessor[V1AsyncClientFactory](pluginContext).createThrow(
+          pluginConfig.v1AsyncClientFactoryClassName
         )
         val client = f.create
         (None, Some(client))

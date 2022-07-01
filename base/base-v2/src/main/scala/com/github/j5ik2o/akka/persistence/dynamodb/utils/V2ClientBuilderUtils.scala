@@ -41,24 +41,24 @@ object V2ClientBuilderUtils {
     val clientOverrideConfiguration: ClientOverrideConfiguration =
       V2ClientOverrideConfigurationBuilderUtils.setup(pluginContext).build()
 
-    var builder = DynamoDbClient.builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
+    val builder = DynamoDbClient.builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
 
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
-        builder = builder.credentialsProvider(
+        builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
         val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(pluginContext)
         awsCredentialsProviderProvider.create.foreach { cp =>
-          builder = builder.credentialsProvider(cp)
+          builder.credentialsProvider(cp)
         }
     }
     pluginConfig.clientConfig.endpoint.foreach { ep =>
-      builder = builder.endpointOverride(URI.create(ep))
+      builder.endpointOverride(URI.create(ep))
     }
     pluginConfig.clientConfig.region.foreach { r =>
-      builder = builder.region(Region.of(r))
+      builder.region(Region.of(r))
     }
     builder
   }
@@ -70,25 +70,25 @@ object V2ClientBuilderUtils {
       .setup(pluginContext)
       .build()
 
-    var builder =
+    val builder =
       DynamoDbAsyncClient.builder().httpClient(httpClient).overrideConfiguration(clientOverrideConfiguration)
 
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
-        builder = builder.credentialsProvider(
+        builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>
         val awsCredentialsProviderProvider = AwsCredentialsProviderProvider.create(pluginContext)
         awsCredentialsProviderProvider.create.foreach { cp =>
-          builder = builder.credentialsProvider(cp)
+          builder.credentialsProvider(cp)
         }
     }
     pluginConfig.clientConfig.endpoint.foreach { ep =>
-      builder = builder.endpointOverride(URI.create(ep))
+      builder.endpointOverride(URI.create(ep))
     }
     pluginConfig.clientConfig.region.foreach { r =>
-      builder = builder.region(Region.of(r))
+      builder.region(Region.of(r))
     }
     builder
   }

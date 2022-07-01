@@ -33,9 +33,9 @@ object V2ClientOverrideConfigurationBuilderUtils {
   def setup(pluginContext: PluginContext): ClientOverrideConfiguration.Builder = {
     import pluginContext._
     import pluginConfig.clientConfig.v2ClientConfig._
-    var clientOverrideConfigurationBuilder = ClientOverrideConfiguration.builder()
+    val clientOverrideConfigurationBuilder = ClientOverrideConfiguration.builder()
     headers.foreach { case (k, v) =>
-      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
+      clientOverrideConfigurationBuilder.putHeader(k, v.asJava)
     }
     retryMode.foreach { v =>
       val r = v match {
@@ -46,24 +46,24 @@ object V2ClientOverrideConfigurationBuilderUtils {
         case com.github.j5ik2o.akka.persistence.dynamodb.config.client.RetryMode.ADAPTIVE =>
           RetryMode.ADAPTIVE
       }
-      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(r)
+      clientOverrideConfigurationBuilder.retryPolicy(r)
     }
     val rp = RetryPolicyProvider.create(pluginContext)
-    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.retryPolicy(rp.create)
+    clientOverrideConfigurationBuilder.retryPolicy(rp.create)
     val provider = ExecutionInterceptorsProvider.create(pluginContext)
     provider.create.foreach { ei =>
-      clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.addExecutionInterceptor(ei)
+      clientOverrideConfigurationBuilder.addExecutionInterceptor(ei)
     }
     // putAdvancedOption
     apiCallTimeout.foreach { v =>
       if (v != Duration.Zero)
-        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.apiCallTimeout(
+        clientOverrideConfigurationBuilder.apiCallTimeout(
           JavaDuration.ofMillis(v.toMillis)
         )
     }
     apiCallAttemptTimeout.foreach { v =>
       if (v != Duration.Zero)
-        clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.apiCallAttemptTimeout(
+        clientOverrideConfigurationBuilder.apiCallAttemptTimeout(
           JavaDuration.ofMillis(v.toMillis)
         )
     }
@@ -71,7 +71,7 @@ object V2ClientOverrideConfigurationBuilderUtils {
     // defaultProfileName
     val metricPublishersProvider = MetricPublishersProvider.create(pluginContext)
     val metricPublishers         = metricPublishersProvider.create
-    clientOverrideConfigurationBuilder = clientOverrideConfigurationBuilder.metricPublishers(
+    clientOverrideConfigurationBuilder.metricPublishers(
       metricPublishers.asJava
     )
     clientOverrideConfigurationBuilder

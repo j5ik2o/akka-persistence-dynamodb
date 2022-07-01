@@ -16,7 +16,7 @@ object V2DaxOverrideConfigurationBuilderUtils {
   def setup(pluginContext: PluginContext): Configuration.Builder = {
     import pluginContext._
     import pluginConfig.clientConfig.v2DaxClientConfig._
-    var builder = Configuration.builder()
+    val builder = Configuration.builder()
 
     if (idleTimeout != Duration.Zero)
       builder.idleTimeoutMillis(idleTimeout.toMillis.toInt)
@@ -41,7 +41,7 @@ object V2DaxOverrideConfigurationBuilderUtils {
 
     (pluginConfig.clientConfig.accessKeyId, pluginConfig.clientConfig.secretAccessKey) match {
       case (Some(a), Some(s)) =>
-        builder = builder.credentialsProvider(
+        builder.credentialsProvider(
           StaticCredentialsProvider.create(AwsBasicCredentials.create(a, s))
         )
       case _ =>

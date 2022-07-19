@@ -332,8 +332,8 @@ lazy val example = (project in file("example"))
       akka.serializationJackson(akka26Version),
       scalatest.scalatest(scalaTest32Version) % Test,
       akka.persistenceTestkit(akka26Version)  % Test,
-      "com.github.j5ik2o"                    %% "docker-controller-scala-scalatest"      % "1.10.78",
-      "com.github.j5ik2o"                    %% "docker-controller-scala-dynamodb-local" % "1.10.78"
+      "com.github.j5ik2o"                    %% "docker-controller-scala-scalatest"      % "1.10.79",
+      "com.github.j5ik2o"                    %% "docker-controller-scala-dynamodb-local" % "1.10.79"
     )
   )
   .dependsOn(

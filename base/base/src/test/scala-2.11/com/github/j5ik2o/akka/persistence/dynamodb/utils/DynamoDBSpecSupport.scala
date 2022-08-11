@@ -1,6 +1,6 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.utils
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.concurrent.duration._
 

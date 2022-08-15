@@ -57,6 +57,11 @@ final case class StatePluginContext(system: ActorSystem, pluginConfig: StatePlug
     provider.create
   }
 
+  val sortKeyResolver: SortKeyResolver = {
+    val provider = SortKeyResolverProvider.create(this)
+    provider.create
+  }
+
   val tableNameResolver: TableNameResolver = {
     val provider = TableNameResolverProvider.create(this)
     provider.create

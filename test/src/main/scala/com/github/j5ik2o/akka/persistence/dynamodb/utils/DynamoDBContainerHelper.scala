@@ -301,11 +301,13 @@ trait DynamoDBContainerHelper {
         .withTableName(stateTableName).withAttributeDefinitions(
           Seq(
             new AttributeDefinition().withAttributeName("pkey").withAttributeType(ScalarAttributeType.S),
+            new AttributeDefinition().withAttributeName("skey").withAttributeType(ScalarAttributeType.S),
             new AttributeDefinition().withAttributeName("persistence-id").withAttributeType(ScalarAttributeType.S)
           ).asJava
         ).withKeySchema(
           Seq(
-            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH)
+            new KeySchemaElement().withAttributeName("pkey").withKeyType(KeyType.HASH),
+            new KeySchemaElement().withAttributeName("skey").withKeyType(KeyType.RANGE)
           ).asJava
         ).withGlobalSecondaryIndexes(
           Seq(

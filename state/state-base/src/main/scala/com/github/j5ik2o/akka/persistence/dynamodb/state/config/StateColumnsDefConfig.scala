@@ -21,6 +21,7 @@ import com.typesafe.config.Config
 
 object StateColumnsDefConfig extends LoggingSupport {
   val partitionKeyColumnNameKey       = "partition-key-column-name"
+  val sortKeyColumnNameKey            = "sort-key-column-name"
   val persistenceIdColumnNameKey      = "persistence-id-column-name"
   val revisionColumnNameKey           = "revision-nr-column-name"
   val deletedColumnNameKey            = "deleted-column-name"
@@ -35,6 +36,7 @@ object StateColumnsDefConfig extends LoggingSupport {
     val result = StateColumnsDefConfig(
       sourceConfig = config,
       partitionKeyColumnName = config.value[String](partitionKeyColumnNameKey),
+      sortKeyColumnName = config.value[String](sortKeyColumnNameKey),
       persistenceIdColumnName = config.value[String](persistenceIdColumnNameKey),
       revisionColumnName = config.value[String](revisionColumnNameKey),
       deletedColumnName = config.value[String](deletedColumnNameKey),
@@ -52,6 +54,7 @@ object StateColumnsDefConfig extends LoggingSupport {
 final case class StateColumnsDefConfig(
     sourceConfig: Config,
     partitionKeyColumnName: String,
+    sortKeyColumnName: String,
     persistenceIdColumnName: String,
     revisionColumnName: String,
     deletedColumnName: String,

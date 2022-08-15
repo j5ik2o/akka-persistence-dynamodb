@@ -34,6 +34,8 @@ object StatePluginConfig extends LoggingSupport {
   val shardCountKey                            = "shard-count"
   val partitionKeyResolverClassNameKey         = "partition-key-resolver-class-name"
   val partitionKeyResolverProviderClassNameKey = "partition-key-resolver-provider-class-name"
+  val sortKeyResolverClassNameKey              = "sort-key-resolver-class-name"
+  val sortKeyResolverProviderClassNameKey      = "sort-key-resolver-provider-class-name"
   val tableNameResolverClassNameKey            = "table-name-resolver-class-name"
   val tableNameResolverProviderClassNameKey    = "table-name-resolver-provider-class-name"
   val writeBackoffKey                          = "write-backoff"
@@ -125,6 +127,14 @@ object StatePluginConfig extends LoggingSupport {
         val className = config.value[String](partitionKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolverProvider], className)
       },
+      sortKeyResolverClassName = {
+        val className = config.value[String](sortKeyResolverClassNameKey)
+        ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
+      },
+      sortKeyResolverProviderClassName = {
+        val className = config.value[String](sortKeyResolverProviderClassNameKey)
+        ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
+      },
       metricsReporterClassName = {
         val className = config.valueOptAs[String](metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
@@ -169,6 +179,8 @@ final case class StatePluginConfig(
     shardCount: Int,
     partitionKeyResolverClassName: String,
     partitionKeyResolverProviderClassName: String,
+    sortKeyResolverClassName: String,
+    sortKeyResolverProviderClassName: String,
     metricsReporterProviderClassName: String,
     metricsReporterClassName: Option[String],
     traceReporterProviderClassName: String,

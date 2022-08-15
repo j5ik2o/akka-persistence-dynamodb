@@ -20,6 +20,7 @@ sealed trait GetRawObjectResult[+A]
 object GetRawObjectResult {
   final case class Just[A](
       pkey: String,
+      skey: String,
       persistenceId: String,
       value: A,
       revision: Long,

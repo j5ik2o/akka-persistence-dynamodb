@@ -81,11 +81,13 @@ final class DynamoDBDurableStateStoreV1[A](
     def future = {
       val tableName = tableNameResolver.resolve(pid)
       val pkey      = partitionKeyResolver.resolve(pid)
+      val skey      = sortKeyResolver.resolve(pid)
       val request = new GetItemRequest()
         .withTableName(tableName.asString)
         .withKey(
           Map(
-            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString)
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
+            pluginConfig.columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString)
           ).asJava
         ).withConsistentRead(pluginConfig.consistentRead)
       Source
@@ -111,6 +113,7 @@ final class DynamoDBDurableStateStoreV1[A](
                       GetRawObjectResult
                         .Just(
                           pkey.asString,
+                          skey.asString,
                           persistenceId,
                           payload.asInstanceOf[A],
                           revision,
@@ -153,7 +156,7 @@ final class DynamoDBDurableStateStoreV1[A](
     getRawObject(persistenceId).map {
       case GetRawObjectResult.Empty =>
         GetObjectResult(None, 0)
-      case GetRawObjectResult.Just(_, _, value, revision, _, _, _, _) =>
+      case GetRawObjectResult.Just(_, _, _, value, revision, _, _, _, _) =>
         GetObjectResult(Some(value), revision)
     }
   }
@@ -167,12 +170,14 @@ final class DynamoDBDurableStateStoreV1[A](
     def future = {
       val tableName = tableNameResolver.resolve(pid)
       val pkey      = partitionKeyResolver.resolve(pid)
+      val skey      = sortKeyResolver.resolve(pid)
       val request = akkaSerialization.serialize(persistenceId, value).map { serialized =>
         new PutItemRequest()
           .withTableName(tableName.asString)
           .withItem(
             (Map(
               pluginConfig.columnsDefConfig.partitionKeyColumnName  -> new AttributeValue().withS(pkey.asString),
+              pluginConfig.columnsDefConfig.sortKeyColumnName       -> new AttributeValue().withS(skey.asString),
               pluginConfig.columnsDefConfig.persistenceIdColumnName -> new AttributeValue().withS(persistenceId),
               pluginConfig.columnsDefConfig.revisionColumnName      -> new AttributeValue().withN(revision.toString),
               pluginConfig.columnsDefConfig.payloadColumnName -> new AttributeValue()
@@ -224,10 +229,12 @@ final class DynamoDBDurableStateStoreV1[A](
     def future = {
       val tableName = tableNameResolver.resolve(pid)
       val pkey      = partitionKeyResolver.resolve(pid)
+      val skey      = sortKeyResolver.resolve(pid)
       val request = new DeleteItemRequest()
         .withTableName(tableName.asString).withKey(
           Map(
-            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString)
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
+            pluginConfig.columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString)
           ).asJava
         )
       Source

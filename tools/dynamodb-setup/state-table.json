@@ -4,12 +4,20 @@
     {
       "AttributeName": "pkey",
       "AttributeType": "S"
+    },
+    {
+      "AttributeName": "skey",
+      "AttributeType": "S"
     }
   ],
   "KeySchema": [
     {
       "KeyType": "HASH",
       "AttributeName": "pkey"
+    },
+    {
+      "KeyType": "RANGE",
+      "AttributeName": "skey"
     }
   ],
   "ProvisionedThroughput": {

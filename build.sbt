@@ -13,7 +13,7 @@ def crossScalacOptions(scalaVersion: String): Seq[String] =
     case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
       Seq(
         "-Ydelambdafy:method",
-        "-target:jvm-1.8",
+        "-target:jvm-1.11",
         "-Yrangepos",
         "-Ywarn-unused"
       )
@@ -51,7 +51,7 @@ lazy val baseSettings = Seq(
       "UTF-8",
       "-language:_",
       "-Ydelambdafy:method",
-      "-target:jvm-1.8",
+      "-target:jvm-1.11",
       "-Yrangepos",
       "-Ywarn-unused"
     ) ++ crossScalacOptions(scalaVersion.value)

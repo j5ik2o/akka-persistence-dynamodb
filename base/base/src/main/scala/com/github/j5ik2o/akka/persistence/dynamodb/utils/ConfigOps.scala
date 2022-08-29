@@ -44,11 +44,17 @@ object ConfigOps {
         case clazz if classOf[Duration].isAssignableFrom(clazz) =>
           val result = config.getDuration(key)
           result.toMillis.milliseconds.asInstanceOf[A]
+        case clazz if clazz == classOf[Boolean] =>
+          val result = config.getBoolean(key)
+          result.asInstanceOf[A]
         case clazz if clazz == classOf[Long] =>
           val result = config.getLong(key)
           result.asInstanceOf[A]
         case clazz if clazz == classOf[Int] =>
           val result = config.getInt(key)
+          result.asInstanceOf[A]
+        case clazz if clazz == classOf[Double] =>
+          val result = config.getDouble(key)
           result.asInstanceOf[A]
         case _ =>
           val result = config.getAnyRef(key)
@@ -62,11 +68,17 @@ object ConfigOps {
           case _: Duration =>
             val result = config.getDuration(key)
             result.toMillis.milliseconds.asInstanceOf[A]
+          case _: Boolean =>
+            val result = config.getBoolean(key)
+            result.asInstanceOf[A]
           case _: Long =>
             val result = config.getLong(key)
             result.asInstanceOf[A]
           case _: Int =>
             val result = config.getInt(key)
+            result.asInstanceOf[A]
+          case _: Double =>
+            val result = config.getDouble(key)
             result.asInstanceOf[A]
           case _ =>
             val result = config.getAnyRef(key)

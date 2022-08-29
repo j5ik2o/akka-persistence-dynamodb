@@ -25,6 +25,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.client.v1.{ StreamReadClient,
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.SnapshotPluginContext
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.serialization.ByteArraySnapshotSerializer
+import org.slf4j.{ Logger, LoggerFactory }
 
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -46,6 +47,8 @@ final class V1NewSnapshotDaoImpl(
   import pluginContext._
   import pluginContext.pluginConfig._
 
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   private val streamReadClient =
     new StreamReadClient(pluginContext, asyncClient, syncClient, pluginConfig.readBackoffConfig)
 
@@ -55,6 +58,8 @@ final class V1NewSnapshotDaoImpl(
   private val serializer = new ByteArraySnapshotSerializer(serialization, metricsReporter, traceReporter)
 
   override def delete(persistenceId: PersistenceId, sequenceNr: SequenceNumber): Source[Unit, NotUsed] = {
+    logger.debug(s"delete($persistenceId, $sequenceNr): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -67,12 +72,16 @@ final class V1NewSnapshotDaoImpl(
           ":snr" -> new AttributeValue().withN(sequenceNr.asString)
         ).asJava
       ).withConsistentRead(consistentRead)
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.debug(s"delete($persistenceId, $sequenceNr):$result: finish")
+    result
   }
 
   override def deleteAllSnapshots(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.debug(s"deleteAllSnapshots($persistenceId): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -86,13 +95,17 @@ final class V1NewSnapshotDaoImpl(
           ":max" -> new AttributeValue().withN(Long.MaxValue.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.debug(s"deleteAllSnapshots($persistenceId):$result: finish")
+    result
   }
 
   override def deleteUpToMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.debug(s"deleteUpToMaxSequenceNr($persistenceId, $maxSequenceNr): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -106,12 +119,16 @@ final class V1NewSnapshotDaoImpl(
           ":max" -> new AttributeValue().withN(maxSequenceNr.asString)
         ).asJava
       ).withConsistentRead(consistentRead)
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.debug(s"deleteUpToMaxSequenceNr($persistenceId):$result: finish")
+    result
   }
 
   override def deleteUpToMaxTimestamp(persistenceId: PersistenceId, maxTimestamp: Long)(implicit
       ec: ExecutionContext
   ): Source[Unit, NotUsed] = {
+    logger.debug(s"deleteUpToMaxTimestamp($persistenceId): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -131,7 +148,9 @@ final class V1NewSnapshotDaoImpl(
           ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.debug(s"deleteUpToMaxTimestamp($persistenceId):$result: finish")
+    result
   }
 
   override def deleteUpToMaxSequenceNrAndMaxTimestamp(
@@ -139,6 +158,8 @@ final class V1NewSnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Unit, NotUsed] = {
+    logger.debug(s"deleteUpToMaxSequenceNrAndMaxTimestamp($persistenceId, $maxSequenceNr, $maxTimestamp): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -158,12 +179,18 @@ final class V1NewSnapshotDaoImpl(
           ":maxTimestamp" -> new AttributeValue().withN(maxTimestamp.toString)
         ).asJava
       ).withConsistentRead(consistentRead)
-    queryDelete(queryRequest)
+    val result = queryDelete(queryRequest)
+    logger.debug(
+      s"deleteUpToMaxSequenceNrAndMaxTimestamp($persistenceId, $maxSequenceNr, $maxTimestamp):$result: finish"
+    )
+    result
   }
 
   override def latestSnapshot(
       persistenceId: PersistenceId
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.debug(s"latestSnapshot($persistenceId): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -180,7 +207,7 @@ final class V1NewSnapshotDaoImpl(
       .withScanIndexForward(false)
       .withLimit(1)
       .withConsistentRead(consistentRead)
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow)
       .flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
@@ -190,12 +217,16 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }.mapAsync(1)(deserialize)
+    logger.debug(s"latestSnapshot($persistenceId):$result: finish")
+    result
   }
 
   override def snapshotForMaxTimestamp(
       persistenceId: PersistenceId,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.debug(s"snapshotForMaxTimestamp($persistenceId, $maxTimestamp): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -216,7 +247,7 @@ final class V1NewSnapshotDaoImpl(
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
           Source.single(Option(response.getItems).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -225,12 +256,16 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }.mapAsync(1)(deserialize)
+    logger.debug(s"snapshotForMaxTimestamp($persistenceId, $maxTimestamp):$result: finish")
+    result
   }
 
   override def snapshotForMaxSequenceNr(
       persistenceId: PersistenceId,
       maxSequenceNr: SequenceNumber
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.debug(s"snapshotForMaxSequenceNr($persistenceId, $maxSequenceNr): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -245,7 +280,7 @@ final class V1NewSnapshotDaoImpl(
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
           Source.single(Option(response.getItems).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -254,6 +289,8 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }.mapAsync(1)(deserialize)
+    logger.debug(s"snapshotForMaxSequenceNr($persistenceId, $maxSequenceNr):$result: finish")
+    result
   }
 
   override def snapshotForMaxSequenceNrAndMaxTimestamp(
@@ -261,6 +298,8 @@ final class V1NewSnapshotDaoImpl(
       maxSequenceNr: SequenceNumber,
       maxTimestamp: Long
   )(implicit ec: ExecutionContext): Source[Option[(SnapshotMetadata, Any)], NotUsed] = {
+    logger.debug(s"snapshotForMaxSequenceNrAndMaxTimestamp($persistenceId, $maxSequenceNr, $maxTimestamp): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
     val queryRequest = new QueryRequest()
       .withTableName(tableName)
       .withIndexName(pluginConfig.getSnapshotRowsIndexName)
@@ -281,7 +320,7 @@ final class V1NewSnapshotDaoImpl(
         ).asJava
       ).withScanIndexForward(false)
       .withConsistentRead(consistentRead)
-    Source
+    val result = Source
       .single(queryRequest).via(streamReadClient.queryFlow).flatMapConcat { response =>
         if (response.getSdkHttpMetadata.getHttpStatusCode == 200)
           Source.single(Option(response.getItems).map(_.asScala).getOrElse(Seq.empty).map(_.asScala.toMap).headOption)
@@ -290,12 +329,16 @@ final class V1NewSnapshotDaoImpl(
           Source.failed(new IOException(s"statusCode: $statusCode"))
         }
       }.mapAsync(1)(deserialize)
+    logger.debug(s"snapshotForMaxSequenceNrAndMaxTimestamp($persistenceId, $maxSequenceNr, $maxTimestamp): finish")
+    result
   }
 
   override def save(snapshotMetadata: SnapshotMetadata, snapshot: Any)(implicit
       ec: ExecutionContext
   ): Source[Unit, NotUsed] = {
-    Source
+    logger.debug(s"save($snapshotMetadata, $snapshot): start")
+    logger.debug(s"pluginConfig: $pluginConfig")
+    val result = Source
       .future(serializer.serialize(snapshotMetadata, snapshot))
       .flatMapConcat { snapshotRow =>
         val pkey = partitionKeyResolver.resolve(snapshotRow.persistenceId, snapshotRow.sequenceNumber)
@@ -322,6 +365,8 @@ final class V1NewSnapshotDaoImpl(
           }
         }
       }
+    logger.debug(s"save($snapshotMetadata, $snapshot):$result: finish")
+    result
   }
 
   private def queryDelete(queryRequest: QueryRequest): Source[Unit, NotUsed] = {

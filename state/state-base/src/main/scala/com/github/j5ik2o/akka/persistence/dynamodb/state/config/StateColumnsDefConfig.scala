@@ -15,7 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.state.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
@@ -35,16 +35,16 @@ object StateColumnsDefConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = StateColumnsDefConfig(
       sourceConfig = config,
-      partitionKeyColumnName = config.value[String](partitionKeyColumnNameKey),
-      sortKeyColumnName = config.value[String](sortKeyColumnNameKey),
-      persistenceIdColumnName = config.value[String](persistenceIdColumnNameKey),
-      revisionColumnName = config.value[String](revisionColumnNameKey),
-      deletedColumnName = config.value[String](deletedColumnNameKey),
-      payloadColumnName = config.value[String](payloadColumnNameKey),
-      serializerIdColumnName = config.value[String](serializerIdColumnNameKey),
-      serializerManifestColumnName = config.value[String](serializerManifestColumnNameKey),
-      orderingColumnName = config.value[String](orderingColumnNameKey),
-      tagsColumnName = config.value[String](tagsColumnNameKey)
+      partitionKeyColumnName = config.as[String](partitionKeyColumnNameKey),
+      sortKeyColumnName = config.as[String](sortKeyColumnNameKey),
+      persistenceIdColumnName = config.as[String](persistenceIdColumnNameKey),
+      revisionColumnName = config.as[String](revisionColumnNameKey),
+      deletedColumnName = config.as[String](deletedColumnNameKey),
+      payloadColumnName = config.as[String](payloadColumnNameKey),
+      serializerIdColumnName = config.as[String](serializerIdColumnNameKey),
+      serializerManifestColumnName = config.as[String](serializerManifestColumnNameKey),
+      orderingColumnName = config.as[String](orderingColumnNameKey),
+      tagsColumnName = config.as[String](tagsColumnNameKey)
     )
     logger.debug("result = {}", result)
     result

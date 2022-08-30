@@ -30,6 +30,10 @@ object Dependencies {
 
   import Versions._
 
+  object iheart {
+    val ficus = "com.iheart" %% "ficus" % ficusVersion
+  }
+
   object slf4j {
     val api        = "org.slf4j" % "slf4j-api"    % slf4jVersion
     val julToSlf4J = "org.slf4j" % "jul-to-slf4j" % slf4jVersion

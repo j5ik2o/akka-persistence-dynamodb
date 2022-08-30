@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V2CommonConfigKeys }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
@@ -35,18 +35,18 @@ object SyncClientConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = SyncClientConfig(
       sourceConfig = config,
-      dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
+      dispatcherName = config.getAs[String](CommonConfigKeys.dispatcherNameKey),
       socketTimeout = config
-        .value[FiniteDuration](CommonConfigKeys.socketTimeoutKey),
-      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
-      connectionAcquisitionTimeout = config.value[FiniteDuration](V2CommonConfigKeys.connectionAcquisitionTimeoutKey),
-      maxConnections = config.value[Int](CommonConfigKeys.maxConnectionsKey),
-      localAddress = config.valueOptAs[String](localAddressKey),
-      expectContinueEnabled = config.valueOptAs[Boolean](expectContinueEnabledKey),
-      connectionTimeToLive = config.value[FiniteDuration](connectionTimeToLiveKey),
-      maxIdleConnectionTimeout = config.value[FiniteDuration](maxIdleConnectionTimeoutKey),
-      useTcpKeepAlive = config.value[Boolean](useTcpKeepAliveKey),
-      useConnectionReaper = config.value[Boolean](useConnectionReaperKey)
+        .as[FiniteDuration](CommonConfigKeys.socketTimeoutKey),
+      connectionTimeout = config.as[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      connectionAcquisitionTimeout = config.as[FiniteDuration](V2CommonConfigKeys.connectionAcquisitionTimeoutKey),
+      maxConnections = config.as[Int](CommonConfigKeys.maxConnectionsKey),
+      localAddress = config.getAs[String](localAddressKey),
+      expectContinueEnabled = config.getAs[Boolean](expectContinueEnabledKey),
+      connectionTimeToLive = config.as[FiniteDuration](connectionTimeToLiveKey),
+      maxIdleConnectionTimeout = config.as[FiniteDuration](maxIdleConnectionTimeoutKey),
+      useTcpKeepAlive = config.as[Boolean](useTcpKeepAliveKey),
+      useConnectionReaper = config.as[Boolean](useConnectionReaperKey)
     )
     logger.debug("result = {}", result)
     result

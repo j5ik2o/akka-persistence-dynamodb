@@ -21,7 +21,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{
   V2CommonConfigDefaultValues,
   V2CommonConfigKeys
 }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -49,7 +49,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
     )
 
   def existsKeyNames(config: Config): Map[String, Boolean] = {
-    keyNames.map(v => (v, config.exists(v))).toMap
+    keyNames.map(v => (v, config.hasPath(v))).toMap
   }
 
   val RetryPolicyProviderClassName = "com.github.j5ik2o.akka.persistence.dynamodb.client.v2.RetryPolicyProvider"
@@ -60,7 +60,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV2Config(
       sourceConfig = config,
-      dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
+      dispatcherName = config.getAs[String](CommonConfigKeys.dispatcherNameKey),
       asyncClientConfig = {
         if (legacyConfigFormat) {
           logger.warn(
@@ -71,12 +71,12 @@ object DynamoDBClientV2Config extends LoggingSupport {
           )
           AsyncClientConfig.fromConfig(config)
         } else
-          AsyncClientConfig.fromConfig(config.configAs(asyncKey, ConfigFactory.empty()))
+          AsyncClientConfig.fromConfig(config.getAs[Config](asyncKey).getOrElse(ConfigFactory.empty()))
       },
-      syncClientConfig = SyncClientConfig.fromConfig(config.configAs(syncKey, ConfigFactory.empty())),
-      headers = config.mapAs[String](CommonConfigKeys.headersKey, Map.empty),
+      syncClientConfig = SyncClientConfig.fromConfig(config.getAs[Config](syncKey).getOrElse(ConfigFactory.empty())),
+      headers = config.getAs[Map[String, Seq[String]]](CommonConfigKeys.headersKey).getOrElse(Map.empty),
       retryPolicyProviderClassName = {
-        val className = config.value[String](retryPolicyProviderClassNameKey)
+        val className = config.as[String](retryPolicyProviderClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             RetryPolicyProviderClassName,
@@ -84,9 +84,9 @@ object DynamoDBClientV2Config extends LoggingSupport {
             classNameValidation
           )
       },
-      retryMode = config.valueOptAs[String](CommonConfigKeys.retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
+      retryMode = config.getAs[String](CommonConfigKeys.retryModeKey).map(s => RetryMode.withName(s.toUpperCase)),
       executionInterceptorsProviderClassName = {
-        val className = config.value[String](executionInterceptorProviderClassNameKey)
+        val className = config.as[String](executionInterceptorProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           ExecutionInterceptorsProviderClassName,
           className,
@@ -94,17 +94,17 @@ object DynamoDBClientV2Config extends LoggingSupport {
         )
       },
       executionInterceptorClassNames = {
-        val classNames = config.valuesAs[String](executionInterceptorClassNamesKey, Seq.empty)
+        val classNames = config.getAs[Seq[String]](executionInterceptorClassNamesKey).getOrElse(Seq.empty)
         classNames
           .map(s =>
             ClassCheckUtils
               .requireClassByName(V2CommonConfigDefaultValues.MetricPublisherClassName, s, classNameValidation)
           ).toIndexedSeq
       },
-      apiCallTimeout = config.valueOptAs[FiniteDuration](apiCallTimeoutKey),
-      apiCallAttemptTimeout = config.valueOptAs[FiniteDuration](apiCallAttemptTimeoutKey),
+      apiCallTimeout = config.getAs[FiniteDuration](apiCallTimeoutKey),
+      apiCallAttemptTimeout = config.getAs[FiniteDuration](apiCallAttemptTimeoutKey),
       metricPublishersProviderClassName = {
-        val className = config.value[String](
+        val className = config.as[String](
           V2CommonConfigKeys.metricPublisherProviderClassNameKey
         )
         ClassCheckUtils.requireClassByName(
@@ -114,14 +114,14 @@ object DynamoDBClientV2Config extends LoggingSupport {
         )
       },
       metricPublisherClassNames = {
-        val classNames = config.valuesAs[String](V2CommonConfigKeys.metricPublisherClassNameKey, Seq.empty)
+        val classNames = config.getAs[Seq[String]](V2CommonConfigKeys.metricPublisherClassNameKey).getOrElse(Seq.empty)
         classNames.map(s =>
           ClassCheckUtils
             .requireClassByName(V2CommonConfigDefaultValues.MetricPublisherClassName, s, classNameValidation)
         )
       },
       awsCredentialsProviderProviderClassName = {
-        val className = config.value[String](
+        val className = config.as[String](
           V2CommonConfigKeys.awsCredentialsProviderProviderClassNameKey
         )
         ClassCheckUtils.requireClassByName(
@@ -131,7 +131,7 @@ object DynamoDBClientV2Config extends LoggingSupport {
         )
       },
       awsCredentialsProviderClassName = {
-        val className = config.valueOptAs[String](V2CommonConfigKeys.awsCredentialsProviderClassNameKey)
+        val className = config.getAs[String](V2CommonConfigKeys.awsCredentialsProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V2CommonConfigDefaultValues.AwsCredentialsProviderClassName,
           className,

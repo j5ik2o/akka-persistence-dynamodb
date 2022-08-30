@@ -21,7 +21,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.{ BackoffConfig, Plugi
 import com.github.j5ik2o.akka.persistence.dynamodb.metrics.{ MetricsReporter, MetricsReporterProvider }
 import com.github.j5ik2o.akka.persistence.dynamodb.state._
 import com.github.j5ik2o.akka.persistence.dynamodb.trace.{ TraceReporter, TraceReporterProvider }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -49,21 +49,21 @@ object StatePluginConfig extends LoggingSupport {
   def fromConfig(config: Config): StatePluginConfig = {
     logger.debug("config = {}", config)
     val clientConfig = DynamoDBClientConfig
-      .fromConfig(config.configAs(dynamoCbClientKey, ConfigFactory.empty()), legacyConfigFormat = false)
+      .fromConfig(config.getAs[Config](dynamoCbClientKey).getOrElse(ConfigFactory.empty()), legacyConfigFormat = false)
     val result = new StatePluginConfig(
       sourceConfig = config,
       v1AsyncClientFactoryClassName = {
-        val className = config.value[String](v1AsyncClientFactoryClassNameKey)
+        val className = config.as[String](v1AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1SyncClientFactoryClassName = {
-        val className = config.value[String](v1SyncClientFactoryClassNameKey)
+        val className = config.as[String](v1SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V1SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V1)
       },
       v1DaxAsyncClientFactoryClassName = {
-        val className = config.value[String](v1DaxAsyncClientFactoryClassNameKey)
+        val className = config.as[String](v1DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxAsyncClientFactoryClassName,
           className,
@@ -71,7 +71,7 @@ object StatePluginConfig extends LoggingSupport {
         )
       },
       v1DaxSyncClientFactoryClassName = {
-        val className = config.value[String](v1DaxSyncClientFactoryClassNameKey)
+        val className = config.as[String](v1DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1DaxSyncClientFactoryClassName,
           className,
@@ -79,17 +79,17 @@ object StatePluginConfig extends LoggingSupport {
         )
       },
       v2AsyncClientFactoryClassName = {
-        val className = config.value[String](v2AsyncClientFactoryClassNameKey)
+        val className = config.as[String](v2AsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2AsyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2SyncClientFactoryClassName = {
-        val className = config.value[String](v2SyncClientFactoryClassNameKey)
+        val className = config.as[String](v2SyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(V2SyncClientFactoryClassName, className, clientConfig.clientVersion == ClientVersion.V2)
       },
       v2DaxAsyncClientFactoryClassName = {
-        val className = config.value[String](v2DaxAsyncClientFactoryClassNameKey)
+        val className = config.as[String](v2DaxAsyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxAsyncClientFactoryClassName,
@@ -98,7 +98,7 @@ object StatePluginConfig extends LoggingSupport {
           )
       },
       v2DaxSyncClientFactoryClassName = {
-        val className = config.value[String](v2DaxSyncClientFactoryClassNameKey)
+        val className = config.as[String](v2DaxSyncClientFactoryClassNameKey)
         ClassCheckUtils
           .requireClassByName(
             V2DaxSyncClientFactoryClassName,
@@ -106,53 +106,56 @@ object StatePluginConfig extends LoggingSupport {
             clientConfig.clientVersion == ClientVersion.V2Dax
           )
       },
-      tableName = config.value[String](tableNameKey),
-      columnsDefConfig = StateColumnsDefConfig.fromConfig(config.configAs(columnsDefKey, ConfigFactory.empty())),
-      tagSeparator = config.value[String](tagSeparatorKey),
-      consistentRead = config.value[Boolean](consistentReadKey),
-      shardCount = config.value[Int](shardCountKey),
+      tableName = config.as[String](tableNameKey),
+      columnsDefConfig =
+        StateColumnsDefConfig.fromConfig(config.getAs[Config](columnsDefKey).getOrElse(ConfigFactory.empty())),
+      tagSeparator = config.as[String](tagSeparatorKey),
+      consistentRead = config.as[Boolean](consistentReadKey),
+      shardCount = config.as[Int](shardCountKey),
       tableNameResolverClassName = {
-        val className = config.value[String](tableNameResolverClassNameKey)
+        val className = config.as[String](tableNameResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[TableNameResolver], className)
       },
       tableNameResolverProviderClassName = {
-        val className = config.value[String](tableNameResolverProviderClassNameKey)
+        val className = config.as[String](tableNameResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[TableNameResolverProvider], className)
       },
       partitionKeyResolverClassName = {
-        val className = config.value[String](partitionKeyResolverClassNameKey)
+        val className = config.as[String](partitionKeyResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolver], className)
       },
       partitionKeyResolverProviderClassName = {
-        val className = config.value[String](partitionKeyResolverProviderClassNameKey)
+        val className = config.as[String](partitionKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[PartitionKeyResolverProvider], className)
       },
       sortKeyResolverClassName = {
-        val className = config.value[String](sortKeyResolverClassNameKey)
+        val className = config.as[String](sortKeyResolverClassNameKey)
         ClassCheckUtils.requireClass(classOf[SortKeyResolver], className)
       },
       sortKeyResolverProviderClassName = {
-        val className = config.value[String](sortKeyResolverProviderClassNameKey)
+        val className = config.as[String](sortKeyResolverProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[SortKeyResolverProvider], className)
       },
       metricsReporterClassName = {
-        val className = config.valueOptAs[String](metricsReporterClassNameKey)
+        val className = config.getAs[String](metricsReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporter], className)
       },
       metricsReporterProviderClassName = {
-        val className = config.value[String](metricsReporterProviderClassNameKey)
+        val className = config.as[String](metricsReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[MetricsReporterProvider], className)
       },
       traceReporterProviderClassName = {
-        val className = config.value[String](traceReporterProviderClassNameKey)
+        val className = config.as[String](traceReporterProviderClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporterProvider], className)
       },
       traceReporterClassName = {
-        val className = config.valueOptAs[String](traceReporterClassNameKey)
+        val className = config.getAs[String](traceReporterClassNameKey)
         ClassCheckUtils.requireClass(classOf[TraceReporter], className)
       },
-      writeBackoffConfig = BackoffConfig.fromConfig(config.configAs(writeBackoffKey, ConfigFactory.empty())),
-      readBackoffConfig = BackoffConfig.fromConfig(config.configAs(readBackoffKey, ConfigFactory.empty())),
+      writeBackoffConfig =
+        BackoffConfig.fromConfig(config.getAs[Config](writeBackoffKey).getOrElse(ConfigFactory.empty())),
+      readBackoffConfig =
+        BackoffConfig.fromConfig(config.getAs[Config](readBackoffKey).getOrElse(ConfigFactory.empty())),
       clientConfig = clientConfig
     )
     logger.debug("result = {}", result)

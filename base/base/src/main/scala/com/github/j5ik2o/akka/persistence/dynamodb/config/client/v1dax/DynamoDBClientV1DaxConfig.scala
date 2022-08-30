@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V1CommonConfigKeys }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.Config
 
@@ -39,23 +39,23 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1DaxConfig(
       sourceConfig = config,
-      dispatcherName = config.valueOptAs(CommonConfigKeys.dispatcherNameKey),
-      connectionTimeout = config.value[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
-      requestTimeout = config.value[FiniteDuration](CommonConfigKeys.requestTimeoutKey),
-      healthCheckTimeout = config.value[FiniteDuration](healthCheckTimeoutKey),
-      healthCheckInterval = config.value[FiniteDuration](healthCheckIntervalKey),
-      idleConnectionTimeout = config.value[FiniteDuration](idleConnectionTimeoutKey),
-      minIdleConnectionSize = config.value[Int](minIdleConnectionSizeKey),
-      writeRetries = config.value[Int](CommonConfigKeys.writeRetriesKey),
-      maxPendingConnectionsPerHost = config.value[Int](maxPendingConnectionsPerHostKey),
-      readRetries = config.value[Int](CommonConfigKeys.readRetriesKey),
-      threadKeepAlive = config.value[FiniteDuration](threadKeepAliveKey),
-      clusterUpdateInterval = config.value[FiniteDuration](clusterUpdateIntervalKey),
-      clusterUpdateThreshold = config.value[FiniteDuration](clusterUpdateThresholdKey),
-      maxRetryDelay = config.value[FiniteDuration](maxRetryDelayKey),
-      unhealthyConsecutiveErrorCount = config.value[Int](unhealthyConsecutiveErrorCountKey),
+      dispatcherName = config.getAs[String](CommonConfigKeys.dispatcherNameKey),
+      connectionTimeout = config.as[FiniteDuration](CommonConfigKeys.connectionTimeoutKey),
+      requestTimeout = config.as[FiniteDuration](CommonConfigKeys.requestTimeoutKey),
+      healthCheckTimeout = config.as[FiniteDuration](healthCheckTimeoutKey),
+      healthCheckInterval = config.as[FiniteDuration](healthCheckIntervalKey),
+      idleConnectionTimeout = config.as[FiniteDuration](idleConnectionTimeoutKey),
+      minIdleConnectionSize = config.as[Int](minIdleConnectionSizeKey),
+      writeRetries = config.as[Int](CommonConfigKeys.writeRetriesKey),
+      maxPendingConnectionsPerHost = config.as[Int](maxPendingConnectionsPerHostKey),
+      readRetries = config.as[Int](CommonConfigKeys.readRetriesKey),
+      threadKeepAlive = config.as[FiniteDuration](threadKeepAliveKey),
+      clusterUpdateInterval = config.as[FiniteDuration](clusterUpdateIntervalKey),
+      clusterUpdateThreshold = config.as[FiniteDuration](clusterUpdateThresholdKey),
+      maxRetryDelay = config.as[FiniteDuration](maxRetryDelayKey),
+      unhealthyConsecutiveErrorCount = config.as[Int](unhealthyConsecutiveErrorCountKey),
       awsCredentialsProviderProviderClassName = {
-        val className = config.value[String](V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
+        val className = config.as[String](V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1CommonConfigKeys.AWSCredentialsProviderProviderClassName,
           className,
@@ -63,7 +63,7 @@ object DynamoDBClientV1DaxConfig extends LoggingSupport {
         )
       },
       awsCredentialsProviderClassName = {
-        val className = config.valueOptAs[String](V1CommonConfigKeys.awsCredentialsProviderClassNameKey)
+        val className = config.getAs[String](V1CommonConfigKeys.awsCredentialsProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1CommonConfigKeys.AWSCredentialsProviderClassName,
           className,

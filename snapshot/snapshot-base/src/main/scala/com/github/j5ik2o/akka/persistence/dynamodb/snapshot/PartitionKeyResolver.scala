@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -75,7 +75,7 @@ object PartitionKeyResolver {
     import pluginContext._
 
     override def separator: String =
-      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.getAs[String]("persistence-id-separator").getOrElse(PersistenceId.Separator)
 
     // ${persistenceId.prefix}-${md5(persistenceId.reverse) % shardCount}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): PartitionKey = {

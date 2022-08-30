@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.state
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.PersistenceId
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 
 final case class TableName(private val value: String) {
   def asString: String = value
@@ -59,7 +59,7 @@ object TableNameResolver {
     import pluginContext._
 
     override def separator: String =
-      pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginConfig.sourceConfig.getAs[String]("persistence-id-separator").getOrElse(PersistenceId.Separator)
 
     override def resolve(persistenceId: PersistenceId): TableName = {
       TableName(persistenceId.prefix.getOrElse(pluginConfig.tableName))

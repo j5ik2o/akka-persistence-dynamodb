@@ -15,7 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
@@ -33,11 +33,11 @@ object BackoffConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = BackoffConfig(
       sourceConfig = config,
-      enabled = config.value[Boolean](enabledKey),
-      minBackoff = config.value[FiniteDuration](minBackoffKey),
-      maxBackoff = config.value[FiniteDuration](maxBackoffKey),
-      randomFactor = config.value[Double](randomFactorKey),
-      maxRestarts = config.value[Int](maxRestartsKey)
+      enabled = config.as[Boolean](enabledKey),
+      minBackoff = config.as[FiniteDuration](minBackoffKey),
+      maxBackoff = config.as[FiniteDuration](maxBackoffKey),
+      randomFactor = config.as[Double](randomFactorKey),
+      maxRestarts = config.as[Int](maxRestartsKey)
     )
     logger.debug("result = {}", result)
     result

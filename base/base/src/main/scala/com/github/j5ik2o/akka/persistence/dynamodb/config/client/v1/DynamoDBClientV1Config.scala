@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1
 
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ CommonConfigKeys, V1CommonConfigKeys }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ClassCheckUtils, LoggingSupport }
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -66,15 +66,15 @@ object DynamoDBClientV1Config extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = DynamoDBClientV1Config(
       sourceConfig = config,
-      dispatcherName = config.valueOptAs[String](CommonConfigKeys.dispatcherNameKey),
+      dispatcherName = config.getAs[String](CommonConfigKeys.dispatcherNameKey),
       clientConfiguration = ClientConfiguration
         .fromConfig(
-          config.configAs(clientConfigurationKey, ConfigFactory.empty()),
+          config.getAs[Config](clientConfigurationKey).getOrElse(ConfigFactory.empty()),
           classNameValidation
         ),
       requestMetricCollectorProviderClassName = {
         val className =
-          config.value[String](requestMetricCollectorProviderClassNameKey)
+          config.as[String](requestMetricCollectorProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           RequestMetricCollectorProviderClassName,
           className,
@@ -83,7 +83,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       requestMetricCollectorClassName = {
         val className =
-          config.valueOptAs[String](requestMetricCollectorClassNameKey)
+          config.getAs[String](requestMetricCollectorClassNameKey)
         ClassCheckUtils.requireClassByName(
           RequestMetricCollectorClassName,
           className,
@@ -91,7 +91,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
         )
       },
       monitoringListenerProviderClassName = {
-        val className = config.value[String](monitoringListenerProviderClassNameKey)
+        val className = config.as[String](monitoringListenerProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           MonitoringListenerProviderClassName,
           className,
@@ -100,7 +100,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       monitoringListenerClassName = {
         val className =
-          config.valueOptAs[String](monitoringListenerClassNameKey)
+          config.getAs[String](monitoringListenerClassNameKey)
         ClassCheckUtils.requireClassByName(
           MonitoringListenerClassName,
           className,
@@ -108,7 +108,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
         )
       },
       requestHandlersProviderClassName = {
-        val className = config.value[String](requestHandlersProviderClassNameKey)
+        val className = config.as[String](requestHandlersProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           RequestHandlersProviderClassName,
           className,
@@ -117,17 +117,17 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       requestHandlerClassNames = {
         val classNames =
-          config.valuesAs[String](requestHandlerClassNamesKey, Vector.empty)
+          config.getAs[Vector[String]](requestHandlerClassNamesKey).getOrElse(Vector.empty)
         classNames.map { className =>
           ClassCheckUtils.requireClassByName(
             RequestHandlerClassName,
             className,
             classNameValidation
           )
-        }.toIndexedSeq
+        }
       },
       csmConfigurationProviderProviderClassName = {
-        val className = config.value[String](csmConfigurationProviderProviderClassNameKey)
+        val className = config.as[String](csmConfigurationProviderProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           CsmConfigurationProviderProviderClassName,
           className,
@@ -136,7 +136,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
       },
       csmConfigurationProviderClassName = {
         val className =
-          config.valueOptAs[String](csmConfigurationProviderClassNameKey)
+          config.getAs[String](csmConfigurationProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           CsmConfigurationProviderClassName,
           className,
@@ -144,7 +144,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
         )
       },
       awsCredentialsProviderProviderClassName = {
-        val className = config.value[String](V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
+        val className = config.as[String](V1CommonConfigKeys.awsCredentialsProviderProviderClassNameKey)
         ClassCheckUtils.requireClassByName(
           V1CommonConfigKeys.AWSCredentialsProviderProviderClassName,
           className,
@@ -152,7 +152,7 @@ object DynamoDBClientV1Config extends LoggingSupport {
         )
       },
       awsCredentialsProviderClassName = {
-        val className = config.valueOptAs[String](
+        val className = config.getAs[String](
           V1CommonConfigKeys.awsCredentialsProviderClassNameKey
         )
         ClassCheckUtils.requireClassByName(

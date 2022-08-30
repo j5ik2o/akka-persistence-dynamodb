@@ -16,7 +16,7 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.journal
 
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ PersistenceId, SequenceNumber }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 
 final case class SortKey(value: String) {
   def asString: String = value
@@ -68,7 +68,8 @@ object SortKeyResolver {
       with ToPersistenceIdOps {
 
     override def separator: String =
-      pluginContext.pluginConfig.sourceConfig.valueAs[String]("persistence-id-separator", PersistenceId.Separator)
+      pluginContext.pluginConfig.sourceConfig
+        .getAs[String]("persistence-id-separator").getOrElse(PersistenceId.Separator)
 
     // ${persistenceId.body}-${sequenceNumber}
     override def resolve(persistenceId: PersistenceId, sequenceNumber: SequenceNumber): SortKey = {

@@ -19,7 +19,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1.DynamoDBClie
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v1dax.DynamoDBClientV1DaxConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2.DynamoDBClientV2Config
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.v2dax.DynamoDBClientV2DaxConfig
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.{ Config, ConfigFactory }
 
@@ -43,23 +43,23 @@ object DynamoDBClientConfig extends LoggingSupport {
       legacyConfigFormat: Boolean
   ): DynamoDBClientConfig = {
     logger.debug("config = {}", config)
-    val clientVersion = ClientVersion.withName(config.value[String](clientVersionKey))
+    val clientVersion = ClientVersion.withName(config.as[String](clientVersionKey))
     val result = DynamoDBClientConfig(
       sourceConfig = config,
-      accessKeyId = config.valueOptAs(accessKeyIdKeyKey),
-      secretAccessKey = config.valueOptAs(secretAccessKeyKey),
-      endpoint = config.valueOptAs(endpointKey),
-      region = config.valueOptAs(regionKey),
+      accessKeyId = config.getAs[String](accessKeyIdKeyKey),
+      secretAccessKey = config.getAs[String](secretAccessKeyKey),
+      endpoint = config.getAs[String](endpointKey),
+      region = config.getAs[String](regionKey),
       clientVersion,
-      clientType = ClientType.withName(config.value[String](clientTypeKey)),
+      clientType = ClientType.withName(config.as[String](clientTypeKey)),
       DynamoDBClientV1Config
         .fromConfig(
-          config.configAs(v1Key, ConfigFactory.empty()),
+          config.getAs[Config](v1Key).getOrElse(ConfigFactory.empty()),
           clientVersion == ClientVersion.V1
         ),
       DynamoDBClientV1DaxConfig
         .fromConfig(
-          config.configAs(v1DaxKey, ConfigFactory.empty()),
+          config.getAs[Config](v1DaxKey).getOrElse(ConfigFactory.empty()),
           clientVersion == ClientVersion.V1Dax
         ), {
         if (legacyConfigFormat) {
@@ -80,18 +80,18 @@ object DynamoDBClientConfig extends LoggingSupport {
           )
         } else
           DynamoDBClientV2Config.fromConfig(
-            config.configAs(v2Key, ConfigFactory.empty()),
+            config.getAs[Config](v2Key).getOrElse(ConfigFactory.empty()),
             clientVersion == ClientVersion.V2,
             legacyConfigFormat
           )
       },
       DynamoDBClientV2DaxConfig
         .fromConfig(
-          config.configAs(v2DaxKey, ConfigFactory.empty()),
+          config.getAs[Config](v2DaxKey).getOrElse(ConfigFactory.empty()),
           clientVersion == ClientVersion.V2
         ),
-      batchGetItemLimit = config.value[Int](batchGetItemLimitKey),
-      batchWriteItemLimit = config.value[Int](batchWriteItemLimitKey)
+      batchGetItemLimit = config.as[Int](batchGetItemLimitKey),
+      batchWriteItemLimit = config.as[Int](batchWriteItemLimitKey)
     )
     logger.debug("result = {}", result)
     result

@@ -109,6 +109,7 @@ lazy val `base` = (project in file("base/base"))
     name := "akka-persistence-dynamodb-base",
     libraryDependencies ++= Seq(
       slf4j.api,
+      iheart.ficus,
       akka.slf4j(akka26Version),
       akka.stream(akka26Version),
       akka.testkit(akka26Version)             % Test,

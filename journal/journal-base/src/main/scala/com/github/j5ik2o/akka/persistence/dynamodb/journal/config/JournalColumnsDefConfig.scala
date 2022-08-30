@@ -15,7 +15,7 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.journal.config
 
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.ConfigOps._
+import net.ceedubs.ficus.Ficus._
 import com.github.j5ik2o.akka.persistence.dynamodb.utils.LoggingSupport
 import com.typesafe.config.Config
 
@@ -34,14 +34,14 @@ object JournalColumnsDefConfig extends LoggingSupport {
     logger.debug("config = {}", config)
     val result = JournalColumnsDefConfig(
       sourceConfig = config,
-      partitionKeyColumnName = config.value[String](partitionKeyColumnNameKey),
-      sortKeyColumnName = config.value[String](sortKeyColumnNameKey),
-      persistenceIdColumnName = config.value[String](persistenceIdColumnNameKey),
-      sequenceNrColumnName = config.value[String](sequenceNrColumnNameKey),
-      deletedColumnName = config.value[String](deletedColumnNameKey),
-      messageColumnName = config.value[String](messageColumnNameKey),
-      orderingColumnName = config.value[String](orderingColumnNameKey),
-      tagsColumnName = config.value[String](tagsColumnNameKey)
+      partitionKeyColumnName = config.as[String](partitionKeyColumnNameKey),
+      sortKeyColumnName = config.as[String](sortKeyColumnNameKey),
+      persistenceIdColumnName = config.as[String](persistenceIdColumnNameKey),
+      sequenceNrColumnName = config.as[String](sequenceNrColumnNameKey),
+      deletedColumnName = config.as[String](deletedColumnNameKey),
+      messageColumnName = config.as[String](messageColumnNameKey),
+      orderingColumnName = config.as[String](orderingColumnNameKey),
+      tagsColumnName = config.as[String](tagsColumnNameKey)
     )
     logger.debug("result = {}", result)
     result

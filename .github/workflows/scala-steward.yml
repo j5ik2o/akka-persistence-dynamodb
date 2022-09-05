@@ -17,7 +17,7 @@ jobs:
         with:
           app_id: 111016
           private_key: ${{ secrets.BOT_PRIVATE_KEY }}
-      - uses: scala-steward-org/scala-steward-action@v2.22.0
+      - uses: scala-steward-org/scala-steward-action@v2.24.0
         if: ${{ !github.event.repository.fork }}
         with:
           github-token: ${{ steps.generate_token.outputs.token }}

@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val scala212Version = "2.12.16"
+    val scala212Version = "2.12.17"
     val scala213Version = "2.13.8"
     val scala3Version   = "3.0.1"
 
@@ -14,7 +14,7 @@ object Dependencies {
     val logbackVersion      = "1.2.11"
     val slf4jVersion        = "1.7.36"
     val ficusVersion        = "1.5.2"
-    val awsSdkV1Version     = "1.12.304"
+    val awsSdkV1Version     = "1.12.305"
     val awsSdkV1DaxVersion  = "1.0.221844.0"
     val awsSdkV2Version     = "2.17.276"
     val reactiveAwsDynamoDB = "1.2.6"

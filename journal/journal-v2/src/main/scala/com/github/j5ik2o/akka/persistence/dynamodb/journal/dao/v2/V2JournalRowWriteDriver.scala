@@ -202,7 +202,9 @@ final class V2JournalRowWriteDriver(
           }.getOrElse(
             Map.empty
           )).asJava
-      ).build()
+      )
+      .conditionExpression(s"attribute_not_exists(${pluginConfig.columnsDefConfig.orderingColumnName})")
+      .build()
     Source.single(request).via(streamClient.putItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful) {
         Source.single(1L)
@@ -311,8 +313,10 @@ final class V2JournalRowWriteDriver(
                             .builder().s(tags).build()
                         )
                       }.getOrElse(Map.empty)).asJava
-                  ).build()
-              ).build()
+                  )
+                  .build()
+              )
+              .build()
           }).flatMapConcat { requestItems =>
             Source
               .single(

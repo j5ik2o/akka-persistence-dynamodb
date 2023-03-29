@@ -173,7 +173,7 @@ final class V2JournalRowWriteDriver(
   override def singlePutJournalRowFlow: Flow[JournalRow, Long, NotUsed] = Flow[JournalRow].flatMapConcat { journalRow =>
     val pkey = partitionKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
     val skey = sortKeyResolver.resolve(journalRow.persistenceId, journalRow.sequenceNumber).asString
-    val request = PutItemRequest
+    val requestBuilder = PutItemRequest
       .builder().tableName(pluginConfig.tableName)
       .item(
         (Map(
@@ -203,14 +203,19 @@ final class V2JournalRowWriteDriver(
             Map.empty
           )).asJava
       )
-      .conditionExpression(
-        s"attribute_not_exists(${pluginConfig.columnsDefConfig.orderingColumnName}) AND #ordering < :newOrdering"
-      )
-      .expressionAttributeNames(Map("#ordering" -> pluginConfig.columnsDefConfig.orderingColumnName).asJava)
-      .expressionAttributeValues(
-        Map(":newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava
-      )
-      .build()
+    val request = if (Option(pluginConfig.sourceConfig.getBoolean("conditional-put-item")).getOrElse(false)) {
+      requestBuilder
+        .conditionExpression(
+          s"attribute_not_exists(${pluginConfig.columnsDefConfig.orderingColumnName}) AND #ordering < :newOrdering"
+        )
+        .expressionAttributeNames(Map("#ordering" -> pluginConfig.columnsDefConfig.orderingColumnName).asJava)
+        .expressionAttributeValues(
+          Map(":newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava
+        )
+        .build()
+    } else {
+      requestBuilder.build()
+    }
     Source.single(request).via(streamClient.putItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful) {
         Source.single(1L)

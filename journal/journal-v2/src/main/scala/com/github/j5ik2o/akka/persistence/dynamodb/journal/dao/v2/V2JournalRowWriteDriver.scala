@@ -208,7 +208,7 @@ final class V2JournalRowWriteDriver(
       )
       .expressionAttributeNames(Map("#ordering" -> pluginConfig.columnsDefConfig.orderingColumnName).asJava)
       .expressionAttributeValues(
-        Map("newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava
+        Map(":newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava
       )
       .build()
     Source.single(request).via(streamClient.putItemFlow).flatMapConcat { response =>

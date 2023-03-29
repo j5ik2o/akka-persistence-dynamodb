@@ -203,9 +203,13 @@ final class V2JournalRowWriteDriver(
             Map.empty
           )).asJava
       )
-      .conditionExpression(s"attribute_not_exists(${pluginConfig.columnsDefConfig.orderingColumnName}) AND #ordering < :newOrdering")
+      .conditionExpression(
+        s"attribute_not_exists(${pluginConfig.columnsDefConfig.orderingColumnName}) AND #ordering < :newOrdering"
+      )
       .expressionAttributeNames(Map("#ordering" -> pluginConfig.columnsDefConfig.orderingColumnName).asJava)
-      .expressionAttributeValues(Map("newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava)
+      .expressionAttributeValues(
+        Map("newOrdering" -> AttributeValue.builder().n(journalRow.ordering.toString).build()).asJava
+      )
       .build()
     Source.single(request).via(streamClient.putItemFlow).flatMapConcat { response =>
       if (response.sdkHttpResponse().isSuccessful) {

@@ -13,6 +13,11 @@ object PluginConfig {
   val v2DaxAsyncClientFactoryClassNameKey = "v2-dax-async-client-factory-class-name"
   val v2DaxSyncClientFactoryClassNameKey  = "v2-dax-sync-client-factory-class-name"
 
+  val v1JournalRowWriteDriverFactoryClassNameKey    = "v1-journal-row-write-driver-factory-class-name"
+  val v1DaxJournalRowWriteDriverFactoryClassNameKey = "v1-dax-journal-row-write-driver-factory-class-name"
+  val v2JournalRowWriteDriverFactoryClassNameKey    = "v2-journal-row-write-driver-factory-class-name"
+  val v2DaxJournalRowWriteDriverFactoryClassNameKey = "v2-dax-journal-row-write-driver-factory-class-name"
+
   val V1AsyncClientFactoryClassName    = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1AsyncClientFactory"
   val V1SyncClientFactoryClassName     = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1SyncClientFactory"
   val V1DaxAsyncClientFactoryClassName = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V1DaxAsyncClientFactory"
@@ -21,6 +26,9 @@ object PluginConfig {
   val V2SyncClientFactoryClassName     = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2SyncClientFactory"
   val V2DaxAsyncClientFactoryClassName = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxAsyncClientFactory"
   val V2DaxSyncClientFactoryClassName  = "com.github.j5ik2o.akka.persistence.dynamodb.utils.V2DaxSyncClientFactory"
+
+  val JournalRowWriteDriverFactoryClassName =
+    "com.github.j5ik2o.akka.persistence.dynamodb.journal.JournalRowWriteDriverFactory"
 }
 
 trait PluginConfig {

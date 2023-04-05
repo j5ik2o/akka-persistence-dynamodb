@@ -131,6 +131,42 @@ object JournalPluginConfig extends LoggingSupport {
             clientConfig.clientVersion == ClientVersion.V2
           )
       },
+      v1JournalRowWriteDriverFactoryClassName = {
+        val className = config.as[String](v1JournalRowWriteDriverFactoryClassNameKey)
+        ClassCheckUtils
+          .requireClassByName(
+            JournalRowWriteDriverFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V1
+          )
+      },
+      v1DaxJournalRowWriteDriverFactoryClassName = {
+        val className = config.as[String](v1DaxJournalRowWriteDriverFactoryClassNameKey)
+        ClassCheckUtils
+          .requireClassByName(
+            JournalRowWriteDriverFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V1
+          )
+      },
+      v2JournalRowWriteDriverFactoryClassName = {
+        val className = config.as[String](v2JournalRowWriteDriverFactoryClassNameKey)
+        ClassCheckUtils
+          .requireClassByName(
+            JournalRowWriteDriverFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
+      v2DaxJournalRowWriteDriverFactoryClassName = {
+        val className = config.as[String](v2DaxJournalRowWriteDriverFactoryClassNameKey)
+        ClassCheckUtils
+          .requireClassByName(
+            JournalRowWriteDriverFactoryClassName,
+            className,
+            clientConfig.clientVersion == ClientVersion.V2
+          )
+      },
       tableName = config.as[String](tableNameKey),
       columnsDefConfig = JournalColumnsDefConfig.fromConfig(
         config.getAs[Config](columnsDefKey).getOrElse(ConfigFactory.empty())
@@ -235,6 +271,10 @@ final case class JournalPluginConfig(
     v2SyncClientFactoryClassName: String,
     v2DaxAsyncClientFactoryClassName: String,
     v2DaxSyncClientFactoryClassName: String,
+    v1JournalRowWriteDriverFactoryClassName: String,
+    v1DaxJournalRowWriteDriverFactoryClassName: String,
+    v2JournalRowWriteDriverFactoryClassName: String,
+    v2DaxJournalRowWriteDriverFactoryClassName: String,
     tableName: String,
     columnsDefConfig: JournalColumnsDefConfig,
     getJournalRowsIndexName: String,

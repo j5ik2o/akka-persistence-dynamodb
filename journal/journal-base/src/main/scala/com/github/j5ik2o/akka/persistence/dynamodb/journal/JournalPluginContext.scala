@@ -62,14 +62,14 @@ final case class JournalPluginContext(system: ActorSystem, pluginConfig: Journal
 
   val journalRowWriteDriver: JournalRowWriteDriver = {
     val className = pluginConfig.clientConfig.clientVersion match {
-      case ClientVersion.V2 =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2JournalRowWriteDriverFactory"
-      case ClientVersion.V2Dax =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v2.V2DaxJournalRowWriteDriverFactory"
       case ClientVersion.V1 =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1JournalRowWriteDriverFactory"
+        pluginConfig.v1JournalRowWriteDriverFactoryClassName
       case ClientVersion.V1Dax =>
-        "com.github.j5ik2o.akka.persistence.dynamodb.journal.dao.v1.V1DaxJournalRowWriteDriverFactory"
+        pluginConfig.v1DaxJournalRowWriteDriverFactoryClassName
+      case ClientVersion.V2 =>
+        pluginConfig.v2JournalRowWriteDriverFactoryClassName
+      case ClientVersion.V2Dax =>
+        pluginConfig.v2DaxJournalRowWriteDriverFactoryClassName
     }
     val f = newDynamicAccessor[JournalRowWriteDriverFactory]().createThrow(className)
     f.create

@@ -69,6 +69,14 @@ object SnapshotPluginConfig extends LoggingSupport {
       )
     val result = SnapshotPluginConfig(
       sourceConfig = config,
+      plugInLifecycleHandlerFactoryClassName = {
+        val className = config.as[String](plugInLifecycleHandlerFactoryClassNameKey)
+        ClassCheckUtils.requireClassByName(PlugInLifecycleHandlerFactoryClassName, className)
+      },
+      plugInLifecycleHandlerClassName = {
+        val className = config.as[String](plugInLifecycleHandlerClassNameKey)
+        ClassCheckUtils.requireClassByName(PlugInLifecycleHandlerClassName, className)
+      },
       v1AsyncClientFactoryClassName = {
         val className = config.as[String](v1AsyncClientFactoryClassNameKey)
         ClassCheckUtils
@@ -180,6 +188,8 @@ object SnapshotPluginConfig extends LoggingSupport {
 
 final case class SnapshotPluginConfig(
     sourceConfig: Config,
+    plugInLifecycleHandlerFactoryClassName: String,
+    plugInLifecycleHandlerClassName: String,
     v1AsyncClientFactoryClassName: String,
     v1SyncClientFactoryClassName: String,
     v1DaxAsyncClientFactoryClassName: String,

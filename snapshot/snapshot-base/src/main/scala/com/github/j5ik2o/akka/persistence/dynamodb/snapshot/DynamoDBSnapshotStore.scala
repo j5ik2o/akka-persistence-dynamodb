@@ -27,6 +27,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.config.SnapshotPluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.snapshot.dao.{ SnapshotDao, SnapshotDaoFactory }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ PlugInLifecycleHandler, PlugInLifecycleHandlerFactory }
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -49,12 +50,16 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
   implicit val mat: Materializer           = SystemMaterializer(system).materializer
   implicit val _log: LoggingAdapter        = log
 
-  system.dynamicAccess
-
   private val serialization = SerializationExtension(system)
 
   protected val pluginConfig: SnapshotPluginConfig = SnapshotPluginConfig.fromConfig(config)
   private val pluginContext                        = SnapshotPluginContext(system, pluginConfig)
+
+  private val plugInLifecycleHandlerFactory: PlugInLifecycleHandlerFactory = pluginContext
+    .newDynamicAccessor[PlugInLifecycleHandlerFactory]().createThrow(
+      pluginConfig.plugInLifecycleHandlerFactoryClassName
+    )
+  private val plugInLifecycleHandler: PlugInLifecycleHandler = plugInLifecycleHandlerFactory.create
 
   import pluginContext._
 
@@ -77,8 +82,14 @@ final class DynamoDBSnapshotStore(config: Config) extends SnapshotStore {
     )
   }
 
+  override def preStart(): Unit = {
+    super.preStart()
+    plugInLifecycleHandler.start()
+  }
+
   override def postStop(): Unit = {
     snapshotDao.dispose()
+    plugInLifecycleHandler.stop()
     super.postStop()
   }
 

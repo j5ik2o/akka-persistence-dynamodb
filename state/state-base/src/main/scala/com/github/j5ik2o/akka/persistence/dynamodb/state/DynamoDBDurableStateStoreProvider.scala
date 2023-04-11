@@ -26,6 +26,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.config.client.ClientVersion
 import com.github.j5ik2o.akka.persistence.dynamodb.state.config.StatePluginConfig
 import com.github.j5ik2o.akka.persistence.dynamodb.state.javadsl.JavaDynamoDBDurableStateStore
 import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.ScalaDurableStateUpdateStoreFactory
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ PlugInLifecycleHandler, PlugInLifecycleHandlerFactory }
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -52,6 +53,12 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
   private val statePluginConfig: StatePluginConfig = StatePluginConfig.fromConfig(config)
   private val statePluginContext                   = StatePluginContext(system, statePluginConfig)
 
+  private val plugInLifecycleHandlerFactory: PlugInLifecycleHandlerFactory = statePluginContext
+    .newDynamicAccessor[PlugInLifecycleHandlerFactory]().createThrow(
+      statePluginConfig.plugInLifecycleHandlerFactoryClassName
+    )
+  private val plugInLifecycleHandler: PlugInLifecycleHandler = plugInLifecycleHandlerFactory.create
+
   import statePluginContext._
 
   implicit val ec: ExecutionContext = pluginExecutor
@@ -76,6 +83,8 @@ final class DynamoDBDurableStateStoreProvider(system: ExtendedActorSystem) exten
 
   override def javadslDurableStateStore(): JavaDurableStateUpdateStore[AnyRef] = {
     val store = createStore[AnyRef]
+    plugInLifecycleHandler.start()
     new JavaDynamoDBDurableStateStore[AnyRef](system, pluginExecutor, store)
   }
+
 }

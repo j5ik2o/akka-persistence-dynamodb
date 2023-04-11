@@ -81,19 +81,21 @@ object PluginTestUtils {
   ) extends PluginContext {
     override type This = BasePluginContext
     override val pluginConfig: PluginConfig = new PluginConfig {
-      override val configRootPath: String                   = null
-      override val v1AsyncClientFactoryClassName: String    = null
-      override val v1SyncClientFactoryClassName: String     = null
-      override val v1DaxAsyncClientFactoryClassName: String = null
-      override val v1DaxSyncClientFactoryClassName: String  = null
-      override val v2AsyncClientFactoryClassName: String    = null
-      override val v2SyncClientFactoryClassName: String     = null
-      override val tableName: String                        = null
-      override val metricsReporterProviderClassName: String = classOf[MetricsReporterProvider.Default].getName
-      override val metricsReporterClassName: Option[String] = metricsReporterClass.map(_.getName)
-      override val traceReporterProviderClassName: String   = classOf[TraceReporterProvider.Default].getName
-      override val traceReporterClassName: Option[String]   = traceReporterClass.map(_.getName)
-      override val clientConfig: DynamoDBClientConfig       = null
+      override val configRootPath: String                         = null
+      override val plugInLifecycleHandlerFactoryClassName: String = null
+      override val plugInLifecycleHandlerClassName: String        = null
+      override val v1AsyncClientFactoryClassName: String          = null
+      override val v1SyncClientFactoryClassName: String           = null
+      override val v1DaxAsyncClientFactoryClassName: String       = null
+      override val v1DaxSyncClientFactoryClassName: String        = null
+      override val v2AsyncClientFactoryClassName: String          = null
+      override val v2SyncClientFactoryClassName: String           = null
+      override val tableName: String                              = null
+      override val metricsReporterProviderClassName: String       = classOf[MetricsReporterProvider.Default].getName
+      override val metricsReporterClassName: Option[String]       = metricsReporterClass.map(_.getName)
+      override val traceReporterProviderClassName: String         = classOf[TraceReporterProvider.Default].getName
+      override val traceReporterClassName: Option[String]         = traceReporterClass.map(_.getName)
+      override val clientConfig: DynamoDBClientConfig             = null
     }
     override def newDynamicAccessor[A: ClassTag](): DynamicAccessor[A, This] = new BaseDynamicAccessor[A, This](this)
   }

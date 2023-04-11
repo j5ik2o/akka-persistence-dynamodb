@@ -32,6 +32,7 @@ import com.github.j5ik2o.akka.persistence.dynamodb.journal.serialization.{
   FlowPersistentReprSerializer
 }
 import com.github.j5ik2o.akka.persistence.dynamodb.model.{ Context, PersistenceId, SequenceNumber }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ PlugInLifecycleHandler, PlugInLifecycleHandlerFactory }
 import com.typesafe.config.Config
 
 import java.util.UUID
@@ -67,7 +68,13 @@ final class DynamoDBJournal(config: Config) extends AsyncWriteJournal with Actor
 
   import pluginContext._
 
-  protected val serializer: FlowPersistentReprSerializer[JournalRow] =
+  private val plugInLifecycleHandlerFactory: PlugInLifecycleHandlerFactory = pluginContext
+    .newDynamicAccessor[PlugInLifecycleHandlerFactory]().createThrow(
+      journalPluginConfig.plugInLifecycleHandlerFactoryClassName
+    )
+  private val plugInLifecycleHandler: PlugInLifecycleHandler = plugInLifecycleHandlerFactory.create
+
+  private val serializer: FlowPersistentReprSerializer[JournalRow] =
     new ByteArrayJournalSerializer(serialization, journalPluginConfig.tagSeparator, metricsReporter, traceReporter)
 
   protected val journalDao: JournalDaoWithUpdates =
@@ -241,10 +248,16 @@ final class DynamoDBJournal(config: Config) extends AsyncWriteJournal with Actor
     traced
   }
 
+  override def preStart(): Unit = {
+    super.preStart()
+    plugInLifecycleHandler.start()
+  }
+
   override def postStop(): Unit = {
     journalDao.dispose()
     journalRowWriteDriver.dispose()
     writeInProgress.clear()
+    plugInLifecycleHandler.stop()
     super.postStop()
   }
 

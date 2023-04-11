@@ -52,6 +52,14 @@ object StatePluginConfig extends LoggingSupport {
       .fromConfig(config.getAs[Config](dynamoCbClientKey).getOrElse(ConfigFactory.empty()), legacyConfigFormat = false)
     val result = new StatePluginConfig(
       sourceConfig = config,
+      plugInLifecycleHandlerFactoryClassName = {
+        val className = config.as[String](plugInLifecycleHandlerFactoryClassNameKey)
+        ClassCheckUtils.requireClassByName(PlugInLifecycleHandlerFactoryClassName, className)
+      },
+      plugInLifecycleHandlerClassName = {
+        val className = config.as[String](plugInLifecycleHandlerClassNameKey)
+        ClassCheckUtils.requireClassByName(PlugInLifecycleHandlerClassName, className)
+      },
       v1AsyncClientFactoryClassName = {
         val className = config.as[String](v1AsyncClientFactoryClassNameKey)
         ClassCheckUtils
@@ -165,6 +173,8 @@ object StatePluginConfig extends LoggingSupport {
 
 final case class StatePluginConfig(
     sourceConfig: Config,
+    plugInLifecycleHandlerFactoryClassName: String,
+    plugInLifecycleHandlerClassName: String,
     v1AsyncClientFactoryClassName: String,
     v1SyncClientFactoryClassName: String,
     v1DaxAsyncClientFactoryClassName: String,
@@ -193,4 +203,5 @@ final case class StatePluginConfig(
     clientConfig: DynamoDBClientConfig
 ) extends PluginConfig {
   override val configRootPath: String = DynamoDBDurableStateStoreProvider.Identifier
+
 }

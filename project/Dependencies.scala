@@ -14,7 +14,7 @@ object Dependencies {
     val logbackVersion      = "1.2.12"
     val slf4jVersion        = "1.7.36"
     val ficusVersion        = "1.5.2"
-    val awsSdkV1Version     = "1.12.478"
+    val awsSdkV1Version     = "1.12.479"
     val awsSdkV1DaxVersion  = "1.0.221844.0"
     val awsSdkV2Version     = "2.20.76"
     val reactiveAwsDynamoDB = "1.2.6"
@@ -76,7 +76,7 @@ object Dependencies {
   }
 
   object testcontainers {
-    val testcontainersVersion    = "1.18.2"
+    val testcontainersVersion    = "1.18.3"
     val testcontainers           = "org.testcontainers" % "testcontainers" % testcontainersVersion
     val testcontainersLocalStack = "org.testcontainers" % "localstack"     % testcontainersVersion
     val testcontainersKafka      = "org.testcontainers" % "kafka"          % testcontainersVersion

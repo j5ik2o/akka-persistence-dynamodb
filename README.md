@@ -16,7 +16,7 @@ The plugin features the following.
 - Durable state
   - Durable State Store Plugin
 
-NOTE: This plugin is derived from [akka/akka-persistence-jdbc](https://github.com/akka/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
+NOTE: This plugin is derived from [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc), not [akka/akka-persistence-dynamodb](https://github.com/akka/akka-persistence-dynamodb).
 
 ## User's Guide
 
@@ -28,6 +28,6 @@ Apache License Version 2.0
 
 This product was made by duplicating or referring to the code of the following products, so Dennis Vriend's license is included in the product code and test code.
 
-- [akka/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
+- [dnvriend/akka-persistence-jdbc](https://github.com/dnvriend/akka-persistence-jdbc)
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb?ref=badge_large)

@@ -15,10 +15,13 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ConfigHelper, DockerControllerHelperUtil, DynamoDBContainerHelper}
+import akka.actor.{ ActorRef, ActorSystem, Props }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
+  ConfigHelper,
+  DockerControllerHelperUtil
+}
 import com.typesafe.config.Config
-import org.openjdk.jmh.annotations.{Setup, TearDown}
+import org.openjdk.jmh.annotations.{ Setup, TearDown }
 
 import java.util.UUID
 

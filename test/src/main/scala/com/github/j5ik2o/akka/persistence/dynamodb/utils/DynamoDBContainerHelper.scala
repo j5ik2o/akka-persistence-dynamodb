@@ -18,50 +18,73 @@ package com.github.j5ik2o.akka.persistence.dynamodb.utils
 import com.amazonaws.auth.{ AWSStaticCredentialsProvider, BasicAWSCredentials }
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.dynamodbv2.model._
+import com.amazonaws.services.dynamodbv2.model.{
+  AttributeDefinition,
+  CreateTableRequest,
+  GlobalSecondaryIndex,
+  KeySchemaElement,
+  KeyType,
+  Projection,
+  ProjectionType,
+  ProvisionedThroughput,
+  ResourceNotFoundException,
+  ScalarAttributeType,
+  StreamSpecification,
+  StreamViewType
+}
 import com.amazonaws.services.dynamodbv2.{ AmazonDynamoDB, AmazonDynamoDBClientBuilder }
-import com.dimafeng.testcontainers.FixedHostPortGenericContainer
-import org.testcontainers.DockerClientFactory
-import org.testcontainers.containers.wait.strategy.Wait
+import com.github.j5ik2o.dockerController.{
+  DockerController,
+  DockerControllerHelper,
+  DockerControllerSpecSupport,
+  WaitPredicates
+}
+import com.github.j5ik2o.dockerController.RandomPortUtil.temporaryServerPort
+import com.github.j5ik2o.dockerController.WaitPredicates.WaitPredicate
+import com.github.j5ik2o.dockerController.dynamodbLocal.DynamoDBLocalController
+import org.scalatest.TestSuite
 
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
-trait DynamoDBContainerHelper {
+trait DockerControllerHelperUtil extends DockerControllerHelper {
 
-  protected lazy val region: Regions = Regions.AP_NORTHEAST_1
+  val testTimeFactor: Int = sys.env.getOrElse("TEST_TIME_FACTOR", "1").toInt
+  logger.debug(s"testTimeFactor = $testTimeFactor")
 
-  protected lazy val accessKeyId: String = "x"
+  lazy val dynamoDBPort: Int              = temporaryServerPort()
+  val controller: DynamoDBLocalController = new DynamoDBLocalController(dockerClient, imageTag = None)(dynamoDBPort)
 
-  protected lazy val secretAccessKey: String = "x"
-
-  protected lazy val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
-
-  protected lazy val dynamoDBPort: Int = RandomPortUtil.temporaryServerPort()
-
-  protected lazy val dynamoDBEndpoint: String = s"http://$dynamoDBHost:$dynamoDBPort"
-
-  protected lazy val dynamoDBImageVersion: String = "1.13.4"
-
-  protected lazy val dynamoDBImageName: String = s"amazon/dynamodb-local:$dynamoDBImageVersion"
-
-  protected lazy val dynamoDbLocalContainer: FixedHostPortGenericContainer = FixedHostPortGenericContainer(
-    dynamoDBImageName,
-    exposedHostPort = dynamoDBPort,
-    exposedContainerPort = 8000,
-    command = Seq("-Xmx256m", "-jar", "DynamoDBLocal.jar", "-dbPath", ".", "-sharedDb"),
-    waitStrategy = Wait.forListeningPort()
+  val waitPredicate: WaitPredicate = WaitPredicates.forLogMessageByRegex(
+    DynamoDBLocalController.RegexOfWaitPredicate,
+    Some((1 * testTimeFactor).seconds)
   )
+
+  val waitPredicateSetting: WaitPredicateSetting = WaitPredicateSetting(Duration.Inf, waitPredicate)
+
+  val tableName = "test"
+
+  override protected val dockerControllers: Vector[DockerController] = Vector(controller)
+
+  override protected val waitPredicatesSettings: Map[DockerController, WaitPredicateSetting] =
+    Map(
+      controller -> waitPredicateSetting
+    )
+
+  val dynamoDBEndpoint: String        = s"http://$dockerHost:$dynamoDBPort"
+  val dynamoDBRegion: Regions         = Regions.AP_NORTHEAST_1
+  val dynamoDBAccessKeyId: String     = "x"
+  val dynamoDBSecretAccessKey: String = "x"
 
   protected lazy val dynamoDBClient: AmazonDynamoDB = {
     AmazonDynamoDBClientBuilder
       .standard().withCredentials(
         new AWSStaticCredentialsProvider(
-          new BasicAWSCredentials(accessKeyId, secretAccessKey)
+          new BasicAWSCredentials(dynamoDBAccessKeyId, dynamoDBSecretAccessKey)
         )
       )
       .withEndpointConfiguration(
-        new EndpointConfiguration(dynamoDBEndpoint, region.getName)
+        new EndpointConfiguration(dynamoDBEndpoint, dynamoDBRegion.getName)
       ).build()
   }
 
@@ -72,6 +95,16 @@ trait DynamoDBContainerHelper {
   protected val waitIntervalForDynamoDBLocal: FiniteDuration = 500.milliseconds
 
   protected val MaxCount = 10
+
+  def startContainer(): Unit = {
+    createDockerContainer(controller, None)
+    startDockerContainer(controller, None)
+  }
+
+  def stopContainer(): Unit = {
+    stopDockerContainer(controller, None)
+    removeDockerContainer(controller, None)
+  }
 
   protected def waitDynamoDBLocal(tableNames: Seq[String]): Unit = {
     var isWaken: Boolean = false
@@ -331,3 +364,5 @@ trait DynamoDBContainerHelper {
   }
 
 }
+
+trait DynamoDBContainerHelper extends DockerControllerSpecSupport with DockerControllerHelperUtil { this: TestSuite => }

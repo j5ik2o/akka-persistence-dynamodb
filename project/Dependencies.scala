@@ -5,7 +5,7 @@ object Dependencies {
   object Versions {
     val scala212Version = "2.12.17"
     val scala213Version = "2.13.11"
-    val scala3Version   = "3.0.1"
+    val scala3Version   = "3.3.1"
 
     val scalaCollectionCompatVersion = "2.11.0"
 
@@ -19,8 +19,7 @@ object Dependencies {
     val awsSdkV2Version     = "2.20.153"
     val reactiveAwsDynamoDB = "1.2.6"
 
-    val scalaTest32Version      = "3.2.4"
-    val scalaTest30Version      = "3.0.8"
+    val scalaTest32Version      = "3.2.16"
     val scalaJava8CompatVersion = "1.0.2"
 
     val reactiveStreamsVersion = "1.0.3"

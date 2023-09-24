@@ -6,8 +6,8 @@ addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.6")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.1")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-site" % "1.4.1")
+//addSbtPlugin("com.typesafe.sbt" % "sbt-site" % "1.4.1")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-ghpages" % "0.6.3")
+//addSbtPlugin("com.typesafe.sbt" % "sbt-ghpages" % "0.6.3")
 
 addDependencyTreePlugin

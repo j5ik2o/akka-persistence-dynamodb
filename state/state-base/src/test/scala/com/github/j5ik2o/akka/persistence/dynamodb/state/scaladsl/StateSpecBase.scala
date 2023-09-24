@@ -58,4 +58,5 @@ abstract class StateSpecBase(val config: Config)
   override def afterAll(): Unit = {
     TestKit.shutdownActorSystem(system)
   }
+
 }

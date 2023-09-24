@@ -23,9 +23,6 @@ on:
       - '.github/workflows/ci.yml'
   schedule:
     - cron: '0 * * * *'
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -33,21 +30,22 @@ jobs:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v3
+      - uses: olafurpg/setup-scala@v14
         with:
-          distribution: 'temurin'
-          java-version: '11'
-          cache: 'sbt'
+          java-version: "adopt@1.8"
+      - uses: coursier/cache-action@v6
       - run: sbt -v lint
+      - name: clean up
+        run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"
   test:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 11, 17, 19 ]
-        scala: [ 3.3.1, 2.13.11, 2.12.17 ]
+        jdk: [ adopt@1.8, adopt@1.11, adopt@1.14 ]
+        scala: [ 3.3.0, 2.13.11, 2.12.18 ]
     runs-on: ubuntu-latest
     needs: lint
     env:
@@ -56,13 +54,14 @@ jobs:
       AWS_REGION: ap-northeast-1
       TEST_TIME_FACTOR: 3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v3
+      - uses: olafurpg/setup-scala@v14
         with:
-          distribution: 'temurin'
           java-version: ${{ matrix.jdk }}
-          cache: 'sbt'
+      - uses: coursier/cache-action@v6
       - name: sbt test
         run: sbt -v ++${{ matrix.scala }} test
+      - name: clean up
+        run: "${GITHUB_WORKSPACE}/.github/clean-up.sh"

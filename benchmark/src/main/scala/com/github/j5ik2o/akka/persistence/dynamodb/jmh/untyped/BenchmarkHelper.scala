@@ -15,14 +15,14 @@
  */
 package com.github.j5ik2o.akka.persistence.dynamodb.jmh.untyped
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBContainerHelper }
+import akka.actor.{ActorRef, ActorSystem, Props}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ConfigHelper, DockerControllerHelperUtil, DynamoDBContainerHelper}
 import com.typesafe.config.Config
-import org.openjdk.jmh.annotations.{ Setup, TearDown }
+import org.openjdk.jmh.annotations.{Setup, TearDown}
 
 import java.util.UUID
 
-trait BenchmarkHelper extends DynamoDBContainerHelper {
+trait BenchmarkHelper extends DockerControllerHelperUtil {
 
   def clientVersion: String
   def clientType: String
@@ -32,7 +32,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
       None,
       legacyConfigFormat = false,
       legacyJournalMode = false,
-      dynamoDBHost,
+      "localhost",
       dynamoDBPort,
       clientVersion,
       clientType
@@ -42,7 +42,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
 
   @Setup
   def setup(): Unit = {
-    dynamoDbLocalContainer.start()
+    startContainer()
     Thread.sleep(1000)
     createTable()
     system = ActorSystem("benchmark-" + UUID.randomUUID().toString, config)
@@ -53,7 +53,7 @@ trait BenchmarkHelper extends DynamoDBContainerHelper {
 
   @TearDown
   def tearDown(): Unit = {
-    dynamoDbLocalContainer.stop()
+    stopContainer()
     system.terminate()
   }
 }

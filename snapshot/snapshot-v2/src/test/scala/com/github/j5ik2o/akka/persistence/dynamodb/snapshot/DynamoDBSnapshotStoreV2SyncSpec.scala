@@ -16,15 +16,14 @@
 package com.github.j5ik2o.akka.persistence.dynamodb.snapshot
 
 import akka.persistence.snapshot.SnapshotStoreSpec
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBSpecSupport, RandomPortUtil }
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ DynamoDBContainerHelper, RandomPortUtil }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.ScalaFutures
-import org.testcontainers.DockerClientFactory
 
 import scala.concurrent.duration._
 
 object DynamoDBSnapshotStoreV2SyncSpec {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBHost: String = "localhost"
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
@@ -53,18 +52,20 @@ final class DynamoDBSnapshotStoreV2SyncSpec
         ).withFallback(ConfigFactory.load("snapshot-reference"))
     )
     with ScalaFutures
-    with DynamoDBSpecSupport {
+    with DynamoDBContainerHelper {
 
   implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort
+  override lazy val dynamoDBPort: Int = DynamoDBSnapshotStoreV2SyncSpec.dynamoDBPort
 
-  before {
+  override def afterStartContainers(): Unit = {
+    super.afterStartContainers()
     createTable()
   }
 
-  after {
+  override def beforeStopContainers(): Unit = {
     deleteTable()
+    super.beforeStopContainers()
   }
 
 }

@@ -18,15 +18,12 @@ package com.github.j5ik2o.akka.persistence.dynamodb.state
 import akka.persistence.state.DurableStateStoreRegistry
 import com.github.j5ik2o.akka.persistence.dynamodb.config.client.{ ClientType, ClientVersion }
 import com.github.j5ik2o.akka.persistence.dynamodb.state.scaladsl.{ DynamoDBDurableStateStoreV1, StateSpecBase }
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBSpecSupport, RandomPortUtil }
-import org.scalatest.concurrent.ScalaFutures
-import org.testcontainers.DockerClientFactory
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DynamoDBContainerHelper, RandomPortUtil }
 
 import java.util.UUID
-import scala.concurrent.duration.DurationInt
 
 object DynamoDBStateV1AsyncSpec {
-  val dynamoDBHost: String = DockerClientFactory.instance().dockerHostIpAddress()
+  val dynamoDBHost: String = "localhost"
   val dynamoDBPort: Int    = RandomPortUtil.temporaryServerPort()
 }
 
@@ -43,12 +40,11 @@ final class DynamoDBStateV1AsyncSpec
           clientType = ClientType.Async.toString
         )
     )
-    with ScalaFutures
-    with DynamoDBSpecSupport {
+    with DynamoDBContainerHelper {
 
-  implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
+  // implicit val pc: PatienceConfig = PatienceConfig(30.seconds, 1.seconds)
 
-  override protected lazy val dynamoDBPort: Int = DynamoDBStateV1AsyncSpec.dynamoDBPort
+  override lazy val dynamoDBPort: Int = DynamoDBStateV1AsyncSpec.dynamoDBPort
 
   "A durable state store plugin" - {
     "instantiate a DynamoDBDurableDataStore successfully" in {
@@ -61,8 +57,8 @@ final class DynamoDBStateV1AsyncSpec
         val revision = 1
         val data     = "abc"
         val tag      = ""
-        store.upsertObject(id, revision, data, tag).futureValue()
-        val result = store.getObject(id).futureValue()
+        store.upsertObject(id, revision, data, tag).futureValue
+        val result = store.getObject(id).futureValue
         result.value shouldBe Some(data)
       }
       {
@@ -70,8 +66,8 @@ final class DynamoDBStateV1AsyncSpec
         val revision = 1
         val data     = "def"
         val tag      = UUID.randomUUID().toString
-        store.upsertObject(id, revision, data, tag).futureValue()
-        val result = store.getRawObject(id).futureValue()
+        store.upsertObject(id, revision, data, tag).futureValue
+        val result = store.getRawObject(id).futureValue
         result match {
           case just: GetRawObjectResult.Just[String] =>
             just.value shouldBe data
@@ -86,14 +82,14 @@ final class DynamoDBStateV1AsyncSpec
     }
   }
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  override def afterStartContainers(): Unit = {
+    super.afterStartContainers()
     createTable()
   }
 
-  override def afterAll(): Unit = {
+  override def beforeStopContainers(): Unit = {
     deleteTable()
-    super.afterAll()
+    super.beforeStopContainers()
   }
 
 }

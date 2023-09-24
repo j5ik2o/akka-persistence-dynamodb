@@ -40,7 +40,8 @@ lazy val baseSettings = Seq(
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(
     Versions.scala212Version,
-    Versions.scala213Version
+    Versions.scala213Version,
+    Versions.scala3Version
   ),
   scalacOptions ++= (
     Seq(
@@ -57,11 +58,11 @@ lazy val baseSettings = Seq(
     ) ++ crossScalacOptions(scalaVersion.value)
   ),
   resolvers ++= Seq(
-    Resolver.sonatypeRepo("snapshots"),
-    Resolver.sonatypeRepo("releases"),
     "Seasar Repository" at "https://maven.seasar.org/maven2/",
     "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
   ),
+  resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
+  resolvers ++= Resolver.sonatypeOssRepos("releases"),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   Test / publishArtifact := false,
@@ -87,9 +88,9 @@ lazy val test = (project in file("test"))
     libraryDependencies ++= Seq(
       akka.stream(akka26Version),
       amazonaws.dynamodb,
-      testcontainers.testcontainers,
-      dimafeng.testcontainerScala,
-      javaDevJnv.jna
+      javaDevJnv.jna,
+      "com.github.j5ik2o" %% "docker-controller-scala-scalatest"      % "1.15.32",
+      "com.github.j5ik2o" %% "docker-controller-scala-dynamodb-local" % "1.15.32"
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -115,7 +116,6 @@ lazy val `base` = (project in file("base/base"))
       akka.testkit(akka26Version)             % Test,
       logback.classic                         % Test,
       slf4j.julToSlf4J                        % Test,
-      dimafeng.testcontainerScalaScalaTest    % Test,
       akka.streamTestkit(akka26Version)       % Test,
       scalatest.scalatest(scalaTest32Version) % Test
     ),
@@ -139,9 +139,8 @@ lazy val `base-v1` = (project in file("base/base-v1"))
       slf4j.api,
       amazonaws.dynamodb,
       amazonaws.dax,
-      logback.classic                      % Test,
-      slf4j.julToSlf4J                     % Test,
-      dimafeng.testcontainerScalaScalaTest % Test
+      logback.classic  % Test,
+      slf4j.julToSlf4J % Test
     )
   ).dependsOn(base, test % "test->compile")
 
@@ -152,10 +151,9 @@ lazy val `base-v2` = (project in file("base/base-v2"))
     libraryDependencies ++= Seq(
       slf4j.api,
       softwareamazon.dynamodb,
-      "software.amazon.dax"                % "amazon-dax-client" % "2.0.4",
-      logback.classic                      % Test,
-      slf4j.julToSlf4J                     % Test,
-      dimafeng.testcontainerScalaScalaTest % Test
+      "software.amazon.dax" % "amazon-dax-client" % "2.0.4",
+      logback.classic       % Test,
+      slf4j.julToSlf4J      % Test
     )
   ).dependsOn(base, test % "test->compile")
 
@@ -269,8 +267,7 @@ lazy val `state-v1` = (project in file("state/state-v1"))
       akka.persistenceTck(akka26Version)      % Test,
       scalatest.scalatest(scalaTest32Version) % Test,
       "ch.qos.logback"                        % "logback-classic" % logbackVersion % Test,
-      "org.slf4j"                             % "jul-to-slf4j"    % slf4jVersion   % Test,
-      dimafeng.testcontainerScalaScalaTest    % Test
+      "org.slf4j"                             % "jul-to-slf4j"    % slf4jVersion   % Test
     )
   ).dependsOn(
     base         % "test->test",
@@ -290,8 +287,7 @@ lazy val `state-v2` = (project in file("state/state-v2"))
       akka.persistenceTck(akka26Version)      % Test,
       scalatest.scalatest(scalaTest32Version) % Test,
       "ch.qos.logback"                        % "logback-classic" % logbackVersion % Test,
-      "org.slf4j"                             % "jul-to-slf4j"    % slf4jVersion   % Test,
-      dimafeng.testcontainerScalaScalaTest    % Test
+      "org.slf4j"                             % "jul-to-slf4j"    % slf4jVersion   % Test
     )
   ).dependsOn(
     base         % "test->test",
@@ -309,7 +305,6 @@ lazy val benchmark = (project in file("benchmark"))
       logback.classic,
       slf4j.api,
       slf4j.julToSlf4J,
-      dimafeng.testcontainerScala,
       akka.slf4j(akka26Version),
       akka.persistenceTyped(akka26Version)
     )
@@ -326,7 +321,6 @@ lazy val example = (project in file("example"))
       logback.classic,
       slf4j.api,
       slf4j.julToSlf4J,
-      dimafeng.testcontainerScala,
       fasterxml.jacksonModuleScala,
       akka.slf4j(akka26Version),
       akka.persistenceTyped(akka26Version),
@@ -348,15 +342,6 @@ lazy val example = (project in file("example"))
     `state-v2`
   )
 
-lazy val docs = (project in file("docs"))
-  .enablePlugins(SphinxPlugin, SiteScaladocPlugin, GhpagesPlugin, PreprocessPlugin)
-  .settings(baseSettings)
-  .settings(
-    name := "documents",
-    git.remoteRepo := "git@github.com:j5ik2o/akka-persistence-dynamodb.git",
-    ghpagesNoJekyll := true
-  )
-
 lazy val root = (project in file("."))
   .settings(baseSettings)
   .settings(
@@ -364,7 +349,6 @@ lazy val root = (project in file("."))
     publish / skip := true
   )
   .aggregate(
-    docs,
     test,
     base,
     `base-v1`,

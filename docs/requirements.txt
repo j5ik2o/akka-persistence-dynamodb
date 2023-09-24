@@ -27,6 +27,6 @@ sphinxcontrib-devhelp==1.0.2
 sphinxcontrib-htmlhelp==2.0.4
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.6
-sphinxcontrib-serializinghtml==1.1.5
+sphinxcontrib-serializinghtml==1.1.9
 typing_extensions==4.2.0
 urllib3==1.26.9

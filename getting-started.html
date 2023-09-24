@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.16.164+6-892fdbac-SNAPSHOT documentation</title>
+  <title>Getting started &mdash; j5ik2o/akka-persistence-dynamodb 1.16.164+8-dd8f3e23-SNAPSHOT documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -177,13 +177,13 @@
 <ul class="simple">
 <li><p>if you use event sourced</p></li>
 </ul>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;...&quot;</span><span class="w"></span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;...&quot;</span>
 <span class="kd">val</span><span class="w"> </span><span class="n">awsClientVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;v2&quot;</span><span class="w"> </span><span class="c1">// or &quot;v1&quot;</span>
 
-<span class="n">libraryDependencies</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-journal-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-snapshot-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
+<span class="n">libraryDependencies</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span>
+<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-journal-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span><span class="p">,</span>
+<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-snapshot-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <figure class="align-default" id="tag-list">
@@ -196,12 +196,12 @@
 <ul class="simple">
 <li><p>if you use durable state</p></li>
 </ul>
-<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;...&quot;</span><span class="w"></span>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="kd">val</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;...&quot;</span>
 <span class="kd">val</span><span class="w"> </span><span class="n">awsClientVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;v2&quot;</span><span class="w"> </span><span class="c1">// or &quot;v1&quot;</span>
 
-<span class="n">libraryDependencies</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-state-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
+<span class="n">libraryDependencies</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nc">Seq</span><span class="p">(</span>
+<span class="w">  </span><span class="s">&quot;com.github.j5ik2o&quot;</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="s">s&quot;akka-persistence-dynamodb-state-</span><span class="si">$</span><span class="n">awsClientVersion</span><span class="s">&quot;</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">version</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <div class="admonition note">
@@ -216,7 +216,7 @@
 <section id="create-table">
 <h4>Create Table<a class="headerlink" href="#create-table" title="Permalink to this heading">¶</a></h4>
 <p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/journal-table.json
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>aws<span class="w"> </span>dynamodb<span class="w"> </span>create-table<span class="w"> </span>--cli-input-json<span class="w"> </span>file://./tools/journal-table.json
 </pre></div>
 </div>
 </section>
@@ -253,7 +253,7 @@
 <section id="id1">
 <h4>Create Table<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h4>
 <p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/snapshot-table.json
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>aws<span class="w"> </span>dynamodb<span class="w"> </span>create-table<span class="w"> </span>--cli-input-json<span class="w"> </span>file://./tools/snapshot-table.json
 </pre></div>
 </div>
 <div class="admonition note">
@@ -294,7 +294,7 @@
 <section id="id3">
 <h4>Create Table<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h4>
 <p>Create the table using the JSON file under <code class="docutils literal notranslate"><span class="pre">tools</span></code> directory.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ aws dynamodb create-table --cli-input-json file://./tools/state-table.json
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>aws<span class="w"> </span>dynamodb<span class="w"> </span>create-table<span class="w"> </span>--cli-input-json<span class="w"> </span>file://./tools/state-table.json
 </pre></div>
 </div>
 </section>

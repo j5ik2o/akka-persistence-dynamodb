@@ -17,5 +17,7 @@
       "packagePatterns": ["^com\\.typesafe\\.akka"],
       "enabled": false
     }
-  ]
+  ],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 5
 }

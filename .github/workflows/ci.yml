@@ -23,6 +23,9 @@ on:
       - '.github/workflows/ci.yml'
   schedule:
     - cron: '0 * * * *'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     runs-on: ubuntu-latest

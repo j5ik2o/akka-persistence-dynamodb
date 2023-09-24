@@ -19,10 +19,7 @@ import java.util.UUID
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ typed, ActorSystem }
 import com.github.j5ik2o.akka.persistence.dynamodb.jmh
-import com.github.j5ik2o.akka.persistence.dynamodb.utils.{
-  ConfigHelper,
-  DockerControllerHelperUtil
-}
+import com.github.j5ik2o.akka.persistence.dynamodb.utils.{ ConfigHelper, DockerControllerHelperUtil }
 import org.openjdk.jmh.annotations.{ Setup, TearDown }
 import com.typesafe.config.Config
 

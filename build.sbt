@@ -89,7 +89,7 @@ lazy val test = (project in file("test"))
       akka.stream(akka26Version),
       amazonaws.dynamodb,
       javaDevJnv.jna,
-      "com.github.j5ik2o" %% "docker-controller-scala-scalatest"      % "1.15.32",
+      "com.github.j5ik2o" %% "docker-controller-scala-scalatest"      % "1.15.33",
       "com.github.j5ik2o" %% "docker-controller-scala-dynamodb-local" % "1.15.33"
     ),
     libraryDependencies ++= {
@@ -327,7 +327,7 @@ lazy val example = (project in file("example"))
       akka.serializationJackson(akka26Version),
       scalatest.scalatest(scalaTest32Version) % Test,
       akka.persistenceTestkit(akka26Version)  % Test,
-      "com.github.j5ik2o"                    %% "docker-controller-scala-scalatest"      % "1.15.32",
+      "com.github.j5ik2o"                    %% "docker-controller-scala-scalatest"      % "1.15.33",
       "com.github.j5ik2o"                    %% "docker-controller-scala-dynamodb-local" % "1.15.33"
     )
   )

@@ -16,6 +16,11 @@
       "managers": ["sbt"],
       "packagePatterns": ["^com\\.typesafe\\.akka"],
       "enabled": false
+    },
+    {
+      "managers": ["sbt"],
+      "packageNames": ["sbt-ci-release"],
+      "enabled": false
     }
   ],
   "prHourlyLimit": 0,

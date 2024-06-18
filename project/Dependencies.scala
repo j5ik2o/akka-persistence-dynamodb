@@ -12,7 +12,7 @@ object Dependencies {
     val akka26Version = "2.6.19"
 
     val logbackVersion      = "1.4.14"
-    val slf4jVersion        = "1.7.36"
+    val slf4jVersion        = "2.0.13"
     val ficusVersion        = "1.5.2"
     val awsSdkV1Version     = "1.12.653"
     val awsSdkV1DaxVersion  = "1.0.230341.0"

@@ -20,8 +20,7 @@ jobs:
         cache: 'sbt'
     - uses: olafurpg/setup-gpg@v3
     - run: |
-        sbt -v "publishSigned"
-        sbt -v "sonatypeBundleRelease"
+        sbt -v ci-release
       env:
         PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
         PGP_SECRET: ${{ secrets.PGP_SECRET }}

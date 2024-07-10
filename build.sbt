@@ -2,6 +2,8 @@ import Dependencies._
 import Dependencies.Versions._
 
 ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -62,7 +64,6 @@ lazy val baseSettings = Seq(
     "Seasar Repository" at "https://maven.seasar.org/maven2/",
     "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
   ),
-  resolvers ++= Resolver.sonatypeOssRepos("releases"),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,
   Test / publishArtifact := false,

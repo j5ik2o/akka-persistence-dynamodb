@@ -20,7 +20,8 @@ def crossScalacOptions(scalaVersion: String): Seq[String] =
   }
 
 lazy val baseSettings = Seq(
-  organization := "com.github.j5ik2o",
+  organization := "io.github.j5ik2o",
+  sonatypeProfileName := "io.github.j5ik2o",
   homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
   licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")),
   developers := List(
@@ -61,7 +62,6 @@ lazy val baseSettings = Seq(
     "Seasar Repository" at "https://maven.seasar.org/maven2/",
     "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
   ),
-  resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
   resolvers ++= Resolver.sonatypeOssRepos("releases"),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,

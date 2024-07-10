@@ -1,9 +1,11 @@
 import Dependencies._
 import Dependencies.Versions._
+import xerial.sbt.Sonatype.sonatypeCentralHost
+
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
 
 ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
-ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
-sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 
 def crossScalacOptions(scalaVersion: String): Seq[String] =
   CrossVersion.partialVersion(scalaVersion) match {

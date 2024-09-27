@@ -5,7 +5,7 @@ import xerial.sbt.Sonatype.sonatypeCentralHost
 ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
 
-ThisBuild / scalafixScalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
+ThisBuild / scalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
 
 def crossScalacOptions(scalaVersion: String): Seq[String] =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -24,7 +24,8 @@ def crossScalacOptions(scalaVersion: String): Seq[String] =
   }
 
 lazy val baseSettings = Seq(
-  organization := "com.github.j5ik2o",
+  organization := "io.github.j5ik2o",
+  organizationName := "com.github.j5ik2o",
   homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
   licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")),
   developers := List(

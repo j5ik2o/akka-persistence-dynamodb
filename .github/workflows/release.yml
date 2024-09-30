@@ -22,17 +22,5 @@ jobs:
         distribution: 'temurin'
         java-version: '11'
         cache: 'sbt'
-    - uses: olafurpg/setup-gpg@v3
-    - run: sbt -v "project test; ci-release"
-    - run: sbt -v "project base; ci-release"
-    - run: sbt -v "project base-v1; ci-release"
-    - run: sbt -v "project base-v2; ci-release"
-    - run: sbt -v "project journal-base; ci-release"
-    - run: sbt -v "project journal-v1; ci-release"
-    - run: sbt -v "project journal-v2; ci-release"
-    - run: sbt -v "project snapshot-base; ci-release"
-    - run: sbt -v "project snapshot-v1; ci-release"
-    - run: sbt -v "project snapshot-v2; ci-release"
-    - run: sbt -v "project state-base; ci-release"
-    - run: sbt -v "project state-v1; ci-release"
-    - run: sbt -v "project state-v2; ci-release"
+
+    - run: sbt -v ci-release

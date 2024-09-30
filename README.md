@@ -5,7 +5,6 @@
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Tokei](https://tokei.rs/b1/github/j5ik2o/akka-persistence-dynamodb)](https://github.com/XAMPPRocky/tokei)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fj5ik2o%2Fakka-persistence-dynamodb?ref=badge_shield)
 
 `j5ik2o/akka-persistence-dynamodb` is an `akka-persistence` plugin for persist `akka-actor` to AWS DynamoDB. 
 

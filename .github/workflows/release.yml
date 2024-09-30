@@ -8,6 +8,11 @@ jobs:
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
+      PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+      PGP_SECRET: ${{ secrets.PGP_SECRET }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -18,12 +23,16 @@ jobs:
         java-version: '11'
         cache: 'sbt'
     - uses: olafurpg/setup-gpg@v3
-    - run: |
-        for subproject in test base base-v1 base-v2 journal-base journal-v1 journal-v2 snapshot-base snapshot-v1 snapshot-v2 state-base state-v1 state-v2; do
-          sbt -v "project $subproject; ci-release"
-        done
-      env:
-        PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-        PGP_SECRET: ${{ secrets.PGP_SECRET }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+    - run: sbt -v "project test; ci-release"
+    - run: sbt -v "project base; ci-release"
+    - run: sbt -v "project base-v1; ci-release"
+    - run: sbt -v "project base-v2; ci-release"
+    - run: sbt -v "project journal-base; ci-release"
+    - run: sbt -v "project journal-v1; ci-release"
+    - run: sbt -v "project journal-v2; ci-release"
+    - run: sbt -v "project snapshot-base; ci-release"
+    - run: sbt -v "project snapshot-v1; ci-release"
+    - run: sbt -v "project snapshot-v2; ci-release"
+    - run: sbt -v "project state-base; ci-release"
+    - run: sbt -v "project state-v1; ci-release"
+    - run: sbt -v "project state-v2; ci-release"

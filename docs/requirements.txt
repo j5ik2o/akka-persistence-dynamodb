@@ -19,7 +19,7 @@ pytz==2024.2
 PyYAML==6.0.2
 requests==2.32.3
 snowballstemmer==2.2.0
-Sphinx==8.0.2
+Sphinx==7.4.7
 sphinx-bootstrap-theme==0.8.1
 sphinx-rtd-theme==2.0.0
 sphinxcontrib-applehelp==2.0.0

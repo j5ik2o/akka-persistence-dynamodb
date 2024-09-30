@@ -15,7 +15,7 @@ myst-parser==2.0.0
 packaging==24.1
 Pygments==2.18.0
 pyparsing==3.1.4
-pytz==2023.4
+pytz==2024.2
 PyYAML==6.0.2
 requests==2.32.3
 snowballstemmer==2.2.0

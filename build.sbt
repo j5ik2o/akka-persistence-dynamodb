@@ -25,7 +25,7 @@ def crossScalacOptions(scalaVersion: String): Seq[String] =
 
 lazy val baseSettings = Seq(
   organization := "io.github.j5ik2o",
-  organizationName := "com.github.j5ik2o",
+  organizationName := "io.github.j5ik2o",
   homepage := Some(url("https://github.com/j5ik2o/akka-persistence-dynamodb")),
   licenses := List("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")),
   developers := List(

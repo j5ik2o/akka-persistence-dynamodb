@@ -80,7 +80,8 @@ lazy val baseSettings = Seq(
     }
   },
   envVars := Map(
-    "AWS_REGION" -> "ap-northeast-1"
+    "AWS_REGION"                                   -> "ap-northeast-1",
+    "AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT" -> "true"
   )
 )
 

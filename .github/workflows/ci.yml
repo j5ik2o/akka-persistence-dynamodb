@@ -29,6 +29,7 @@ jobs:
     env:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+      AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +52,7 @@ jobs:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       AWS_REGION: ap-northeast-1
+      AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
       TEST_TIME_FACTOR: 3
     steps:
       - uses: actions/checkout@v4

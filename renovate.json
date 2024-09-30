@@ -3,6 +3,9 @@
   "extends": ["config:recommended"],
   "commitMessagePrefix": "chore(deps):",
   "platformAutomerge": true,
+  "ignorePaths": [
+    "docs/requirements.txt"
+  ],
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],

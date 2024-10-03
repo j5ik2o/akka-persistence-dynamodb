@@ -260,6 +260,62 @@ final class DynamoDBDurableStateStoreV1[A](
     traced
   }
 
+  override def deleteObject(persistenceId: String, revision: Long): Future[Done] = {
+    val pid        = PersistenceId(persistenceId)
+    val context    = Context.newContext(UUID.randomUUID(), pid)
+    val newContext = metricsReporter.fold(context)(_.beforeStateStoreDeleteObject(context))
+
+    def future = {
+      val tableName = tableNameResolver.resolve(pid)
+      val pkey      = partitionKeyResolver.resolve(pid)
+      val skey      = sortKeyResolver.resolve(pid)
+      val request = new DeleteItemRequest()
+        .withTableName(tableName.asString)
+        .withKey(
+          Map(
+            pluginConfig.columnsDefConfig.partitionKeyColumnName -> new AttributeValue().withS(pkey.asString),
+            pluginConfig.columnsDefConfig.sortKeyColumnName      -> new AttributeValue().withS(skey.asString)
+          ).asJava
+        )
+        .withConditionExpression(s"#revision = :revision")
+        .withExpressionAttributeNames(
+          Map("#revision" -> pluginConfig.columnsDefConfig.revisionColumnName).asJava
+        )
+        .withExpressionAttributeValues(
+          Map(":revision" -> new AttributeValue().withN(revision.toString)).asJava
+        )
+
+      Source
+        .single(request)
+        .via(streamWriteClient.deleteItemFlow)
+        .flatMapConcat { response =>
+          if (response.getSdkHttpMetadata.getHttpStatusCode == 200) {
+            Source.single(Done)
+          } else {
+            val statusCode = response.getSdkHttpMetadata.getHttpStatusCode
+            if (statusCode == 400 && response.toString.contains("ConditionalCheckFailedException")) {
+              // Revision mismatch, item not deleted
+              Source.failed(new RevisionMismatchException(s"Revision mismatch for persistenceId: $persistenceId"))
+            } else {
+              Source.failed(new IOException(s"statusCode: $statusCode"))
+            }
+          }
+        }
+        .runWith(Sink.head)
+    }
+
+    val traced = traceReporter.fold(future)(_.traceStateStoreDeleteObject(context)(future))
+
+    traced.onComplete {
+      case Success(_) =>
+        metricsReporter.foreach(_.afterStateStoreDeleteObject(newContext))
+      case Failure(ex) =>
+        metricsReporter.foreach(_.errorStateStoreDeleteObject(newContext, ex))
+    }
+
+    traced
+  }
+
   private def dispose(): Unit = {
     (asyncClient, syncClient) match {
       case (Some(a), _) => a.shutdown()
@@ -267,4 +323,5 @@ final class DynamoDBDurableStateStoreV1[A](
       case _            =>
     }
   }
+
 }

@@ -44,7 +44,6 @@ lazy val baseSettings = Seq(
   ),
   scalaVersion := Versions.scala213Version,
   crossScalaVersions := Seq(
-    Versions.scala212Version,
     Versions.scala213Version,
     Versions.scala3Version
   ),
@@ -64,7 +63,8 @@ lazy val baseSettings = Seq(
   ),
   resolvers ++= Seq(
     "Seasar Repository" at "https://maven.seasar.org/maven2/",
-    "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release"
+    "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release",
+    "Akka Repository" at "https://repo.akka.io/maven/"
   ),
   semanticdbEnabled := true,
   semanticdbVersion := scalafixSemanticdb.revision,

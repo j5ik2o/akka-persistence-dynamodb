@@ -55,4 +55,7 @@ final class JavaDynamoDBDurableStateStore[A](
   override def deleteObject(persistenceId: String): CompletionStage[Done] =
     toJava(underlying.deleteObject(persistenceId))
 
+  override def deleteObject(persistenceId: String, revision: Long): CompletionStage[Done] = {
+    toJava(underlying.deleteObject(persistenceId, revision))
+  }
 }

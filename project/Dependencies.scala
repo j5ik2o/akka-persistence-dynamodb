@@ -3,13 +3,12 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val scala212Version = "2.12.19"
     val scala213Version = "2.13.14"
     val scala3Version   = "3.3.3"
 
     val scalaCollectionCompatVersion = "2.11.0"
 
-    val akka26Version = "2.6.19"
+    val akkaVersion = "2.9.5"
 
     val logbackVersion      = "1.5.8"
     val slf4jVersion        = "1.7.36"

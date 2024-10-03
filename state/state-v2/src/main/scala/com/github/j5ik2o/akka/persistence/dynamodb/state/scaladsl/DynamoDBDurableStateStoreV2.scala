@@ -335,5 +335,4 @@ final class DynamoDBDurableStateStoreV2[A](
     }
   }
 
-
 }

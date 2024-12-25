@@ -3,8 +3,8 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val scala213Version = "2.13.14"
-    val scala3Version   = "3.3.3"
+    val scala213Version = "2.13.15"
+    val scala3Version   = "3.3.4"
 
     val scalaCollectionCompatVersion = "2.12.0"
 

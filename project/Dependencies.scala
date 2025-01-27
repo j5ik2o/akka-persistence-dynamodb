@@ -15,7 +15,7 @@ object Dependencies {
     val ficusVersion        = "1.5.2"
     val awsSdkV1Version     = "1.12.780"
     val awsSdkV1DaxVersion  = "1.0.230341.0"
-    val awsSdkV2Version     = "2.30.6"
+    val awsSdkV2Version     = "2.30.7"
     val reactiveAwsDynamoDB = "1.2.6"
 
     val scalaTest32Version      = "3.2.16"

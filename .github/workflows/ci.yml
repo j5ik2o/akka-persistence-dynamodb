@@ -39,6 +39,7 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - run: sbt -v lint
   test:
     strategy:
@@ -63,5 +64,6 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.jdk }}
           cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
       - name: sbt test
         run: sbt -v ++${{ matrix.scala }} test

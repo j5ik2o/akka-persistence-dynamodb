@@ -9,10 +9,8 @@ jobs:
       JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
       AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
-      PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-      PGP_SECRET: ${{ secrets.PGP_SECRET }}
-      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      GITHUB_ACTOR: j5ik2o
+      GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -23,4 +21,11 @@ jobs:
         java-version: '11'
         cache: 'sbt'
     - uses: sbt/setup-sbt@v1
-    - run: sbt -v -Dsun.net.client.defaultReadTimeout=60000 ci-release
+    - name: publish
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        VERSION=${VERSION#v}
+        echo "Publishing version=$VERSION"
+
+        sbt -v -Dsbt.log.noformat=true \
+          "set version := \"${VERSION}\"; +publish"

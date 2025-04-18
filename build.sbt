@@ -1,9 +1,17 @@
 import Dependencies._
 import Dependencies.Versions._
-import xerial.sbt.Sonatype.sonatypeCentralHost
 
-ThisBuild / publishTo := sonatypePublishToBundle.value
-ThisBuild / sonatypeCredentialHost := sonatypeCentralHost
+ThisBuild / publishMavenStyle := true
+ThisBuild / publishTo := Some(
+  "GitHub Package Registry" at
+  "https://maven.pkg.github.com/j5ik2o/akka-persistence-dynamodb"
+)
+ThisBuild / credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  sys.env.getOrElse("GITHUB_ACTOR", ""),
+  sys.env.getOrElse("GITHUB_TOKEN", "")
+)
 
 ThisBuild / scalaBinaryVersion := CrossVersion.binaryScalaVersion(scalaVersion.value)
 

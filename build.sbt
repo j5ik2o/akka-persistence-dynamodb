@@ -24,20 +24,33 @@ ThisBuild / crossScalaVersions := Seq(
   Versions.scala213Version,
   Versions.scala3Version
 )
-ThisBuild / scalacOptions ++= (
-  Seq(
-    "-feature",
-    "-deprecation",
-    "-unchecked",
-    "-encoding",
-    "UTF-8",
-    "-language:_",
-    "-Ydelambdafy:method",
-    "-target:jvm-1.8",
-    "-Yrangepos",
-    "-Ywarn-unused"
-  ) ++ crossScalacOptions(scalaVersion.value)
+val commonFlags = Seq(
+  "-feature",
+  "-deprecation",
+  "-unchecked",
+  "-encoding",
+  "UTF-8"
 )
+def extraFlags(scalaVer: String): Seq[String] =
+  CrossVersion.partialVersion(scalaVer) match {
+    case Some((3, _)) =>
+      Seq(
+        "-source:3.0-migration",
+        "-Xignore-scala2-macros",
+        "-Xtarget:8",
+        "-Wunused:all"
+      )
+    case Some((2, _)) =>
+      Seq(
+        "-language:_",
+        "-Ydelambdafy:method",
+        "-target:jvm-1.8",
+        "-Yrangepos",
+        "-Ywarn-unused"
+      )
+    case _ => Nil
+  }
+ThisBuild / scalacOptions ++= commonFlags ++ extraFlags(scalaVersion.value)
 ThisBuild / resolvers ++= Seq(
   "Seasar Repository" at "https://maven.seasar.org/maven2/",
   "DynamoDB Local Repository" at "https://s3-us-west-2.amazonaws.com/dynamodb-local/release",
@@ -66,22 +79,6 @@ ThisBuild / dynverSeparator := "-"
 ThisBuild / publishMavenStyle := true
 ThisBuild / pomIncludeRepository := (_ => false)
 ThisBuild / credentials += Credentials(Path.userHome / ".sbt" / "1.0" / "sonatype_credentials")
-
-def crossScalacOptions(scalaVersion: String): Seq[String] =
-  CrossVersion.partialVersion(scalaVersion) match {
-    case Some((3L, _)) =>
-      Seq(
-        "-source:3.0-migration",
-        "-Xignore-scala2-macros"
-      )
-    case Some((2L, scalaMajor)) if scalaMajor >= 12 =>
-      Seq(
-        "-Ydelambdafy:method",
-        "-target:jvm-1.8",
-        "-Yrangepos",
-        "-Ywarn-unused"
-      )
-  }
 
 lazy val test = (project in file("test"))
   .settings(

@@ -23,42 +23,38 @@ on:
       - '.github/workflows/ci.yml'
   schedule:
     - cron: '0 * * * *'
+env:
+  JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+  JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
+  AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
+  AWS_REGION: ap-northeast-1
 jobs:
   lint:
     runs-on: ubuntu-latest
-    env:
-      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
-      - run: sbt -v lint
+      - name: sbt lint
+        run: sbt -v lint
   test:
     strategy:
       fail-fast: false
       matrix:
         jdk: [ 11, 17, 19 ]
-        scala: [ 2.13.14, 3.3.3 ]
+        scala: [ 2.13.16, 3.6.4 ]
     runs-on: ubuntu-latest
     needs: lint
     env:
-      JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-      AWS_REGION: ap-northeast-1
-      AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: true
       TEST_TIME_FACTOR: 3
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'

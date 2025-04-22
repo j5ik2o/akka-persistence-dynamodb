@@ -1,6 +1,12 @@
 name: Bump Version
 on:
   workflow_dispatch:
+    inputs:
+      force_bump:
+        description: 'Force version bump'
+        required: true
+        type: boolean
+        default: false
   schedule:
     - cron: '0 0 * * *'
 jobs:
@@ -15,22 +21,50 @@ jobs:
     - name: Calculate changes from the latest tag to HEAD
       id: changes
       run: |
-        LATEST_TAG=$(git describe --abbrev=0)
-        echo "latest-tag = $LATEST_TAG"
-        COUNT=$(git log $LATEST_TAG..HEAD --pretty=format:"%s" --no-merges \
-          --grep='^build:' \
-          --grep='^ci:' \
-          --grep='^feat:' \
-          --grep='^fix:' \
-          --grep='^docs:' \
-          --grep='^style:' \
-          --grep='^refactor:' \
-          --grep='^perf:' \
-          --grep='^test:' \
-          --grep='^revert:' \
-          --grep='^chore:' | awk 'END{print NR}')
+        # タグが存在するか確認
+        if git tag -l | grep -q .; then
+          LATEST_TAG=$(git describe --abbrev=0 --tags)
+          echo "latest-tag = $LATEST_TAG"
+          # 最新タグから現在までの変更をカウント
+          COUNT=$(git log $LATEST_TAG..HEAD --pretty=format:"%s" --no-merges \
+            --grep='^build:' \
+            --grep='^ci:' \
+            --grep='^feat:' \
+            --grep='^fix:' \
+            --grep='^docs:' \
+            --grep='^style:' \
+            --grep='^refactor:' \
+            --grep='^perf:' \
+            --grep='^test:' \
+            --grep='^revert:' \
+            --grep='^chore:' | awk 'END{print NR}')
+        else
+          echo "No tags found - using initial commit as base"
+          # 初期コミットから現在までの変更をカウント（初回実行時）
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+          COUNT=$(git log $FIRST_COMMIT..HEAD --pretty=format:"%s" --no-merges \
+            --grep='^build:' \
+            --grep='^ci:' \
+            --grep='^feat:' \
+            --grep='^fix:' \
+            --grep='^docs:' \
+            --grep='^style:' \
+            --grep='^refactor:' \
+            --grep='^perf:' \
+            --grep='^test:' \
+            --grep='^revert:' \
+            --grep='^chore:' | awk 'END{print NR}')
+          # 初回は必ず1以上にしてタグ付けができるようにする
+          if [ "$COUNT" -eq "0" ]; then
+            COUNT=1
+          fi
+        fi
         echo "steps.changes.outputs.count = $COUNT"
-        echo "count=$COUNT" >> $GITHUB_OUTPUT
+        if [[ "${{ inputs.force_bump }}" == "true" ]]; then
+          echo "count=1" >> $GITHUB_OUTPUT
+        else
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+        fi
     - name: Bump version and push tag
       id: tag_version
       uses: mathieudutour/github-tag-action@v6.2

@@ -4,7 +4,7 @@ on:
     tags: [ 'v*' ]
     branches: [ main ]
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     env:
       SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}

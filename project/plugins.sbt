@@ -2,7 +2,7 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.5")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.3")
 
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.7")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")
 
 addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.3.1")
 

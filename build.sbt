@@ -146,7 +146,7 @@ lazy val `base-v2` = (project in file("base/base-v2"))
     libraryDependencies ++= Seq(
       slf4j.api,
       softwareamazon.dynamodb,
-      "software.amazon.dax" % "amazon-dax-client" % "2.0.6",
+      "software.amazon.dax" % "amazon-dax-client" % "2.0.7",
       logback.classic       % Test,
       slf4j.julToSlf4J      % Test
     )

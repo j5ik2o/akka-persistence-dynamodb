@@ -21,8 +21,6 @@ on:
       - '.scalafmt.conf'
       - 'project/build.properties'
       - '.github/workflows/ci.yml'
-  schedule:
-    - cron: '0 * * * *'
 env:
   JAVA_OPTS: -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
   JVM_OPTS:  -Xms2048M -Xmx2048M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
